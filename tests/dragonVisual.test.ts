@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { DragonVisual } from '../src/actors/dragon/visual';
-import { newFlightState, requestDragonForm, toggleLanding } from '../src/actors/dragon/flight';
+import { newFlightState, requestDragonForm, stepFlight, toggleLanding } from '../src/actors/dragon/flight';
 import { FORMS } from '../src/actors/dragon/forms';
 import { heightAt } from '../src/world/terrain';
 
@@ -40,6 +40,8 @@ describe('procedural dragon model', () => {
     state.x = -555; state.z = 100;
     state.y = heightAt(state.x, state.z) + 13;
     expect(toggleLanding(state).ok).toBe(true);
+    const idle = { turn: 0, pitch: 0, bank: 0, boost: false, flap: false, move: 0 };
+    for (let i = 0; i < 90; i++) stepFlight(state, idle, 1 / 60);
     expect(requestDragonForm(state, 'small').ok).toBe(true);
     state.time = 1;
     dragon.update(state);

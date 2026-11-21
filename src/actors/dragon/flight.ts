@@ -1,6 +1,7 @@
 import { minimumFlightY, SPAWN, heightAt } from '../../world/terrain';
 import { canExpandInAir, canStand, safeFlightY } from '../../world/collision';
 import { FORMS, type DragonForm, type DragonMode } from './forms';
+import { beginTraversal, advanceTraversal, type TraversalTransition } from './traversalTransition';
 
 export interface FlightState {
   x: number; y: number; z: number;
@@ -8,6 +9,7 @@ export interface FlightState {
   speed: number; time: number;
   form: DragonForm;
   mode: DragonMode;
+  transition: TraversalTransition | null;
   /** Dismount anchor: rider is independent while the small dragon is controlled. */
   riderX: number; riderZ: number;
 }
@@ -33,12 +35,13 @@ const reject = (message: string): InteractionResult => ({ ok: false, message });
 export function newFlightState(): FlightState {
   return {
     ...SPAWN, pitch: 0.02, roll: 0, speed: FORMS.rideable.cruise, time: 0,
-    form: 'rideable', mode: 'air', riderX: SPAWN.x, riderZ: SPAWN.z,
+    form: 'rideable', mode: 'air', transition: null, riderX: SPAWN.x, riderZ: SPAWN.z,
   };
 }
 
 /** Free size changes, subject to actual space and safe dismount/remount in the G2 prototype. */
 export function requestDragonForm(state: FlightState, target: DragonForm): InteractionResult {
+  if (state.transition) return reject('Finish landing or taking off before changing size.');
   if (target === state.form) return accept(FORMS[target].label + ' form already active.');
   if (target === 'small' && state.mode === 'air') {
     return reject('Land first so the young rider can dismount safely.');
@@ -67,33 +70,29 @@ export function requestDragonForm(state: FlightState, target: DragonForm): Inter
   return accept(config.label + ' form activated.');
 }
 
-/** Assisted landing/takeoff: no crash penalty; water entry comes in G3. */
+/** Physically interpolate landing/takeoff without teleporting the body. */
 export function toggleLanding(state: FlightState): InteractionResult {
-  if (state.mode === 'ground') {
-    const check = canStand(state.x, state.z, state.form);
-    if (!check.ok) return reject(check.reason);
-    state.mode = 'air';
-    state.y = Math.max(state.y, safeFlightY(state.x, state.z, state.form));
-    state.speed = FORMS[state.form].cruise * 0.72;
-    return accept('Wings spread — airborne.');
-  }
+  if (state.transition) return reject('Finish the current flight maneuver first.');
   const check = canStand(state.x, state.z, state.form);
   if (!check.ok) return reject(check.reason);
+  if (state.mode === 'ground') {
+    const target = Math.max(state.y + 8, safeFlightY(state.x, state.z, state.form) + 1);
+    beginTraversal(state, 'takingOff', target, FORMS[state.form].cruise * 0.72);
+    return accept('Taking off — wings unfurling.');
+  }
   if (state.y - heightAt(state.x, state.z) > 22) {
     return reject('Descend within 22 meters of the ground to land.');
   }
-  state.mode = 'ground';
-  state.pitch = 0;
-  state.roll = 0;
-  state.speed = 0;
-  state.y = heightAt(state.x, state.z) + FORMS[state.form].standHeight;
-  return accept('Touchdown. Press F to take off again.');
+  const target = heightAt(state.x, state.z) + FORMS[state.form].standHeight;
+  beginTraversal(state, 'landing', target, 0);
+  return accept('Landing — preparing to touch down.');
 }
 
 /** Pure fixed-step simulation, portable to another engine. */
 export function stepFlight(s: FlightState, c: FlightControls, dt: number): void {
   if (!Number.isFinite(dt) || dt <= 0 || dt > 0.1) return;
   s.time += dt;
+  if (advanceTraversal(s, dt)) return;
   const form = FORMS[s.form];
   if (s.mode === 'ground') {
     const drive = clamp(c.move ?? c.pitch, -1, 1);

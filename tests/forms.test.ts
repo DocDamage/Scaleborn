@@ -32,6 +32,9 @@ describe('three-form dragon contract', () => {
     expect(canStand(s.x, s.z, 'rideable').ok).toBe(true);
     expect(toggleLanding(s).ok).toBe(true);
     expect(s.mode).toBe('ground');
+    expect(s.transition?.phase).toBe('landing');
+    for (let i = 0; i < 90; i++) stepFlight(s, idle, 1 / 60);
+    expect(s.transition).toBeNull();
     expect(requestDragonForm(s, 'small').ok).toBe(true);
     expect(s.form).toBe('small');
     for (let i = 0; i < 15; i++) stepFlight(s, { ...idle, move: 1 }, 1 / 60);

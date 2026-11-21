@@ -70,8 +70,37 @@ async function main() {
     );
     assert.ok(hasWebGL, 'No WebGL2 context on game canvas');
     await page.screenshot({ path: 'artifacts/azure-coast-smoke.png' });
+    // Exercise a complete animated landing/size change/takeoff in a deterministic meadow.
+    const meadowResponse = await page.goto(url + '?start=meadow&qa=1', { waitUntil: 'networkidle' });
+    assert.equal(meadowResponse?.status(), 200);
+    await page.locator('#start').click();
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaLand !== 'function') throw new Error('Dev landing hook missing');
+      window.__scalebornQaLand();
+    });
+    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'LANDING', null, { timeout: 15000 });
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaAdvance !== 'function') throw new Error('Dev QA step hook missing');
+      window.__scalebornQaAdvance(100);
+    });
+    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'ON LAND', null, { timeout: 12000 });
+    await page.keyboard.press('1');
+    await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'SMALL COMPANION', null, { timeout: 6000 });
+    await page.screenshot({ path: 'artifacts/azure-coast-small-meadow.png' });
+    await page.keyboard.press('2');
+    await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'RIDEABLE', null, { timeout: 6000 });
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaLaunch !== 'function') throw new Error('Dev takeoff hook missing');
+      window.__scalebornQaLaunch();
+    });
+    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'TAKING OFF', null, { timeout: 15000 });
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaAdvance !== 'function') throw new Error('Dev QA step hook missing');
+      window.__scalebornQaAdvance(90);
+    });
+    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'IN FLIGHT', null, { timeout: 12000 });
     assert.deepEqual(errors, [], 'Browser reported runtime or shader errors');
-    console.log('PASS: WebGL2 rendered, HUD and size controls active, midair dismount blocked, camera switched, screenshots captured.');
+    console.log('PASS: WebGL2, multiple cameras, giant and small forms, full landing/takeoff phases, and screenshots.');
   } finally {
     await browser.close();
   }
