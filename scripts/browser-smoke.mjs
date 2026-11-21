@@ -86,7 +86,11 @@ async function main() {
     await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'ON LAND', null, { timeout: 12000 });
     await page.keyboard.press('1');
     await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'SMALL COMPANION', null, { timeout: 6000 });
+    await page.keyboard.press('Tab');
+    await page.waitForFunction(() => document.querySelector('#focus-name')?.textContent === 'RIDER', null, { timeout: 8000 });
     await page.screenshot({ path: 'artifacts/azure-coast-small-meadow.png' });
+    await page.keyboard.press('Tab');
+    await page.waitForFunction(() => document.querySelector('#focus-name')?.textContent === 'DRAGON', null, { timeout: 8000 });
     await page.keyboard.press('2');
     await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'RIDEABLE', null, { timeout: 6000 });
     await page.evaluate(() => {
@@ -99,6 +103,25 @@ async function main() {
       window.__scalebornQaAdvance(90);
     });
     await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'IN FLIGHT', null, { timeout: 12000 });
+
+    // Water uses the same scene and simulation; fixed-step QA avoids slow SwiftShader timing.
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaWater !== 'function') throw new Error('Water QA hook unavailable');
+      window.__scalebornQaWater();
+      window.__scalebornQaAdvance(85);
+    });
+    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'SWIMMING', null, { timeout: 12000 });
+    await page.evaluate(() => {
+      window.__scalebornQaDive();
+      window.__scalebornQaAdvance(85);
+    });
+    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'DIVING', null, { timeout: 12000 });
+    assert.ok(Number(await page.locator('#altitude').textContent()) >= 1, 'Water dive must report depth');
+    await page.evaluate(() => {
+      window.__scalebornQaDive();
+      window.__scalebornQaAdvance(100);
+    });
+    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'SWIMMING', null, { timeout: 12000 });
     assert.deepEqual(errors, [], 'Browser reported runtime or shader errors');
     console.log('PASS: WebGL2, multiple cameras, giant and small forms, full landing/takeoff phases, and screenshots.');
   } finally {

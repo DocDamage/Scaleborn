@@ -1,7 +1,7 @@
 import type { FlightState } from './flight';
 
 /** A renderer-neutral and save-friendly physical motion phase. */
-export type TraversalPhase = 'landing' | 'takingOff';
+export type TraversalPhase = 'landing' | 'takingOff' | 'splashdown' | 'waterLaunch';
 
 export interface TraversalTransition {
   phase: TraversalPhase;
@@ -18,6 +18,8 @@ export interface TraversalTransition {
 
 export const LANDING_DURATION = 1.45;
 export const TAKEOFF_DURATION = 1.15;
+export const SPLASHDOWN_DURATION = 1.10;
+export const WATER_LAUNCH_DURATION = 1.30;
 
 const ease = (t: number): number => t * t * (3 - 2 * t);
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
@@ -32,16 +34,17 @@ export function beginTraversal(
   state.transition = {
     phase,
     elapsed: 0,
-    duration: phase === 'landing' ? LANDING_DURATION : TAKEOFF_DURATION,
+    duration: phase === 'landing' ? LANDING_DURATION : phase === 'takingOff' ? TAKEOFF_DURATION : phase === 'splashdown' ? SPLASHDOWN_DURATION : WATER_LAUNCH_DURATION,
     startY: state.y,
     targetY,
     startSpeed: state.speed,
     targetSpeed,
     startPitch: state.pitch,
-    targetPitch: phase === 'landing' ? 0 : 0.12,
+    targetPitch: phase === 'landing' || phase === 'splashdown' ? 0 : 0.12,
     startRoll: state.roll,
   };
-  state.mode = phase === 'landing' ? 'ground' : 'air';
+  state.mode = phase === 'landing' ? 'ground' : phase === 'splashdown' ? 'surface' : 'air';
+  if (phase === 'splashdown') state.waterTargetY = targetY;
 }
 
 /** Return true if a transition was in progress during this simulation step. */

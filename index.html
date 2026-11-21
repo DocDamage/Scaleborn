@@ -11,12 +11,13 @@
     <div id="app">
       <canvas id="game" aria-label="Scaleborn 3D game view"></canvas>
       <div id="vignette" aria-hidden="true"></div>
+      <div id="water-tint" aria-hidden="true" hidden></div>
       <header class="titlebar">
         <span class="eyebrow">AZURE COAST · EXPLORATION BUILD</span>
         <h1>Scaleborn</h1>
       </header>
       <section id="hud" aria-label="Flight information">
-        <div class="stat"><span>GROUND CLEARANCE</span><strong id="altitude">—</strong><small>meters</small></div>
+        <div class="stat"><span id="altitude-label">GROUND CLEARANCE</span><strong id="altitude">—</strong><small>meters</small></div>
         <div class="stat"><span>SPEED</span><strong id="speed">—</strong><small>m/s</small></div>
         <div class="stat"><span>VIEW</span><strong id="camera-name">—</strong></div>
         <div class="stat"><span>REGION</span><strong>Azure Coast</strong></div>
@@ -28,27 +29,32 @@
       </aside>
       <div id="discovery-toast" role="status" aria-live="polite" hidden></div>
       <section id="dragon-panel" aria-label="Dragon form controls">
-        <div class="form-info"><span class="eyebrow">DRAGON FORM</span><strong id="form-name">RIDEABLE</strong><span id="mode-name">IN FLIGHT</span></div>
+        <div class="form-info"><span class="eyebrow">DRAGON FORM</span><strong id="form-name">RIDEABLE</strong><span id="mode-name">IN FLIGHT</span>
+        <div class="focus-indicator"><span>CONTROLLING</span><strong id="focus-name">DRAGON</strong></div></div>
         <div class="form-buttons" role="group" aria-label="Change dragon size">
           <button data-form="small" type="button" aria-pressed="false" title="Small dragon; dismount on land">1 · Small</button>
           <button data-form="rideable" type="button" aria-pressed="true">2 · Rideable</button>
           <button data-form="giant" type="button" aria-pressed="false">3 · Giant</button>
         </div>
-        <button id="land-button" type="button">F · Land / Take off</button>
+        <button id="land-button" type="button">F · Land / Splash / Fly</button>
+        <div class="traversal-buttons">
+          <button id="focus-button" type="button" title="Switch between the rider and small dragon">Tab · Switch</button>
+          <button id="dive-button" type="button" title="Dive or rise while swimming">C · Dive / Rise</button>
+        </div>
       </section>
       <div id="action-toast" role="status" aria-live="polite" hidden></div>
       <div id="crosshair" aria-hidden="true"><span></span><span></span></div>
-      <div id="controls-hint">W/S pitch or walk · A/D turn · Shift surge · F land/takeoff · 1/2/3 dragon size · V camera · H help · F3 diagnostics</div>
+      <div id="controls-hint">W/S move or pitch · A/D steer · Q/E underwater depth · F land/splash/fly · C dive/rise · Tab rider/dragon · 1/2/3 size · V camera · H help</div>
       <section id="diagnostics" hidden aria-label="Diagnostics"></section>
       <section id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
         <div class="intro">
           <div class="sigil">✦</div>
           <p class="eyebrow">CHAPTER ZERO · THE FIRST FLIGHT</p>
           <h2 id="welcome-title">The Azure Coast awaits.</h2>
-          <p>Your dragon knows the winds. Explore the golden cliffs, fishing harbor and distant island. This is an early, playable development build—not the complete adventure. Land in open terrain before shrinking; return to your rider to remount.</p>
+          <p>Your dragon knows the winds. Explore the golden cliffs, fishing harbor and distant island. This is an early, playable development build—not the complete adventure. Land before shrinking; Tab switches between the rider and small dragon. Over deep water, F splashes down and C dives. The rider and dragon share magical underwater breathing.</p>
           <div class="keys">
             <span>W/S — pitch</span><span>A/D — turn</span><span>Mouse — look/steer</span>
-            <span>Shift — speed surge</span><span>Q/E — bank</span><span>V — change view</span><span>1/2/3 — dragon size</span><span>F — land / take off</span>
+            <span>Shift — speed surge</span><span>Q/E — bank</span><span>V — change view</span><span>1/2/3 — dragon size</span><span>F — land / splash / take off</span><span>C — dive / surface</span><span>Tab — rider / dragon</span><span>Q/E — underwater depth</span>
           </div>
           <button id="start" type="button">Take flight</button>
           <small>Click the game to capture the mouse. Press Esc to release it. Audio is muted in this build.</small>

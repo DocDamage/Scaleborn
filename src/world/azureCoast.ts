@@ -4,6 +4,7 @@ import { makeTerrainTile, disposeTerrainTile } from './terrainTile';
 import { addCoastalDressing } from './dressing';
 import { PainterlyOcean } from './ocean';
 import { PainterlySky } from './sky';
+import { addMarineDressing } from './marineDressing';
 
 type TerrainTile = { group: THREE.Group; signature: string };
 
@@ -21,13 +22,18 @@ export class AzureCoast {
   });
   private readonly water = new PainterlyOcean();
   private readonly sky = new PainterlySky();
+  private readonly airFog = new THREE.FogExp2(0xb6cbd4, 0.00055);
+  private readonly seaFog = new THREE.FogExp2(0x1b5866, 0.012);
+  private readonly airBackground = new THREE.Color(0xc4d9df);
+  private readonly seaBackground = new THREE.Color(0x1b5866);
+  private underwater = false;
   readonly scene: THREE.Scene;
   readonly ocean: THREE.Mesh;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
-    scene.background = new THREE.Color(0xc4d9df);
-    scene.fog = new THREE.FogExp2(0xb6cbd4, 0.00055);
+    scene.background = this.airBackground;
+    scene.fog = this.airFog;
     scene.add(new THREE.HemisphereLight(0xbde7ee, 0x716251, 2.2));
     const sun = new THREE.DirectionalLight(0xffd3a5, 2.0);
     sun.position.set(-420, 600, -520);
@@ -35,6 +41,7 @@ export class AzureCoast {
     this.ocean = this.water.mesh;
     scene.add(this.sky.mesh, this.ocean);
     addCoastalDressing(scene);
+    addMarineDressing(scene);
   }
 
   update(x: number, z: number): void {
@@ -64,6 +71,14 @@ export class AzureCoast {
     for (const [key, tile] of this.tiles) {
       if (!required.has(key)) this.remove(key, tile);
     }
+  }
+
+  setUnderwater(active: boolean): void {
+    if (active === this.underwater) return;
+    this.underwater = active;
+    this.scene.fog = active ? this.seaFog : this.airFog;
+    this.scene.background = active ? this.seaBackground : this.airBackground;
+    this.sky.mesh.visible = !active;
   }
 
   animate(time: number, x: number, y: number, z: number): void {

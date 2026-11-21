@@ -1,6 +1,8 @@
 /** Portable, meter-based creature forms. Rendering scale and physical rules remain separate. */
 export type DragonForm = 'small' | 'rideable' | 'giant';
-export type DragonMode = 'air' | 'ground';
+export type DragonMode = 'air' | 'ground' | 'surface' | 'underwater';
+export type RiderMode = 'ground' | 'surface' | 'underwater';
+export type ControlTarget = 'dragon' | 'rider';
 
 export interface FormSpec {
   id: DragonForm;

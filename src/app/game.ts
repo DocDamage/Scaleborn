@@ -7,6 +7,9 @@ import { FlightInput } from '../input/flightInput';
 import { AzureCoast } from '../world/azureCoast';
 import { heightAt } from '../world/terrain';
 import { CoastDiscovery } from '../world/discoveries';
+import { toggleDragonDive } from '../actors/dragon/swimming';
+import { toggleRiderControl, toggleRiderDive } from '../actors/rider/movement';
+import { SEA_LEVEL, LANDMARKS } from '../world/terrain';
 
 const FIXED_DT = 1 / 60;
 const MAX_STEPS = 5;
@@ -39,6 +42,9 @@ export class Game {
   private readonly cameraText = requireElement<HTMLElement>('#camera-name');
   private readonly formName = requireElement<HTMLElement>('#form-name');
   private readonly modeName = requireElement<HTMLElement>('#mode-name');
+  private readonly focusName = requireElement<HTMLElement>('#focus-name');
+  private readonly altLabel = requireElement<HTMLElement>('#altitude-label');
+  private readonly waterTint = requireElement<HTMLElement>('#water-tint');
   private readonly actionToast = requireElement<HTMLElement>('#action-toast');
   private actionTimer = 0;
   private lastTime = 0;
@@ -62,11 +68,18 @@ export class Game {
     this.renderer.toneMappingExposure = 1.22;
     this.camera = new THREE.PerspectiveCamera(71, window.innerWidth / window.innerHeight, 0.2, 6500);
     // A seeded, safe location for repeatable manual and browser landing QA.
-    if (new URLSearchParams(window.location.search).get('start') === 'meadow') {
+    const start = new URLSearchParams(window.location.search).get('start');
+    if (start === 'meadow') {
       this.flight.x = -555;
       this.flight.z = 100;
       this.flight.y = heightAt(-555, 100) + 18;
       this.flight.yaw = 0;
+    } else if (start === 'water') {
+      this.flight.x = 1900;
+      this.flight.z = 1900;
+      this.flight.y = 16;
+      this.flight.yaw = 0.7;
+      this.flight.speed = 0;
     }
     this.coast = new AzureCoast(this.scene);
     this.dragon.attach(this.scene);
@@ -80,6 +93,8 @@ export class Game {
         __scalebornQaAdvance?: (frames: number) => void;
         __scalebornQaLand?: () => void;
         __scalebornQaLaunch?: () => void;
+        __scalebornQaWater?: () => void;
+        __scalebornQaDive?: () => void;
       };
       host.__scalebornQaLand = (): void => {
         // Stage and trigger atomically: no frame-rate-dependent input race.
@@ -98,6 +113,25 @@ export class Game {
       host.__scalebornQaLaunch = (): void => {
         const result = toggleLanding(this.flight);
         if (!result.ok) throw new Error('Unable to launch: ' + result.message);
+        this.updateHud(0.2);
+      };
+      host.__scalebornQaWater = (): void => {
+        this.flight.x = 1900; this.flight.z = 1900;
+        this.flight.y = 16; this.flight.yaw = 0.7;
+        this.flight.pitch = 0; this.flight.roll = 0;
+        this.flight.speed = 0;
+        this.flight.mode = 'air';
+        this.flight.form = 'rideable';
+        this.flight.controlTarget = 'dragon';
+        this.flight.transition = null;
+        const result = toggleLanding(this.flight);
+        if (!result.ok) throw new Error('Unable to stage water entry: ' + result.message);
+        this.coast.update(this.flight.x, this.flight.z);
+        this.updateHud(0.2);
+      };
+      host.__scalebornQaDive = (): void => {
+        const result = toggleDragonDive(this.flight);
+        if (!result.ok) throw new Error('Unable to dive: ' + result.message);
         this.updateHud(0.2);
       };
       host.__scalebornQaAdvance = (frames: number): void => {
@@ -120,7 +154,13 @@ export class Game {
       });
     });
     requireElement<HTMLButtonElement>('#land-button').addEventListener('click', () => {
-      if (!this.paused) this.notify(toggleLanding(this.flight));
+      if (!this.paused) this.landAction();
+    });
+    requireElement<HTMLButtonElement>('#focus-button').addEventListener('click', () => {
+      if (!this.paused) this.notify(toggleRiderControl(this.flight));
+    });
+    requireElement<HTMLButtonElement>('#dive-button').addEventListener('click', () => {
+      if (!this.paused) this.diveAction();
     });
     requireElement<HTMLButtonElement>('#start').addEventListener('click', () => this.begin(canvas));
     canvas.addEventListener('click', () => {
@@ -158,56 +198,103 @@ export class Game {
     this.notify(requestDragonForm(this.flight, form));
   }
 
+  private landAction(): void {
+    if (this.flight.controlTarget === 'rider') {
+      this.notify({ ok: false, message: 'Switch back to dragon control for takeoff or landing.' });
+      return;
+    }
+    this.notify(toggleLanding(this.flight));
+  }
+
+  private diveAction(): void {
+    this.notify(this.flight.controlTarget === 'rider'
+      ? toggleRiderDive(this.flight) : toggleDragonDive(this.flight));
+  }
+
+  private focusPosition(): { x: number; y: number; z: number } {
+    const s = this.flight;
+    return s.controlTarget === 'rider'
+      ? { x: s.riderX, y: s.riderY, z: s.riderZ }
+      : { x: s.x, y: s.y, z: s.z };
+  }
+
+  private isUnderwater(): boolean {
+    const s = this.flight;
+    return s.controlTarget === 'rider'
+      ? s.riderMode === 'underwater' : s.mode === 'underwater';
+  }
+
   private updateCamera(dt: number, instant = false): void {
     const state = this.flight;
+    const rider = state.controlTarget === 'rider';
+    const submerged = this.isUnderwater();
+    const position = this.focusPosition();
+    const yaw = rider ? state.riderYaw : state.yaw;
+    const pitch = rider ? 0 : state.pitch;
     const forward = new THREE.Vector3(
-      Math.sin(state.yaw) * Math.cos(state.pitch),
-      Math.sin(state.pitch),
-      -Math.cos(state.yaw) * Math.cos(state.pitch),
+      Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch),
     );
-    const root = new THREE.Vector3(state.x, state.y, state.z);
-    const target = root.clone().addScaledVector(forward, 7);
+    const root = new THREE.Vector3(position.x, position.y + (rider ? 1 : 0), position.z);
     const mode = cameraModes[this.cameraIndex] ?? 'CHASE';
-    const scale = FORMS[state.form].visualScale;
-    const distance = state.form === 'small' ? 5.8 : state.form === 'giant' ? 37 : 17;
-    const rise = state.form === 'small' ? 2.0 : state.form === 'giant' ? 14 : 6.8;
+    const scale = rider ? 1 : FORMS[state.form].visualScale;
+    const distance = rider ? 7 : submerged ? 11 :
+      state.form === 'small' ? 5.8 : state.form === 'giant' ? 37 : 17;
+    const rise = rider ? (submerged ? 0.45 : 2.1) : submerged ? 0.75 :
+      state.form === 'small' ? 2 : state.form === 'giant' ? 14 : 6.8;
+    const target = root.clone().addScaledVector(forward, rider ? 2.5 : 7);
     let desired: THREE.Vector3;
-    if (mode === 'WIDE') desired = root.clone().addScaledVector(forward, -distance * 1.9).add(new THREE.Vector3(0, rise * 1.6, 0));
-    else if (mode === 'DRAGON EYE') desired = root.clone().addScaledVector(forward, 2.4 * scale).add(new THREE.Vector3(0, 0.52 * scale, 0));
+    if (mode === 'WIDE') desired = root.clone().addScaledVector(forward, -distance * 1.9)
+      .add(new THREE.Vector3(0, rise * 1.6, 0));
+    else if (mode === 'DRAGON EYE') desired = root.clone().addScaledVector(forward, 2.4 * scale)
+      .add(new THREE.Vector3(0, 0.52 * scale, 0));
     else if (mode === 'OVERHEAD') desired = root.clone().add(new THREE.Vector3(0, distance * 3.8, 0.1));
     else if (mode === 'ORBIT') {
       const angle = state.time * 0.22;
-      desired = root.clone().add(new THREE.Vector3(Math.sin(angle) * distance * 1.5, rise * 1.9, Math.cos(angle) * distance * 1.5));
-    } else desired = root.clone().addScaledVector(forward, -distance).add(new THREE.Vector3(0, rise, 0));
-    // The camera should not cut into cliffs when following a grounded dragon.
+      desired = root.clone().add(new THREE.Vector3(
+        Math.sin(angle) * distance * 1.5, rise * 1.9, Math.cos(angle) * distance * 1.5,
+      ));
+    } else desired = root.clone().addScaledVector(forward, -distance)
+      .add(new THREE.Vector3(0, rise, 0));
     desired.y = Math.max(desired.y, heightAt(desired.x, desired.z) + 1.25);
     this.camera.up.set(0, 1, 0);
-    const smoothing = instant ? 1 : 1 - Math.exp(-dt * 4.5);
-    this.camera.position.lerp(desired, smoothing);
+    this.camera.position.lerp(desired, instant ? 1 : 1 - Math.exp(-dt * 4.5));
     this.camera.lookAt(mode === 'DRAGON EYE'
-      ? target.clone().addScaledVector(forward, 80)
-      : target);
+      ? target.clone().addScaledVector(forward, 80) : target);
   }
 
   private updateHud(dt: number): void {
     this.hudAccum += dt;
     if (this.hudAccum < 0.12) return;
     this.hudAccum = 0;
-    const ground = Math.max(0, heightAt(this.flight.x, this.flight.z));
-    this.altitudeText.textContent = this.flight.mode === 'ground' ? '0' : Math.round(Math.max(0, this.flight.y - ground)).toString();
-    this.speedText.textContent = Math.round(Math.abs(this.flight.speed)).toString();
+    const rider = this.flight.controlTarget === 'rider';
+    const current = this.focusPosition();
+    const swimming = rider ? this.flight.riderMode !== 'ground' :
+      this.flight.mode === 'surface' || this.flight.mode === 'underwater';
+    const belowSurface = this.isUnderwater();
+    this.altLabel.textContent = belowSurface ? 'DEPTH' : swimming ? 'SEA LEVEL' : 'GROUND CLEARANCE';
+    this.altitudeText.textContent = belowSurface
+      ? String(Math.round(Math.max(0, SEA_LEVEL - current.y)))
+      : swimming || (rider ? this.flight.riderMode === 'ground' : this.flight.mode === 'ground')
+        ? '0' : String(Math.round(Math.max(0, current.y - Math.max(0, heightAt(current.x, current.z)))));
+    this.speedText.textContent = Math.round(Math.abs(rider ? this.flight.riderSpeed : this.flight.speed)).toString();
     this.formName.textContent = FORMS[this.flight.form].label.toUpperCase();
+    this.focusName.textContent = rider ? 'RIDER' : 'DRAGON';
     this.modeName.textContent = this.flight.transition?.phase === 'landing' ? 'LANDING'
       : this.flight.transition?.phase === 'takingOff' ? 'TAKING OFF'
-      : this.flight.mode === 'ground' ? 'ON LAND' : 'IN FLIGHT';
+      : this.flight.transition?.phase === 'splashdown' ? 'SPLASHDOWN'
+      : this.flight.transition?.phase === 'waterLaunch' ? 'WATER LAUNCH'
+      : (rider ? this.flight.riderMode : this.flight.mode) === 'ground'
+        ? (rider ? 'ON FOOT' : 'ON LAND')
+      : (rider ? this.flight.riderMode : this.flight.mode) === 'surface' ? 'SWIMMING'
+      : (rider ? this.flight.riderMode : this.flight.mode) === 'underwater' ? 'DIVING' : 'IN FLIGHT';
     document.querySelectorAll<HTMLButtonElement>('[data-form]').forEach((button) => {
       const selected = button.dataset.form === this.flight.form;
       button.setAttribute('aria-pressed', String(selected));
     });
     this.cameraText.textContent = cameraModes[this.cameraIndex] ?? 'CHASE';
-    const target = this.discoveries.nearest(this.flight.x, this.flight.z);
+    const target = this.discoveries.nearest(current.x, current.z);
     this.waypointName.textContent = target?.name ?? 'Coast fully charted';
-    this.waypointDistance.textContent = target ? Math.round(target.meters) + ' m' : '4 of 4 discoveries';
+    this.waypointDistance.textContent = target ? Math.round(target.meters) + ' m' : LANDMARKS.length + ' discoveries found';
     if (this.diagnostics.hidden) return;
     const render = this.renderer.info.render;
     this.diagnostics.textContent = [
@@ -216,12 +303,14 @@ export class Game {
       'XYZ ' + Math.round(this.flight.x) + ', ' + Math.round(this.flight.y) + ', ' + Math.round(this.flight.z),
       'DRAGON FORM ' + this.flight.form,
       'TRAVERSAL ' + (this.flight.transition?.phase ?? this.flight.mode),
+      'CONTROL ' + this.flight.controlTarget,
+      'RIDER ' + this.flight.riderMode,
       'TERRAIN TILES ' + this.coast.tileCount(),
-      'DISCOVERED ' + this.discoveries.count() + '/4',
+      'DISCOVERED ' + this.discoveries.count() + '/' + LANDMARKS.length,
       'DRAWS ' + render.calls,
       'TRIANGLES ' + render.triangles,
       'WEBGL ' + this.renderer.capabilities.isWebGL2,
-      'CURRENT GATE G2 EARLY',
+      'CURRENT GATE G3 WATER / RIDER PREVIEW',
     ].join('\n');
   }
 
@@ -244,7 +333,9 @@ export class Game {
     }
     if (this.input.take('camera')) this.cameraIndex = (this.cameraIndex + 1) % cameraModes.length;
     if (!this.paused) {
-      if (this.input.take('land')) this.notify(toggleLanding(this.flight));
+      if (this.input.take('land')) this.landAction();
+      if (this.input.take('switchFocus')) this.notify(toggleRiderControl(this.flight));
+      if (this.input.take('submerge')) this.diveAction();
       for (const form of FORM_ORDER) {
         if (this.input.take(form)) this.setForm(form);
       }
@@ -260,8 +351,9 @@ export class Game {
         this.accumulator -= FIXED_DT;
         steps++;
       }
-      this.coast.update(this.flight.x, this.flight.z);
-      const found = this.discoveries.update(this.flight.x, this.flight.z);
+      const focus = this.focusPosition();
+      this.coast.update(focus.x, focus.z);
+      const found = this.discoveries.update(focus.x, focus.z);
       if (found.length) {
         this.reveal.textContent = '✦  DISCOVERED  ·  ' + found.map((site) => site.name).join(', ');
         this.revealTimer = 4.2;
@@ -269,7 +361,10 @@ export class Game {
       this.revealTimer = Math.max(0, this.revealTimer - elapsed);
       this.reveal.hidden = this.revealTimer === 0;
     } else this.accumulator = 0;
-    this.coast.animate(this.flight.time, this.flight.x, this.flight.y, this.flight.z);
+    const focus = this.focusPosition();
+    this.coast.setUnderwater(this.isUnderwater());
+    this.waterTint.hidden = !this.isUnderwater();
+    this.coast.animate(this.flight.time, focus.x, focus.y, focus.z);
     this.dragon.update(this.flight);
     this.updateCamera(elapsed);
     this.renderer.render(this.scene, this.camera);
