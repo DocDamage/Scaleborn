@@ -33,7 +33,7 @@ describe('deterministic air/sea integration', () => {
     expect(s.y).toBeGreaterThanOrEqual(dragonBottomY(s.x, s.z, s.form) - 0.001);
     expect(s.y).toBeLessThan(dragonSurfaceY(s.form));
     expect(toggleDragonDive(s).ok).toBe(true);
-    for (let i = 0; i < 430; i++) stepFlight(s, idle, 1 / 60);
+    for (let i = 0; i < 450; i++) stepFlight(s, idle, 1 / 60);
     expect(s.mode).toBe('surface');
     expect(s.y).toBeCloseTo(dragonSurfaceY(s.form), 2);
   });

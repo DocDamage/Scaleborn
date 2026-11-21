@@ -63,11 +63,16 @@ describe('three-form dragon contract', () => {
     s.y = heightAt(s.x, s.z) + FORMS.rideable.standHeight;
     expect(requestDragonForm(s, 'giant').ok).toBe(false);
   });
-  it('never lands on open water or from high altitude', () => {
+  it('splashes into deep water but refuses unsafe high-altitude entry', () => {
     const sea = newFlightState();
     sea.x = 1900; sea.z = 1900; sea.y = 12;
-    expect(toggleLanding(sea).ok).toBe(false);
-    expect(sea.mode).toBe('air');
+    expect(toggleLanding(sea).ok).toBe(true);
+    expect(sea.mode).toBe('surface');
+    expect(sea.transition?.phase).toBe('splashdown');
+    const highSea = newFlightState();
+    highSea.x = 1900; highSea.z = 1900; highSea.y = 125;
+    expect(toggleLanding(highSea).ok).toBe(false);
+    expect(highSea.mode).toBe('air');
     const high = land(); high.y += 200;
     expect(toggleLanding(high).ok).toBe(false);
   });
