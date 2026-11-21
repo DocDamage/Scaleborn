@@ -57,8 +57,8 @@ export class FlightInput {
       turn: Math.max(-1, Math.min(1, turn)),
       pitch: Math.max(-1, Math.min(1, pitch)),
       bank: has('bankRight') - has('bankLeft'),
-      boost: has('boost'),
-      flap: has('flap'),
+      boost: Boolean(has('boost')),
+      flap: Boolean(has('flap')),
     };
   }
 
