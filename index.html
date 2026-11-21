@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#10232f" />
+    <meta name="description" content="Explore Azure Coast on the wings of an original dragon companion." />
+    <title>Scaleborn — Azure Coast</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game" aria-label="Scaleborn 3D game view"></canvas>
+      <div id="vignette" aria-hidden="true"></div>
+      <header class="titlebar">
+        <span class="eyebrow">AZURE COAST · EXPLORATION BUILD</span>
+        <h1>Scaleborn</h1>
+      </header>
+      <section id="hud" aria-label="Flight information">
+        <div class="stat"><span>GROUND CLEARANCE</span><strong id="altitude">—</strong><small>meters</small></div>
+        <div class="stat"><span>AIRSPEED</span><strong id="speed">—</strong><small>m/s</small></div>
+        <div class="stat"><span>VIEW</span><strong id="camera-name">—</strong></div>
+        <div class="stat"><span>REGION</span><strong>Azure Coast</strong></div>
+      </section>
+      <div id="crosshair" aria-hidden="true"><span></span><span></span></div>
+      <div id="controls-hint">W/S climb/dive · A/D turn · Shift surge · Q/E bank · V camera · H help · F3 diagnostics</div>
+      <section id="diagnostics" hidden aria-label="Diagnostics"></section>
+      <section id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+        <div class="intro">
+          <div class="sigil">✦</div>
+          <p class="eyebrow">CHAPTER ZERO · THE FIRST FLIGHT</p>
+          <h2 id="welcome-title">The Azure Coast awaits.</h2>
+          <p>Your dragon knows the winds. Explore the golden cliffs, fishing harbor and distant island. This is an early, playable development build—not the complete adventure.</p>
+          <div class="keys">
+            <span>W/S — pitch</span><span>A/D — turn</span><span>Mouse — look/steer</span>
+            <span>Shift — speed surge</span><span>Q/E — bank</span><span>V — change view</span>
+          </div>
+          <button id="start" type="button">Take flight</button>
+          <small>Click the game to capture the mouse. Press Esc to release it. Audio is muted in this build.</small>
+        </div>
+      </section>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
