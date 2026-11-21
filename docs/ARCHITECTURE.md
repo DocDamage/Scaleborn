@@ -57,3 +57,21 @@ No paid assets. No remote CDN dependencies. Browser assets can later be exported
 - Small dragon can be controlled independently, but returning to the rider is required before mounting. Co-op puzzles, shoulder perch and rider walking are explicitly future work.
 - Dragon mesh scale affects visuals only; gameplay collision dimensions come from immutable form configuration. Adaptation to Unreal must preserve this separation.
 - Three-bone skinned wing mesh construction is an initial procedural animation rig, not complete production animation retargeting or GLB export.
+
+### Animated G2 traversal contract (follow-up)
+
+Landing and takeoff use renderer-independent time-stepped transitions in
+`traversalTransition.ts`. Input is ignored for horizontal movement during the
+fixed 1.45-second descent and 1.15-second ascent; size transformations are
+blocked until the active transition completes. `animationPose.ts` maps
+simulation state to normalized pose channels that drive the current three-bone
+wing skins, diagonal walking gait, head, tail and rider lean. Visuals read the
+**interpolated** simulation height rather than snapping directly to ground height.
+
+The `?start=meadow` route starts at the fixed training meadow for repeatable
+manual and Chromium checks. It does not introduce a new world seed or save state.
+
+Do not conflate logical `mode` (ground/air, switched when the transition
+begins) with `transition.phase` (landing/takingOff); HUD and animation
+must report the latter until completed. Full obstacle collisions and
+animation-root-motion are intentionally deferred.

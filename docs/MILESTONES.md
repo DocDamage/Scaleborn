@@ -14,8 +14,8 @@ These gates describe **completion criteria**, not completed claims. Deliver one 
 
 ## Snapshot: Azure Coast G1 + early G2 dragon systems
 
-- **Implemented draft:** 3 dragon sizes, conservative clearance checks, grounded locomotion and takeoff/landing controls, an independently sized dismounted rider, deforming skinned wing animation; stitched 32:8 terrain tile edges, shader-rendered animated ocean, shoreline foam geometry, a golden-hour shader sky and clustered clouds, four discoverable Azure Coast landmarks including ruins and sea arch; browser scaffold, first procedural terrain tiles, 4 km world contract, seeded biome query, coastal cottages/trees/rocks, lighthouse, cloud banks, original dragon silhouette, rider model, assisted flight maths, cameras, HUD, diagnostics and unit tests.
-- **Needs validation:** screenshot/browser smoke test and shader compilation, CI result, iGPU benchmark, color/lighting tuning, foam seam QA and clean dependency lock.
+- **Implemented draft:** 3 dragon sizes, conservative clearance checks, fixed-step animated landing/takeoff transitions, grounded locomotion with diagonal walking gait, independent rider scale, skinned wing fold/unfold and breath/neck/tail pose channels; stitched 32:8 terrain tile edges, shader-rendered animated ocean, shoreline foam geometry, a golden-hour shader sky and clustered clouds, four discoverable Azure Coast landmarks including ruins and sea arch; browser scaffold, first procedural terrain tiles, 4 km world contract, seeded biome query, coastal cottages/trees/rocks, lighthouse, cloud banks, original dragon silhouette, rider model, assisted flight maths, cameras, HUD, diagnostics and unit tests.
+- **Needs validation:** browser transition screenshots, CI result, real-world landing/takeoff collision QA, iGPU benchmark, painterly material work, shore foam QA and clean dependency lock.
 - **Not implemented:** completed G1/G2 art and animation, shoulder perch, rider-on-foot movement and cooperative puzzles; water diving/swimming, NPCs, quests, boss combat, audio, saves and asset export.
 
 ## Portability and development discipline

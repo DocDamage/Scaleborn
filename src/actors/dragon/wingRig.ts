@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { DragonPose } from './animationPose';
 
 /**
  * Original code-built deforming dragon wing.
@@ -94,18 +95,16 @@ export function createWingRig(side: -1 | 1): WingRig {
   return { root, mesh, shoulder, elbow, tip };
 }
 
-export function poseWing(rig: WingRig, side: -1 | 1,
-  phase: number, flightMode: 'air' | 'ground', fast: boolean): void {
-  if (flightMode === 'ground') {
-    rig.shoulder.rotation.z = -side * 0.76;
-    rig.elbow.rotation.z = -side * 0.46;
-    rig.tip.rotation.z = -side * 0.22;
-    rig.shoulder.rotation.x = Math.sin(phase * 0.6) * 0.025;
-  } else {
-    const flap = Math.sin(phase) * (fast ? 0.45 : 0.31) + 0.11;
-    rig.shoulder.rotation.z = side * flap;
-    rig.elbow.rotation.z = side * (0.15 + Math.sin(phase - 0.55) * (fast ? 0.42 : 0.22));
-    rig.tip.rotation.z = side * (0.08 + Math.sin(phase - 1.0) * 0.20);
-    rig.shoulder.rotation.x = Math.sin(phase + 0.3) * 0.065;
-  }
+/** Blend continuously between folded, launch, landing and cruise wing poses. */
+export function poseWing(rig: WingRig, side: -1 | 1, pose: DragonPose): void {
+  const phase = pose.flapPhase;
+  const fold = Math.max(0, Math.min(1, pose.wingFold));
+  const openShoulder = side * (0.11 + Math.sin(phase) * pose.flapAmount);
+  const openElbow = side * (0.15 + Math.sin(phase - 0.55) * pose.flapAmount * 0.85);
+  const openTip = side * (0.08 + Math.sin(phase - 1.0) * pose.flapAmount * 0.50);
+  rig.shoulder.rotation.z = openShoulder * (1 - fold) - side * 0.76 * fold;
+  rig.elbow.rotation.z = openElbow * (1 - fold) - side * 0.46 * fold;
+  rig.tip.rotation.z = openTip * (1 - fold) - side * 0.22 * fold;
+  rig.shoulder.rotation.x = Math.sin(phase + 0.3) * 0.065 * (1 - fold)
+    + Math.sin(phase * 0.6) * 0.025 * fold;
 }

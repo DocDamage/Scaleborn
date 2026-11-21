@@ -3,6 +3,7 @@ import type { FlightState } from './flight';
 import { FORMS } from './forms';
 import { heightAt } from '../../world/terrain';
 import { createWingRig, poseWing } from './wingRig';
+import { dragonPose } from './animationPose';
 
 const skin = new THREE.MeshStandardMaterial({ color: 0x263f4a, roughness: 0.65, metalness: 0.11 });
 const highlight = new THREE.MeshStandardMaterial({ color: 0x426b74, roughness: 0.62, metalness: 0.09 });
@@ -79,6 +80,7 @@ export class DragonVisual {
   private readonly tail = new THREE.Group();
   private readonly head = new THREE.Group();
   private readonly eyes: THREE.Mesh[] = [];
+  private readonly legs: Array<{ group: THREE.Group; diagonal: boolean }> = [];
   private displayedScale = FORMS.rideable.visualScale;
   private previousTime = 0;
 
@@ -106,16 +108,23 @@ export class DragonVisual {
       ear.rotation.z = side * -0.55;
     }
     this.body.add(this.head);
-    for (const side of [-0.55, 0.55]) {
-      for (const longitudinal of [-1.05, 1.03]) {
-        ellipsoid(this.body, skin, [side, -0.62, longitudinal], [0.27, 0.65, 0.30]);
-        ellipsoid(this.body, ridges, [side, -1.13, longitudinal - 0.12], [0.32, 0.15, 0.40]);
-        for (const toe of [-0.13, 0.13]) {
+    // Hinged procedural legs: diagonal pairs step in opposition on land.
+    for (const side of [-1, 1]) {
+      for (const front of [true, false]) {
+        const leg = new THREE.Group();
+        const z = front ? -1.05 : 1.03;
+        leg.name = 'leg.' + (front ? 'front' : 'hind') + (side < 0 ? 'Left' : 'Right');
+        leg.position.set(side * 0.55, -0.45, z);
+        ellipsoid(leg, skin, [0, -0.18, 0], [0.27, 0.47, 0.30]);
+        ellipsoid(leg, ridges, [0, -0.68, -0.12], [0.31, 0.16, 0.39]);
+        for (const toe of [-0.14, 0.14]) {
           const claw = new THREE.Mesh(new THREE.ConeGeometry(0.078, 0.30, 6), highlight);
           claw.rotation.x = -Math.PI / 2;
-          claw.position.set(side + toe, -1.15, longitudinal - 0.42);
-          this.body.add(claw);
+          claw.position.set(toe, -0.71, -0.40);
+          leg.add(claw);
         }
+        this.body.add(leg);
+        this.legs.push({ group: leg, diagonal: (side < 0) === front });
       }
     }
     this.body.add(this.wingL.root, this.wingR.root);
@@ -144,20 +153,26 @@ export class DragonVisual {
     this.displayedScale += (targetScale - this.displayedScale) * Math.min(1, dt * 4.8);
     if (Math.abs(targetScale - this.displayedScale) < 0.0003) this.displayedScale = targetScale;
     this.body.scale.setScalar(this.displayedScale);
-    this.root.position.set(state.x,
-      state.mode === 'ground'
-        ? heightAt(state.x, state.z) + this.displayedScale * 1.31
-        : state.y,
-      state.z);
+    const pose = dragonPose(state);
+    // Physics already owns the ground height. Never snap the render root on F.
+    this.root.position.set(state.x, state.y, state.z);
     this.root.rotation.order = 'YXZ';
-    this.root.rotation.set(state.mode === 'air' ? state.pitch : 0, -state.yaw, state.roll);
+    this.root.rotation.set(state.pitch, -state.yaw, state.roll);
+    this.body.position.y = pose.bodyBob * this.displayedScale;
 
-    const fast = state.speed > FORMS[state.form].cruise * 1.38;
-    const phase = state.time * (fast ? 8.8 : 5.5);
-    poseWing(this.wingL, -1, phase, state.mode, fast);
-    poseWing(this.wingR, 1, phase, state.mode, fast);
-    this.tail.rotation.y = Math.sin(state.time * 2.2) * 0.10 - state.roll * 0.21;
+    poseWing(this.wingL, -1, pose);
+    poseWing(this.wingR, 1, pose);
+    for (const leg of this.legs) {
+      const phase = pose.gaitPhase + (leg.diagonal ? 0 : Math.PI);
+      const stride = Math.sin(phase) * pose.gaitAmount;
+      leg.group.rotation.x = pose.name === 'walk' ? stride * 0.43
+        : state.mode === 'air' ? -0.19 : 0;
+      leg.group.position.y = -0.45 + (pose.name === 'walk'
+        ? Math.max(0, Math.sin(phase)) * pose.gaitAmount * 0.08 : 0);
+    }
+    this.tail.rotation.y = pose.tailAngle;
     this.tail.rotation.x = Math.sin(state.time * 1.65) * 0.07;
+    this.head.rotation.x = pose.neckAngle;
     this.head.rotation.y = -state.roll * 0.15 + Math.sin(state.time * 0.7) * 0.028;
     const blinking = (state.time % 7.3) > 7.08;
     for (const eye of this.eyes) eye.scale.y = blinking ? 0.025 : 0.16;
@@ -172,7 +187,7 @@ export class DragonVisual {
     } else {
       if (this.rider.parent !== this.root) this.root.add(this.rider);
       this.rider.position.set(0, this.displayedScale * 0.72, -this.displayedScale * 0.40);
-      this.rider.rotation.set(-state.pitch * 0.13, 0, -state.roll * 0.23);
+      this.rider.rotation.set(-state.pitch * 0.13, 0, pose.riderLean);
       this.rider.visible = true;
     }
   }

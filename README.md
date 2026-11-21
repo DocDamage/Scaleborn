@@ -4,7 +4,7 @@
 
 ## Current state: G0/G1 and early G2 dragon flight/size prototype
 
-This branch contains a playable **first-flight preview**: an original code-generated dragon and rider, deterministic seam-stitched Azure Coast terrain streamed in tiles, animated shader ocean and coastal foam, layered cloud banks, clustered trees, coastal rocks, generated harbor cottages and piers, lighthouse, ancient temple and sea arch, four discoverable landmarks, three dragon forms with distinct flight profiles, safe landing/takeoff, a directly controlled small dragon on land, separately scaled rider, deforming three-bone wings and multiple cameras. It does **not** yet include full rider-on-foot control, swimming, underwater exploration, combat, quests, saves, audio, asset-export tooling or finished painterly textures. Dragon transformations are an early G2 implementation: small form requires landing before dismount; full free midair remounting, shoulder riding and co-op puzzles are later. These remain planned work, not hidden or simulated features.
+This branch contains a playable **first-flight preview**: an original code-generated dragon and rider, deterministic seam-stitched Azure Coast terrain streamed in tiles, animated shader ocean and coastal foam, layered cloud banks, clustered trees, coastal rocks, generated harbor cottages and piers, lighthouse, ancient temple and sea arch, four discoverable landmarks, three dragon forms with distinct flight profiles, animated landing/takeoff over fixed time, a directly controlled small dragon on land, separately scaled rider, deforming three-bone wings and multiple cameras. It does **not** yet include full rider-on-foot control, swimming, underwater exploration, combat, quests, saves, audio, asset-export tooling or finished painterly textures. Dragon transformations are an early G2 implementation: small form requires landing before dismount; full free midair remounting, shoulder riding and co-op puzzles are later. These remain planned work, not hidden or simulated features.
 
 The 4 × 4 km world and all objects use meters with Y up. The packaged seed is `0x5ca1e0`. Geometry is procedurally generated and currently requires no third-party art/audio files.
 
@@ -37,7 +37,7 @@ Open the URL printed by Vite. Click **Take flight**. Press Esc to release pointe
 
 - **G0** — architecture, strict TypeScript, Vite, lint/tests/build, seeded generation and asset registry. Lockfile and smoke/benchmark verification remain.
 - **G1** — painterly Azure Coast, recognizable landmarks, world-streaming quality/LOD, water, foliage and coastal architecture. **In progress:** stitched 32:8 terrain LOD edges, shader ocean, foam contours, temple/arch and discoverable landmarks; painterly art direction and benchmarks remain.
-- **G2** — polished flight dynamics, original procedural dragon/rider rigs, expressive animation and all three dragon sizes. **In progress:** 3 size modes, separate physics profiles, conservative collision checks, land/takeoff, controllable small dragon, independent rider scale and skinned wing deformation. Real skeletal rig export, transitions, complete locomotion and animation QA remain.
+- **G2** — polished flight dynamics, original procedural dragon/rider rigs, expressive animation and all three dragon sizes. **In progress:** 3 size modes, distinct physics profiles, conservative collision proxies, eased landing/takeoff, diagonal ground gait, controllable small dragon, independent rider scale and animated skinned wing deformation. Real skeletal rig export, transitions, complete locomotion and animation QA remain.
 - **G3** — seamless on-foot, riding, swimming and underwater traversal, co-op exploration.
 - **G4** — fire/elemental combat, threats and rider/dragon bond interactions.
 - **G5** — story opening, villages/NPCs, quests, progression and persistent saves.
@@ -65,8 +65,12 @@ integrated-GPU target. That requires profiling on the specified hardware.
 
 **3 — Giant:** an approximately 12-meter-long dragon with stronger acceleration and wider turns. Transformation checks collision clearance to terrain and authored structures; crowded spaces block growth.
 
-**F — Land or take off:** you can land only within 22 meters of clear solid terrain. The prototype teleports vertically to a safe flight floor on takeoff (a takeoff animation and full world collision remain upcoming).
+**F — Land or take off:** you can land only within 22 meters of clear solid terrain. Landing now takes 1.45 seconds and takeoff 1.15 seconds, with physically interpolated vertical movement and animated wing folding/unfolding; full obstacle collision and animation authoring remain upcoming.
 
 None of these actions consumes stamina, magic, or a transformation charge. The geometry and hit proxies are generated in code and identified by stable IDs for future replacement.
 
 **Known limitations:** the small dragon cannot yet ride on the girl's shoulders; on-foot rider control, swimming and other G3 systems have not been developed. The collision proxies are conservative circles/height bounds, not per-mesh physics. The dragon form conversion currently preserves entity identity but does not serialize save data.
+
+### Repeatable landing test
+
+Launch `npm run dev` and open `http://localhost:5173/?start=meadow` to begin above a safe training meadow. Press **F** to land (a 1.45-second descent), **1** to shrink and dismount, **2** to remount nearby, and **F** to launch (1.15 seconds). You cannot transform or trigger another traversal action while a landing or launch is underway. The browser smoke test exercises this path automatically.

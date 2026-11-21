@@ -61,6 +61,13 @@ export class Game {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.22;
     this.camera = new THREE.PerspectiveCamera(71, window.innerWidth / window.innerHeight, 0.2, 6500);
+    // A seeded, safe location for repeatable manual and browser landing QA.
+    if (new URLSearchParams(window.location.search).get('start') === 'meadow') {
+      this.flight.x = -555;
+      this.flight.z = 100;
+      this.flight.y = heightAt(-555, 100) + 18;
+      this.flight.yaw = 0;
+    }
     this.coast = new AzureCoast(this.scene);
     this.dragon.attach(this.scene);
     this.coast.update(this.flight.x, this.flight.z);
@@ -152,7 +159,9 @@ export class Game {
     this.altitudeText.textContent = this.flight.mode === 'ground' ? '0' : Math.round(Math.max(0, this.flight.y - ground)).toString();
     this.speedText.textContent = Math.round(Math.abs(this.flight.speed)).toString();
     this.formName.textContent = FORMS[this.flight.form].label.toUpperCase();
-    this.modeName.textContent = this.flight.mode === 'ground' ? 'ON LAND' : 'IN FLIGHT';
+    this.modeName.textContent = this.flight.transition?.phase === 'landing' ? 'LANDING'
+      : this.flight.transition?.phase === 'takingOff' ? 'TAKING OFF'
+      : this.flight.mode === 'ground' ? 'ON LAND' : 'IN FLIGHT';
     document.querySelectorAll<HTMLButtonElement>('[data-form]').forEach((button) => {
       const selected = button.dataset.form === this.flight.form;
       button.setAttribute('aria-pressed', String(selected));
@@ -168,7 +177,7 @@ export class Game {
       'FPS ' + this.fps,
       'XYZ ' + Math.round(this.flight.x) + ', ' + Math.round(this.flight.y) + ', ' + Math.round(this.flight.z),
       'DRAGON FORM ' + this.flight.form,
-      'TRAVERSAL ' + this.flight.mode,
+      'TRAVERSAL ' + (this.flight.transition?.phase ?? this.flight.mode),
       'TERRAIN TILES ' + this.coast.tileCount(),
       'DISCOVERED ' + this.discoveries.count() + '/4',
       'DRAWS ' + render.calls,
