@@ -36,13 +36,14 @@ Stable asset IDs and JSON-like definitions transfer; JavaScript, Three.js materi
 - **typescript-eslint**: MIT; TypeScript rules.
 - **@types/three**: MIT; TypeScript declarations.
 - **@eslint/js**: MIT; ESLint flat config.
+- **Playwright**: Apache-2.0; dev-only Chromium software-WebGL smoke and screenshot testing (not shipped).
 
 No paid assets. No remote CDN dependencies. Browser assets can later be exported with dedicated offline Blender and GLB tooling. Dependency size and iGPU performance must be measured rather than assumed.
 
 ## Known engineering gaps
 
 1. `package-lock.json` must be generated and committed before declaring reproducibility.
-2. Browser smoke testing and integrated-GPU benchmarks are required before claiming 60 FPS.
+2. Chromium software-WebGL smoke testing is available as a GitHub Actions workflow; real integrated-GPU benchmarks are still required before claiming 60 FPS.
 3. 32:8 terrain LOD transitions are edge-height-stitched in G1; transition normal differences, foam continuity, and runtime screenshot QA remain.
 4. Foliage is globally instanced rather than chunk-streamed; profile large-world memory before expansion.
 5. Generated dragon model uses animated wing pivots, not a complete deforming bone rig. G2 requires an offline generator with GLB output and animation QA.

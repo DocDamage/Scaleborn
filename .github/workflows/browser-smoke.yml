@@ -1,0 +1,27 @@
+name: Browser smoke and screenshot
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Start the local game
+        run: |
+          npm run dev -- --host 127.0.0.1 > /tmp/scaleborn-vite.log 2>&1 &
+      - run: npm run test:browser
+      - name: Save preview image
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scaleborn-azure-coast-smoke
+          path: artifacts/azure-coast-smoke.png
+          if-no-files-found: warn

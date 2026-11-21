@@ -42,3 +42,15 @@ Open the URL printed by Vite. Click **Take flight**. Press Esc to release pointe
 - **G6** — optimization, replacement art pipeline, accessibility, packaging and Unreal port plan.
 
 See `docs/ARCHITECTURE.md` and `docs/MILESTONES.md` for contracts, omissions and acceptance gates.
+
+## Browser smoke test and visual QA
+
+The **Browser smoke and screenshot** GitHub Actions workflow runs Chromium with
+software WebGL, clicks into flight, exercises the camera toggle, checks the HUD,
+rejects browser console errors, and attaches a 1280 × 720 PNG screenshot.
+Run it locally after `npm install` and `npx playwright install chromium`
+with `npm run dev` active, then `npm run test:browser`. The screenshot lives
+at `artifacts/azure-coast-smoke.png` (ignored by git).
+
+**Important:** a successful software-WebGL smoke test does not prove the 60 FPS
+integrated-GPU target. That requires profiling on the specified hardware.
