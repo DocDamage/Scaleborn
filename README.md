@@ -4,7 +4,7 @@
 
 ## Current state: early G0/G1 foundation (not the complete game)
 
-This branch contains a playable **first-flight preview**: an original code-generated dragon and rider, deterministic Azure Coast terrain streamed in tiles, ocean, cloud banks, trees, coastal rocks, generated harbor cottages and piers, lighthouse, simple assisted flight and multiple cameras. It does **not** yet include combat, on-foot controls, swimming, underwater exploration, transformation, quests, saves, audio, asset-export tooling or finished painterly textures. These remain planned work, not hidden or simulated features.
+This branch contains a playable **first-flight preview**: an original code-generated dragon and rider, deterministic seam-stitched Azure Coast terrain streamed in tiles, animated shader ocean and coastal foam, cloud banks, trees, coastal rocks, generated harbor cottages and piers, lighthouse, ancient temple and sea arch, four discoverable landmarks, simple assisted flight and multiple cameras. It does **not** yet include combat, on-foot controls, swimming, underwater exploration, transformation, quests, saves, audio, asset-export tooling or finished painterly textures. These remain planned work, not hidden or simulated features.
 
 The 4 × 4 km world and all objects use meters with Y up. The packaged seed is `0x5ca1e0`. Geometry is procedurally generated and currently requires no third-party art/audio files.
 
@@ -34,7 +34,7 @@ Open the URL printed by Vite. Click **Take flight**. Press Esc to release pointe
 ## Milestone order
 
 - **G0** — architecture, strict TypeScript, Vite, lint/tests/build, seeded generation and asset registry. Lockfile and smoke/benchmark verification remain.
-- **G1** — painterly Azure Coast, recognizable landmarks, world-streaming quality/LOD, water, foliage and coastal architecture. **Early draft**, not art-complete.
+- **G1** — painterly Azure Coast, recognizable landmarks, world-streaming quality/LOD, water, foliage and coastal architecture. **In progress:** stitched 32:8 terrain LOD edges, shader ocean, foam contours, temple/arch and discoverable landmarks; painterly art direction and benchmarks remain.
 - **G2** — polished flight dynamics, original procedural dragon/rider rigs, expressive animation and all three dragon sizes. **Early input/flight prototype only**.
 - **G3** — seamless on-foot, riding, swimming and underwater traversal, co-op exploration.
 - **G4** — fire/elemental combat, threats and rider/dragon bond interactions.

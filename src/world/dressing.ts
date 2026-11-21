@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { addAncientLandmarks } from './landmarks';
 import { rng, hash2 } from '../core/random';
 import { AZURE_SEED, heightAt, LANDMARKS } from './terrain';
 
@@ -163,6 +164,7 @@ function clouds(scene: THREE.Scene): void {
 export function addCoastalDressing(scene: THREE.Scene): void {
   makeFoliage(scene);
   clouds(scene);
+  addAncientLandmarks(scene);
   const harbor = LANDMARKS.find((l) => l.id === 'azure.harbor');
   const beacon = LANDMARKS.find((l) => l.id === 'azure.lighthouse');
   if (!harbor || !beacon) throw new Error('Missing required Azure Coast landmarks');
