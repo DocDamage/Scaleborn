@@ -3,6 +3,7 @@ import type { FlightState } from './flight';
 import { FORMS } from './forms';
 import { createWingRig, poseWing } from './wingRig';
 import { dragonPose } from './animationPose';
+import { riderPose } from '../rider/pose';
 
 const skin = new THREE.MeshStandardMaterial({ color: 0x263f4a, roughness: 0.65, metalness: 0.11 });
 const highlight = new THREE.MeshStandardMaterial({ color: 0x426b74, roughness: 0.62, metalness: 0.09 });
@@ -35,9 +36,18 @@ function makeRider(): THREE.Group {
   ellipsoid(group, skinMaterial, [0, 1.38, -0.02], [0.23, 0.27, 0.22]);
   ellipsoid(group, hair, [0, 1.56, 0.01], [0.23, 0.14, 0.24]);
   for (const side of [-1, 1]) {
-    ellipsoid(group, coat, [side * 0.29, 0.77, -0.18], [0.11, 0.38, 0.12]);
-    ellipsoid(group, skinMaterial, [side * 0.25, 0.41, -0.38], [0.12, 0.12, 0.12]);
-    ellipsoid(group, cloth, [side * 0.22, 0.27, 0.26], [0.15, 0.3, 0.16]);
+    const name = side < 0 ? 'left' : 'right';
+    const arm = new THREE.Group();
+    arm.name = 'rider.' + name + 'Arm';
+    arm.position.set(side * 0.29, 1.07, -0.01);
+    ellipsoid(arm, coat, [0, -0.30, -0.17], [0.11, 0.38, 0.12]);
+    ellipsoid(arm, skinMaterial, [side * -0.04, -0.67, -0.35], [0.12, 0.12, 0.12]);
+    group.add(arm);
+    const leg = new THREE.Group();
+    leg.name = 'rider.' + name + 'Leg';
+    leg.position.set(side * 0.22, 0.54, 0.14);
+    ellipsoid(leg, cloth, [0, -0.27, 0.12], [0.15, 0.30, 0.16]);
+    group.add(leg);
     const horn = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.29, 7), skinMaterial);
     horn.position.set(side * 0.14, 1.77, -0.05);
     horn.rotation.z = side * -0.3;
@@ -79,6 +89,12 @@ export class DragonVisual {
   private readonly tail = new THREE.Group();
   private readonly head = new THREE.Group();
   private readonly eyes: THREE.Mesh[] = [];
+  private readonly riderLimbs = {
+    leftArm: this.rider.getObjectByName('rider.leftArm') as THREE.Group,
+    rightArm: this.rider.getObjectByName('rider.rightArm') as THREE.Group,
+    leftLeg: this.rider.getObjectByName('rider.leftLeg') as THREE.Group,
+    rightLeg: this.rider.getObjectByName('rider.rightLeg') as THREE.Group,
+  };
   private readonly legs: Array<{ group: THREE.Group; diagonal: boolean }> = [];
   private displayedScale = FORMS.rideable.visualScale;
   private previousTime = 0;
@@ -178,13 +194,18 @@ export class DragonVisual {
     const blinking = (state.time % 7.3) > 7.08;
     for (const eye of this.eyes) eye.scale.y = blinking ? 0.025 : 0.16;
 
+    const riderMotion = riderPose(state);
+    this.riderLimbs.leftArm.rotation.x = riderMotion.leftArm;
+    this.riderLimbs.rightArm.rotation.x = riderMotion.rightArm;
+    this.riderLimbs.leftLeg.rotation.x = riderMotion.leftLeg;
+    this.riderLimbs.rightLeg.rotation.x = riderMotion.rightLeg;
     if (state.form === 'small') {
       if (this.scene && this.rider.parent !== this.scene) this.scene.add(this.rider);
       this.rider.position.set(
         state.riderX, state.riderY, state.riderZ,
       );
       this.rider.rotation.set(
-        state.riderMode === 'underwater' ? -0.18 : 0,
+        riderMotion.torsoLean,
         -state.riderYaw,
         state.riderMode === 'ground' ? 0 : Math.sin(state.time * 4.2) * 0.08,
       );

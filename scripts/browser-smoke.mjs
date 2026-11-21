@@ -86,8 +86,16 @@ async function main() {
     await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'ON LAND', null, { timeout: 12000 });
     await page.keyboard.press('1');
     await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'SMALL COMPANION', null, { timeout: 6000 });
+    await page.keyboard.press('g');
+    await page.waitForFunction(() => document.querySelector('#tidegate-status')?.textContent === '1 / 2 RUNES', null, { timeout: 10000 });
     await page.keyboard.press('Tab');
     await page.waitForFunction(() => document.querySelector('#focus-name')?.textContent === 'RIDER', null, { timeout: 8000 });
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaStageRiderRune !== 'function') throw new Error('Tidegate QA hook missing');
+      window.__scalebornQaStageRiderRune();
+    });
+    await page.keyboard.press('g');
+    await page.waitForFunction(() => document.querySelector('#tidegate-status')?.textContent === 'TIDEBOUND SIGIL AWAKENED', null, { timeout: 10000 });
     await page.screenshot({ path: 'artifacts/azure-coast-small-meadow.png' });
     await page.keyboard.press('Tab');
     await page.waitForFunction(() => document.querySelector('#focus-name')?.textContent === 'DRAGON', null, { timeout: 8000 });
