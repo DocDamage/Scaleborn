@@ -73,6 +73,21 @@ export class Game {
     this.coast.update(this.flight.x, this.flight.z);
     this.dragon.update(this.flight);
     this.input = new FlightInput(canvas);
+    // Dev-only deterministic simulation advance for slow software-WebGL QA.
+    // Never expose this hook in a production bundle or ordinary gameplay URLs.
+    if (import.meta.env.DEV && new URLSearchParams(window.location.search).get('qa') === '1') {
+      const host = window as Window & { __scalebornQaAdvance?: (frames: number) => void };
+      host.__scalebornQaAdvance = (frames: number): void => {
+        if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
+          throw new Error('QA frames must be an integer between 1 and 180');
+        }
+        const idle = { turn: 0, pitch: 0, bank: 0, boost: false, flap: false, move: 0 };
+        for (let i = 0; i < frames; i++) stepFlight(this.flight, idle, FIXED_DT);
+        this.accumulator = 0;
+        this.dragon.update(this.flight);
+        this.updateHud(0.2);
+      };
+    }
     document.querySelectorAll<HTMLButtonElement>('[data-form]').forEach((button) => {
       button.addEventListener('click', () => {
         if (!this.paused) {

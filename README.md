@@ -74,3 +74,7 @@ None of these actions consumes stamina, magic, or a transformation charge. The g
 ### Repeatable landing test
 
 Launch `npm run dev` and open `http://localhost:5173/?start=meadow` to begin above a safe training meadow. Press **F** to land (a 1.45-second descent), **1** to shrink and dismount, **2** to remount nearby, and **F** to launch (1.15 seconds). You cannot transform or trigger another traversal action while a landing or launch is underway. The browser smoke test exercises this path automatically.
+
+### Software renderer test pacing
+
+The Chromium smoke test uses `?start=meadow&qa=1`. Development-only `__scalebornQaAdvance(frames)` advances a bounded number of real fixed-timestep simulation steps, so software rendering on a CI server cannot cause false timeouts during 1.45-second transitions. The hook is excluded in production builds and disabled for ordinary gameplay URLs. Browser tests still check the DOM and actual rendered WebGL scene.
