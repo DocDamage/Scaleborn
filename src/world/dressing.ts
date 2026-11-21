@@ -101,7 +101,7 @@ function makeFoliage(scene: THREE.Scene): void {
     const woodland = fbm(x * 0.002, z * 0.002, AZURE_SEED + 911, 3);
     if (y > 9 && y < 117 && hasRoom && woodland > -0.24 && random() > 0.14) {
       trees.push({ x, y, z, s: 3.6 + random() * 5.5, hue: random() });
-    } else if (y > -1 && random() > 0.48) {
+    } else if (y > -1 && random() > 0.87) {
       rocks.push({ x, y, z, s: 2 + random() * 7 });
     }
   }
@@ -146,6 +146,37 @@ function makeFoliage(scene: THREE.Scene): void {
   scene.add(rockMesh);
 }
 
+/** Coastal scrub and flowering bushes soften open areas without large mesh counts. */
+function makeGroundCover(scene: THREE.Scene): void {
+  const random = rng(AZURE_SEED + 329);
+  const data: Array<{x: number; y: number; z: number; s: number; hue: number}> = [];
+  for (let i = 0; i < 5800; i++) {
+    const x = -1750 + random() * 3500;
+    const z = -1750 + random() * 3500;
+    const y = heightAt(x, z);
+    const patch = fbm(x * 0.0022, z * 0.0022, AZURE_SEED + 301, 3);
+    if (y > 10 && y < 105 && patch > -0.16 &&
+      Math.hypot(x + 1220, z - 105) > 110 && random() > 0.28) {
+      data.push({ x, y, z, s: 1.35 + random() * 2.25, hue: random() });
+    }
+  }
+  const bushes = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), leaves, data.length);
+  const object = new THREE.Object3D();
+  const tint = new THREE.Color();
+  data.forEach((item, index) => {
+    object.position.set(item.x, item.y + item.s * 0.38, item.z);
+    object.rotation.set(0, item.hue * Math.PI * 2, 0);
+    object.scale.set(item.s, item.s * 0.5, item.s * 0.75);
+    object.updateMatrix();
+    bushes.setMatrixAt(index, object.matrix);
+    if (item.hue > 0.92) tint.setHSL(0.13, 0.43, 0.49);
+    else tint.setHSL(0.24 + item.hue * 0.11, 0.25, 0.33 + item.hue * 0.12);
+    bushes.setColorAt(index, tint);
+  });
+  bushes.name = 'vegetation.azure.coastal-scrub';
+  scene.add(bushes);
+}
+
 /** Layered, irregular cloud clusters instead of flat single ellipsoids. */
 function clouds(scene: THREE.Scene): void {
   const r = rng(AZURE_SEED + 81);
@@ -178,6 +209,7 @@ function clouds(scene: THREE.Scene): void {
 
 export function addCoastalDressing(scene: THREE.Scene): void {
   makeFoliage(scene);
+  makeGroundCover(scene);
   clouds(scene);
   addAncientLandmarks(scene);
   const harbor = LANDMARKS.find((l) => l.id === 'azure.harbor');

@@ -12,9 +12,6 @@ const vertexShader = `
 const fragmentShader = `
   precision highp float;
   varying vec3 vDirection;
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-  }
   void main() {
     vec3 dir = normalize(vDirection);
     float height = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);
@@ -32,8 +29,8 @@ const fragmentShader = `
     float disc = smoothstep(0.9992, 0.99975, solarDot);
     sky = mix(sky, vec3(1.0, 0.80, 0.55), glow * 0.43);
     sky = mix(sky, vec3(1.0, 0.96, 0.76), disc);
-    float granulation = hash(floor(dir.xz * 185.0 + dir.y * 13.0));
-    sky += (granulation - 0.5) * 0.015;
+    // Subtle broad-brush modulation; avoid high-frequency horizon banding.
+    sky += sin(dir.x * 11.0 + dir.z * 7.0) * sin(dir.y * 9.0 - dir.z * 8.0) * 0.002;
     gl_FragColor = vec4(sky, 1.0);
   }
 `;
