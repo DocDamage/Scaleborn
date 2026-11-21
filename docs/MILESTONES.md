@@ -12,11 +12,11 @@ These gates describe **completion criteria**, not completed claims. Deliver one 
 | G5 | Egg/hatching narrative, harbor NPCs, first quest, secrets, save slots, journal, audio | Complete opening, quest/save/load roundtrip and no broken narrative paths |
 | G6 | Refined UX and performance, replacement asset pipeline, export packages, migration instructions | Manual iGPU benchmark, browser automation and actual GLB/Unreal import validation |
 
-## Snapshot: Azure Coast G1 incremental upgrade
+## Snapshot: Azure Coast G1 + early G2 dragon systems
 
-- **Implemented draft:** stitched 32:8 terrain tile edges, shader-rendered animated ocean, shoreline foam geometry, a golden-hour shader sky and clustered clouds, four discoverable Azure Coast landmarks including ruins and sea arch; browser scaffold, first procedural terrain tiles, 4 km world contract, seeded biome query, coastal cottages/trees/rocks, lighthouse, cloud banks, original dragon silhouette, rider model, assisted flight maths, cameras, HUD, diagnostics and unit tests.
+- **Implemented draft:** 3 dragon sizes, conservative clearance checks, grounded locomotion and takeoff/landing controls, an independently sized dismounted rider, deforming skinned wing animation; stitched 32:8 terrain tile edges, shader-rendered animated ocean, shoreline foam geometry, a golden-hour shader sky and clustered clouds, four discoverable Azure Coast landmarks including ruins and sea arch; browser scaffold, first procedural terrain tiles, 4 km world contract, seeded biome query, coastal cottages/trees/rocks, lighthouse, cloud banks, original dragon silhouette, rider model, assisted flight maths, cameras, HUD, diagnostics and unit tests.
 - **Needs validation:** screenshot/browser smoke test and shader compilation, CI result, iGPU benchmark, color/lighting tuning, foam seam QA and clean dependency lock.
-- **Not implemented:** fully authored hero/dragon character rigs and animations; complete G1, G2; transformation; water diving; on-foot movement; NPCs; quests; boss combat; audio and saves.
+- **Not implemented:** completed G1/G2 art and animation, shoulder perch, rider-on-foot movement and cooperative puzzles; water diving/swimming, NPCs, quests, boss combat, audio, saves and asset export.
 
 ## Portability and development discipline
 

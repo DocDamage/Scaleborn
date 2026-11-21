@@ -14,10 +14,10 @@
 ## Boundaries
 
 - `src/world/terrain.ts` and `src/core/random.ts` are deterministic, renderer-neutral gameplay data.
-- `src/actors/dragon/flight.ts` is renderer-neutral, fixed-step flight simulation.
+- `src/actors/dragon/forms.ts` defines portable sizes and movement parameters. `flight.ts` owns pure fixed-step air/ground simulation, form transitions and dismount position. `src/world/collision.ts` defines terrain/structure clearance proxies; all are renderer-independent.
 - `src/data/assets.ts` owns stable asset identifiers and required rig sockets. Asset replacement must not alter game rules.
 - `src/world/azureCoast.ts` owns disposable Three.js tile groups, LOD streaming, and shared materials. `tileLod.ts` is a renderer-independent stitched-edge contract; `terrainTile.ts` generates painted vertex colors and shoreline ribbons; `ocean.ts` renders original procedural water.
-- `src/world/dressing.ts` and `src/world/landmarks.ts` own procedural scene-assembly recipes; `src/world/discoveries.ts` is an in-memory, renderer-independent discovery tracker.
+- `src/actors/dragon/wingRig.ts` constructs original three-bone skinned membrane meshes and animates them; `src/actors/dragon/visual.ts` composes the creature and a physically independent rider. `src/world/dressing.ts` and `src/world/landmarks.ts` own procedural scene-assembly recipes; `src/world/discoveries.ts` is an in-memory, renderer-independent discovery tracker.
 - `src/actors/dragon/visual.ts` is an initial generated character implementation, not final rigging.
 - `src/input/flightInput.ts` translates browser events into abstract action commands.
 - `src/app/game.ts` is composition root: fixed-step loop, camera and HUD. Move cameras/UI into dedicated modules as features grow.
@@ -48,3 +48,12 @@ No paid assets. No remote CDN dependencies. Browser assets can later be exported
 4. Foliage is globally instanced rather than chunk-streamed; profile large-world memory before expansion.
 5. Generated dragon model uses animated wing pivots, not a complete deforming bone rig. G2 requires an offline generator with GLB output and animation QA.
 6. No water physics, quest persistence, audio, NPC schedules or actual asset replacement implementation yet.
+
+### G2 form/interaction rules
+
+- Flight is an arcade simulation, not a physics engine. A clearance height is recomputed from deterministic terrain plus conservative structure bounding cylinders.
+- Land requires a clear slope and a near-ground position. A safety-oriented instantaneous takeoff lift is temporary until full animation-driven takeoff exists.
+- Young rider remains 1:1 scale. On land, shrinking transfers the rider to an unmounted scene root; when the dragon remounts nearby, the rider is reattached.
+- Small dragon can be controlled independently, but returning to the rider is required before mounting. Co-op puzzles, shoulder perch and rider walking are explicitly future work.
+- Dragon mesh scale affects visuals only; gameplay collision dimensions come from immutable form configuration. Adaptation to Unreal must preserve this separation.
+- Three-bone skinned wing mesh construction is an initial procedural animation rig, not complete production animation retargeting or GLB export.
