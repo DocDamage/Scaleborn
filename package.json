@@ -1,0 +1,28 @@
+{
+  "name": "scaleborn",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Scaleborn: an original painterly dragon-riding adventure",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "check": "npm run lint && npm run test && npm run build"
+  },
+  "dependencies": {
+    "three": "0.175.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.24.0",
+    "@types/three": "0.175.0",
+    "eslint": "9.24.0",
+    "typescript": "5.8.3",
+    "typescript-eslint": "8.29.0",
+    "vite": "6.2.5",
+    "vitest": "3.1.1"
+  },
+  "engines": {"node": ">=20"}
+}
