@@ -12,6 +12,7 @@ const labels: Record<string, string> = {
   'azure.lighthouse': 'The Sunward Beacon',
   'azure.temple': 'Temple of the First Tide',
   'azure.sea-arch': 'The Skybreak Arch',
+  'azure.sunken-shrine': 'The Sunken Shrine',
 };
 
 function display(anchor: WorldAnchor, x: number, z: number): NearbyLandmark {

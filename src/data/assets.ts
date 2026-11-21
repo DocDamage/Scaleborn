@@ -18,6 +18,9 @@ export const ASSETS: readonly AssetManifestEntry[] = [
   { id: 'structure.azure.lighthouse', type: 'structure', source: 'procedural' },
   { id: 'structure.azure.temple', type: 'structure', source: 'procedural' },
   { id: 'vegetation.azure.tree', type: 'vegetation', source: 'procedural' },
+  { id: 'vegetation.azure.kelp', type: 'vegetation', source: 'procedural' },
+  { id: 'vegetation.azure.coral', type: 'vegetation', source: 'procedural' },
+  { id: 'structure.azure.sunken-shrine', type: 'structure', source: 'procedural' },
   { id: 'terrain.azure.coast', type: 'terrain', source: 'procedural' },
   { id: 'water.azure.ocean', type: 'water', source: 'procedural' },
 ] as const;

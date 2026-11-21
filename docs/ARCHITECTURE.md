@@ -75,3 +75,14 @@ Do not conflate logical `mode` (ground/air, switched when the transition
 begins) with `transition.phase` (landing/takingOff); HUD and animation
 must report the latter until completed. Full obstacle collisions and
 animation-root-motion are intentionally deferred.
+
+### G3 cross-environment traversal (incremental)
+
+- `src/world/waterPhysics.ts` owns permanent-sea-level, analytical seabed clearance, safe depths, and approach interpolation. It has no renderer dependency.
+- `src/actors/dragon/swimming.ts` owns swimming response, depth changes and surface/dive switching. The G2 flight state is now explicitly `air|ground|surface|underwater`; the same deterministic `stepFlight` function routes to the water controller, so all forms retain identity and no level load occurs.
+- `src/actors/rider/movement.ts` owns the young rider's separate x/y/z, heading, speed and `ground|surface|underwater` state. With the dragon in grounded small form, Tab switches control without remounting. Rider and dragon retain their own positions.
+- `src/world/marineDressing.ts` generates reef, kelp and the Sunken Shrine from the Azure Coast seed. These are initial procedural assets, not imported art.
+- The HUD/camera follow the **controlled** actor; fog and sky change when that actor is submerged. A water launch or splashdown is an eased vertical transition, just as G2 landing/takeoff is.
+- Sea-entry requires sufficiently deep water and low approach altitude. Ocean floor is bounded by deterministic terrain-height samples; no collision is computed against triangle meshes, and no fluid dynamics or oxygen consumption is simulated.
+- Form changes cannot dismount a rider in water, and remounting requires both actors on land within the established radius. The small dragon may not switch rider control while flying.
+- Controls: F land/splash/launch, C dive/surface, Q/E underwater depth, Tab rider/dragon, W/S travel while swimming or on foot, A/D steering. All control definitions remain centralized for future remapping.

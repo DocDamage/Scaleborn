@@ -11,6 +11,7 @@ export const LANDMARKS: readonly WorldAnchor[] = [
   { id: 'azure.lighthouse', x: -475, z: -610 },
   { id: 'azure.temple', x: 850, z: -500 },
   { id: 'azure.sea-arch', x: 565, z: 775 },
+  { id: 'azure.sunken-shrine', x: 1560, z: 1440 },
 ];
 
 /** Meter-based X/Z geography. Y is up. Fixed islands, deterministic erosion-like detail. */

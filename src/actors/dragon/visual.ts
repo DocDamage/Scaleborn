@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import type { FlightState } from './flight';
 import { FORMS } from './forms';
-import { heightAt } from '../../world/terrain';
 import { createWingRig, poseWing } from './wingRig';
 import { dragonPose } from './animationPose';
 
@@ -166,7 +165,9 @@ export class DragonVisual {
       const phase = pose.gaitPhase + (leg.diagonal ? 0 : Math.PI);
       const stride = Math.sin(phase) * pose.gaitAmount;
       leg.group.rotation.x = pose.name === 'walk' ? stride * 0.43
-        : state.mode === 'air' ? -0.19 : 0;
+        : state.mode === 'underwater' || state.mode === 'surface'
+          ? Math.sin(state.time * 4.4 + (leg.diagonal ? 0 : Math.PI)) * 0.13
+          : state.mode === 'air' ? -0.19 : 0;
       leg.group.position.y = -0.45 + (pose.name === 'walk'
         ? Math.max(0, Math.sin(phase)) * pose.gaitAmount * 0.08 : 0);
     }
@@ -180,9 +181,13 @@ export class DragonVisual {
     if (state.form === 'small') {
       if (this.scene && this.rider.parent !== this.scene) this.scene.add(this.rider);
       this.rider.position.set(
-        state.riderX, heightAt(state.riderX, state.riderZ) + 0.05, state.riderZ,
+        state.riderX, state.riderY, state.riderZ,
       );
-      this.rider.rotation.set(0, -state.yaw + 0.12, 0);
+      this.rider.rotation.set(
+        state.riderMode === 'underwater' ? -0.18 : 0,
+        -state.riderYaw,
+        state.riderMode === 'ground' ? 0 : Math.sin(state.time * 4.2) * 0.08,
+      );
       this.rider.visible = true;
     } else {
       if (this.rider.parent !== this.root) this.root.add(this.rider);

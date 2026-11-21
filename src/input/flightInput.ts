@@ -16,6 +16,8 @@ const binding = {
   small: 'Digit1',
   rideable: 'Digit2',
   giant: 'Digit3',
+  switchFocus: 'Tab',
+  submerge: 'KeyC',
 } as const;
 
 export type FlightAction = keyof typeof binding;
@@ -67,7 +69,7 @@ export class FlightInput {
     };
   }
 
-  take(action: 'camera' | 'help' | 'diagnostics' | 'land' | 'small' | 'rideable' | 'giant'): boolean {
+  take(action: 'camera' | 'help' | 'diagnostics' | 'land' | 'small' | 'rideable' | 'giant' | 'switchFocus' | 'submerge'): boolean {
     const code = binding[action];
     const found = this.toggles.has(code);
     this.toggles.delete(code);
