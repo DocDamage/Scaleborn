@@ -50,7 +50,7 @@ describe('independent young dragonkin rider', () => {
     expect(s.riderY).toBeGreaterThanOrEqual(riderFloorY(s.riderX, s.riderZ) - 0.001);
     expect(s.riderMode).toBe('underwater');
     expect(toggleRiderDive(s).ok).toBe(true);
-    for (let i = 0; i < 135; i++) stepFlight(s, idle, 1 / 60);
+    for (let i = 0; i < 510; i++) stepFlight(s, idle, 1 / 60);
     expect(s.riderY).toBeCloseTo(RIDER_SURFACE_Y, 2);
   });
   it('does not grant unlimited underwater movement through terrain', () => {

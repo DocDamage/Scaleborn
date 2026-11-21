@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { newFlightState, stepFlight, toggleLanding } from '../src/actors/dragon/flight';
 import { toggleDragonDive } from '../src/actors/dragon/swimming';
-import { canDragonDive, canEnterSea, dragonBottomY, dragonSurfaceY, riderCanSwim } from '../src/world/waterPhysics';
+import { canDragonDive, canEnterSea, dragonBottomY, dragonSurfaceY, riderCanSwim, approach } from '../src/world/waterPhysics';
 import { heightAt } from '../src/world/terrain';
 const idle = { turn: 0, pitch: 0, bank: 0, boost: false, flap: false, move: 0 };
 const sea = () => {
   const s = newFlightState(); s.x = 1900; s.z = 1900; s.y = 16; s.speed = 0; return s;
 };
 describe('deterministic air/sea integration', () => {
+  it('approaches depth by a limited step without snapping', () => {
+    expect(approach(-20, 0, 1)).toBe(-19);
+    expect(approach(20, 0, 1)).toBe(19);
+    expect(approach(-0.2, 0, 1)).toBe(0);
+    expect(approach(0.2, 0, 1)).toBe(0);
+  });
   it('distinguishes shallow shore from deep water and safe sea floor', () => {
     expect(canEnterSea(1900, 1900, 'rideable').ok).toBe(true);
     expect(canDragonDive(1900, 1900, 'rideable').ok).toBe(true);

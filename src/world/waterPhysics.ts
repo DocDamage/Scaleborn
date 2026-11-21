@@ -45,5 +45,8 @@ export function riderCanSwim(x: number, z: number): boolean {
   return heightAt(x, z) < SEA_LEVEL - 1.1;
 }
 export function approach(current: number, target: number, maxDistance: number): number {
-  return Math.max(target - maxDistance, Math.min(target + maxDistance, current));
+  // A rate limit, not a tolerance clamp: moving from the depths must take time.
+  const step = Math.max(0, maxDistance);
+  if (current < target) return Math.min(current + step, target);
+  return Math.max(current - step, target);
 }
