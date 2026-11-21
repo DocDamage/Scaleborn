@@ -23,5 +23,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: scaleborn-azure-coast-smoke
-          path: artifacts/azure-coast-smoke.png
+          path: artifacts/azure-coast-*.png
           if-no-files-found: warn

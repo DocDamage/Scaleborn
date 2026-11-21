@@ -8,19 +8,23 @@ const grass = new THREE.Color(0x9bba8e);
 const forest = new THREE.Color(0x62847c);
 const stone = new THREE.Color(0x918b88);
 const deep = new THREE.Color(0x376c79);
+const ochre = new THREE.Color(0xb9a57c);
+const blueSage = new THREE.Color(0x6e9c95);
 const temp = new THREE.Color();
 const white = new THREE.Color(0xffffff);
 
 /** Elevation and painted-noise blend; no external texture required. */
 function paintTerrain(x: number, z: number, h: number, target: THREE.Color): void {
   const variation = fbm(x * 0.011, z * 0.011, AZURE_SEED + 631, 3);
+  const wash = fbm(x * 0.0032, z * 0.0032, AZURE_SEED + 137, 4);
   if (h < -3) target.copy(deep);
   else if (h < 8) target.copy(sand);
   else if (h < 32) target.copy(sand).lerp(grass, Math.min(1, (h - 8) / 24));
   else if (h < 88) target.copy(grass).lerp(forest, Math.min(1, (h - 32) / 56));
   else target.copy(forest).lerp(stone, Math.min(1, (h - 88) / 45));
-  target.lerp(white, Math.max(0, variation) * 0.085);
-  target.multiplyScalar(0.965 + variation * 0.075);
+  if (h > 9) target.lerp(wash > 0 ? ochre : blueSage, Math.min(0.24, Math.abs(wash) * 0.42));
+  target.lerp(white, Math.max(0, variation) * 0.06);
+  target.multiplyScalar(0.95 + variation * 0.14);
 }
 
 type Point = { x: number; z: number; h: number };

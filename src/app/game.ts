@@ -174,7 +174,7 @@ export class Game {
       this.revealTimer = Math.max(0, this.revealTimer - elapsed);
       this.reveal.hidden = this.revealTimer === 0;
     } else this.accumulator = 0;
-    this.coast.animate(this.flight.time);
+    this.coast.animate(this.flight.time, this.flight.x, this.flight.y, this.flight.z);
     this.dragon.update(this.flight);
     this.updateCamera(elapsed);
     this.renderer.render(this.scene, this.camera);

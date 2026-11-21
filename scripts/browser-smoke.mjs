@@ -37,6 +37,9 @@ async function main() {
     await page.locator('#start').click();
     await page.locator('#welcome').waitFor({ state: 'hidden' });
     await page.waitForFunction(() => Number(document.querySelector('#speed')?.textContent) > 0, null, { timeout: 15000 });
+    await page.waitForTimeout(800);
+    await mkdir('artifacts', { recursive: true });
+    await page.screenshot({ path: 'artifacts/azure-coast-chase.png' });
     const initialCamera = await page.locator('#camera-name').textContent();
     await page.keyboard.press('v');
     await page.waitForFunction(
@@ -48,7 +51,6 @@ async function main() {
       Boolean(canvas.getContext('webgl2')),
     );
     assert.ok(hasWebGL, 'No WebGL2 context on game canvas');
-    await mkdir('artifacts', { recursive: true });
     await page.screenshot({ path: 'artifacts/azure-coast-smoke.png' });
     assert.deepEqual(errors, [], 'Browser reported runtime or shader errors');
     console.log('PASS: WebGL2 rendered, HUD active, camera switched, screenshot captured.');

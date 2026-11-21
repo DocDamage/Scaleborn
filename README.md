@@ -4,7 +4,7 @@
 
 ## Current state: early G0/G1 foundation (not the complete game)
 
-This branch contains a playable **first-flight preview**: an original code-generated dragon and rider, deterministic seam-stitched Azure Coast terrain streamed in tiles, animated shader ocean and coastal foam, cloud banks, trees, coastal rocks, generated harbor cottages and piers, lighthouse, ancient temple and sea arch, four discoverable landmarks, simple assisted flight and multiple cameras. It does **not** yet include combat, on-foot controls, swimming, underwater exploration, transformation, quests, saves, audio, asset-export tooling or finished painterly textures. These remain planned work, not hidden or simulated features.
+This branch contains a playable **first-flight preview**: an original code-generated dragon and rider, deterministic seam-stitched Azure Coast terrain streamed in tiles, animated shader ocean and coastal foam, layered cloud banks, clustered trees, coastal rocks, generated harbor cottages and piers, lighthouse, ancient temple and sea arch, four discoverable landmarks, simple assisted flight and multiple cameras. It does **not** yet include combat, on-foot controls, swimming, underwater exploration, transformation, quests, saves, audio, asset-export tooling or finished painterly textures. These remain planned work, not hidden or simulated features.
 
 The 4 × 4 km world and all objects use meters with Y up. The packaged seed is `0x5ca1e0`. Geometry is procedurally generated and currently requires no third-party art/audio files.
 
@@ -47,10 +47,10 @@ See `docs/ARCHITECTURE.md` and `docs/MILESTONES.md` for contracts, omissions and
 
 The **Browser smoke and screenshot** GitHub Actions workflow runs Chromium with
 software WebGL, clicks into flight, exercises the camera toggle, checks the HUD,
-rejects browser console errors, and attaches a 1280 × 720 PNG screenshot.
+rejects browser console errors, and attaches a two 1280 × 720 PNG screenshots (chase and wide cameras).
 Run it locally after `npm install` and `npx playwright install chromium`
 with `npm run dev` active, then `npm run test:browser`. The screenshot lives
-at `artifacts/azure-coast-smoke.png` (ignored by git).
+under `artifacts/azure-coast-*.png` (ignored by git).
 
 **Important:** a successful software-WebGL smoke test does not prove the 60 FPS
 integrated-GPU target. That requires profiling on the specified hardware.

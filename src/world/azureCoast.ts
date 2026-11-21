@@ -3,6 +3,7 @@ import { TILE_METERS, TILE_RADIUS, specKey, tileSpec } from './tileLod';
 import { makeTerrainTile, disposeTerrainTile } from './terrainTile';
 import { addCoastalDressing } from './dressing';
 import { PainterlyOcean } from './ocean';
+import { PainterlySky } from './sky';
 
 type TerrainTile = { group: THREE.Group; signature: string };
 
@@ -19,6 +20,7 @@ export class AzureCoast {
     depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
   });
   private readonly water = new PainterlyOcean();
+  private readonly sky = new PainterlySky();
   readonly scene: THREE.Scene;
   readonly ocean: THREE.Mesh;
 
@@ -31,7 +33,7 @@ export class AzureCoast {
     sun.position.set(-420, 600, -520);
     scene.add(sun);
     this.ocean = this.water.mesh;
-    scene.add(this.ocean);
+    scene.add(this.sky.mesh, this.ocean);
     addCoastalDressing(scene);
   }
 
@@ -64,8 +66,9 @@ export class AzureCoast {
     }
   }
 
-  animate(time: number): void {
+  animate(time: number, x: number, y: number, z: number): void {
     this.water.update(time);
+    this.sky.moveWithCamera(x, y, z);
   }
 
   tileCount(): number {
@@ -83,5 +86,6 @@ export class AzureCoast {
     this.terrainMaterial.dispose();
     this.foamMaterial.dispose();
     this.water.dispose();
+    this.sky.dispose();
   }
 }
