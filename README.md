@@ -78,3 +78,5 @@ Launch `npm run dev` and open `http://localhost:5173/?start=meadow` to begin abo
 ### Software renderer test pacing
 
 The Chromium smoke test uses `?start=meadow&qa=1`. Development-only `__scalebornQaAdvance(frames)` advances a bounded number of real fixed-timestep simulation steps, so software rendering on a CI server cannot cause false timeouts during 1.45-second transitions. The hook is excluded in production builds and disabled for ordinary gameplay URLs. Browser tests still check the DOM and actual rendered WebGL scene.
+
+Under software WebGL, frames can take longer than a full flight-transition phase. The dev-only QA harness therefore stages the meadow landing atomically (using the **same** `toggleLanding` function as the F key) and advances fixed simulation frames before checking the DOM. This removes a slow-render/input scheduling race, without altering normal game inputs or physics.

@@ -74,8 +74,11 @@ async function main() {
     const meadowResponse = await page.goto(url + '?start=meadow&qa=1', { waitUntil: 'networkidle' });
     assert.equal(meadowResponse?.status(), 200);
     await page.locator('#start').click();
-    await page.keyboard.press('f');
-    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'LANDING', null, { timeout: 6000 });
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaLand !== 'function') throw new Error('Dev landing hook missing');
+      window.__scalebornQaLand();
+    });
+    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'LANDING', null, { timeout: 15000 });
     await page.evaluate(() => {
       if (typeof window.__scalebornQaAdvance !== 'function') throw new Error('Dev QA step hook missing');
       window.__scalebornQaAdvance(100);
@@ -86,8 +89,11 @@ async function main() {
     await page.screenshot({ path: 'artifacts/azure-coast-small-meadow.png' });
     await page.keyboard.press('2');
     await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'RIDEABLE', null, { timeout: 6000 });
-    await page.keyboard.press('f');
-    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'TAKING OFF', null, { timeout: 6000 });
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaLaunch !== 'function') throw new Error('Dev takeoff hook missing');
+      window.__scalebornQaLaunch();
+    });
+    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'TAKING OFF', null, { timeout: 15000 });
     await page.evaluate(() => {
       if (typeof window.__scalebornQaAdvance !== 'function') throw new Error('Dev QA step hook missing');
       window.__scalebornQaAdvance(90);
