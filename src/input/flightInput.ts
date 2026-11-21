@@ -12,6 +12,10 @@ const binding = {
   camera: 'KeyV',
   help: 'KeyH',
   diagnostics: 'F3',
+  land: 'KeyF',
+  small: 'Digit1',
+  rideable: 'Digit2',
+  giant: 'Digit3',
 } as const;
 
 export type FlightAction = keyof typeof binding;
@@ -57,12 +61,13 @@ export class FlightInput {
       turn: Math.max(-1, Math.min(1, turn)),
       pitch: Math.max(-1, Math.min(1, pitch)),
       bank: has('bankRight') - has('bankLeft'),
+      move: has('climb') - has('dive'),
       boost: Boolean(has('boost')),
       flap: Boolean(has('flap')),
     };
   }
 
-  take(action: 'camera' | 'help' | 'diagnostics'): boolean {
+  take(action: 'camera' | 'help' | 'diagnostics' | 'land' | 'small' | 'rideable' | 'giant'): boolean {
     const code = binding[action];
     const found = this.toggles.has(code);
     this.toggles.delete(code);
