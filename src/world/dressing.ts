@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { rng, hash2 } from '../core/random';
+import { addAncientLandmarks } from './landmarks';
+import { rng, hash2, fbm } from '../core/random';
 import { AZURE_SEED, heightAt, LANDMARKS } from './terrain';
 
 const mat = (color: number): THREE.MeshStandardMaterial =>
@@ -92,14 +93,15 @@ function makeFoliage(scene: THREE.Scene): void {
   const random = rng(AZURE_SEED + 517);
   const trees: Array<{x: number; y: number; z: number; s: number; hue: number}> = [];
   const rocks: Array<{x: number; y: number; z: number; s: number}> = [];
-  for (let i = 0; i < 3400; i++) {
+  for (let i = 0; i < 5400; i++) {
     const x = -1750 + random() * 3500;
     const z = -1750 + random() * 3500;
     const y = heightAt(x, z);
     const hasRoom = Math.hypot(x + 1220, z - 105) > 140;
-    if (y > 9 && y < 117 && hasRoom && random() > 0.22) {
+    const woodland = fbm(x * 0.002, z * 0.002, AZURE_SEED + 911, 3);
+    if (y > 9 && y < 117 && hasRoom && woodland > -0.24 && random() > 0.14) {
       trees.push({ x, y, z, s: 3.6 + random() * 5.5, hue: random() });
-    } else if (y > -1 && random() > 0.48) {
+    } else if (y > -1 && random() > 0.87) {
       rocks.push({ x, y, z, s: 2 + random() * 7 });
     }
   }
@@ -122,7 +124,9 @@ function makeFoliage(scene: THREE.Scene): void {
     object.scale.set(t.s * 0.34, t.s * 0.43, t.s * 0.36);
     object.updateMatrix();
     crown2.setMatrixAt(i, object.matrix);
-    tint.setHSL(0.29 + t.hue * 0.06, 0.24 + t.hue * 0.16, 0.31 + t.hue * 0.14);
+    if (t.hue < 0.11) tint.setHSL(0.10, 0.38, 0.46);
+    else if (t.hue < 0.22) tint.setHSL(0.045, 0.30, 0.40);
+    else tint.setHSL(0.27 + t.hue * 0.10, 0.27 + t.hue * 0.12, 0.33 + t.hue * 0.15);
     crown1.setColorAt(i, tint);
     crown2.setColorAt(i, tint.clone().multiplyScalar(1.17));
   });
@@ -142,19 +146,62 @@ function makeFoliage(scene: THREE.Scene): void {
   scene.add(rockMesh);
 }
 
+/** Coastal scrub and flowering bushes soften open areas without large mesh counts. */
+function makeGroundCover(scene: THREE.Scene): void {
+  const random = rng(AZURE_SEED + 329);
+  const data: Array<{x: number; y: number; z: number; s: number; hue: number}> = [];
+  for (let i = 0; i < 5800; i++) {
+    const x = -1750 + random() * 3500;
+    const z = -1750 + random() * 3500;
+    const y = heightAt(x, z);
+    const patch = fbm(x * 0.0022, z * 0.0022, AZURE_SEED + 301, 3);
+    if (y > 10 && y < 105 && patch > -0.16 &&
+      Math.hypot(x + 1220, z - 105) > 110 && random() > 0.28) {
+      data.push({ x, y, z, s: 1.35 + random() * 2.25, hue: random() });
+    }
+  }
+  const bushes = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), leaves, data.length);
+  const object = new THREE.Object3D();
+  const tint = new THREE.Color();
+  data.forEach((item, index) => {
+    object.position.set(item.x, item.y + item.s * 0.38, item.z);
+    object.rotation.set(0, item.hue * Math.PI * 2, 0);
+    object.scale.set(item.s, item.s * 0.5, item.s * 0.75);
+    object.updateMatrix();
+    bushes.setMatrixAt(index, object.matrix);
+    if (item.hue > 0.92) tint.setHSL(0.13, 0.43, 0.49);
+    else tint.setHSL(0.24 + item.hue * 0.11, 0.25, 0.33 + item.hue * 0.12);
+    bushes.setColorAt(index, tint);
+  });
+  bushes.name = 'vegetation.azure.coastal-scrub';
+  scene.add(bushes);
+}
+
+/** Layered, irregular cloud clusters instead of flat single ellipsoids. */
 function clouds(scene: THREE.Scene): void {
   const r = rng(AZURE_SEED + 81);
-  const material = new THREE.MeshLambertMaterial({ color: 0xfff2d9, transparent: true, opacity: 0.75, depthWrite: false });
-  const count = 86;
-  const mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), material, count);
+  const material = new THREE.MeshLambertMaterial({
+    color: 0xffe5d4, transparent: true, opacity: 0.78, depthWrite: false,
+  });
+  const clusters = 54, puffs = 5;
+  const mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), material, clusters * puffs);
   const object = new THREE.Object3D();
-  for (let i = 0; i < count; i++) {
-    const x = (r() - 0.5) * 4600, z = (r() - 0.5) * 4600;
-    object.position.set(x, 280 + r() * 320, z);
-    object.scale.set(40 + r() * 55, 8 + r() * 13, 24 + r() * 38);
-    object.rotation.set(0, r() * 6.28, 0);
-    object.updateMatrix();
-    mesh.setMatrixAt(i, object.matrix);
+  let index = 0;
+  for (let i = 0; i < clusters; i++) {
+    const cx = (r() - 0.5) * 4900, cz = (r() - 0.5) * 4900;
+    const cy = 260 + r() * 350, width = 40 + r() * 68;
+    for (let p = 0; p < puffs; p++) {
+      const middle = p === 0;
+      object.position.set(cx + (r() - 0.5) * width * 2.2,
+        cy + (r() - 0.5) * 13 + (middle ? 8 : 0),
+        cz + (r() - 0.5) * width * 1.3);
+      object.scale.set((middle ? 1.2 : 0.65 + r() * 0.4) * width,
+        (middle ? 1.0 : 0.7 + r() * 0.4) * (14 + r() * 12),
+        (middle ? 1.1 : 0.65 + r() * 0.55) * width * 0.68);
+      object.rotation.set(0, r() * Math.PI, 0);
+      object.updateMatrix();
+      mesh.setMatrixAt(index++, object.matrix);
+    }
   }
   mesh.name = 'sky.azure.cloud-bank';
   scene.add(mesh);
@@ -162,7 +209,9 @@ function clouds(scene: THREE.Scene): void {
 
 export function addCoastalDressing(scene: THREE.Scene): void {
   makeFoliage(scene);
+  makeGroundCover(scene);
   clouds(scene);
+  addAncientLandmarks(scene);
   const harbor = LANDMARKS.find((l) => l.id === 'azure.harbor');
   const beacon = LANDMARKS.find((l) => l.id === 'azure.lighthouse');
   if (!harbor || !beacon) throw new Error('Missing required Azure Coast landmarks');

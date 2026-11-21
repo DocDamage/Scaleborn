@@ -5,6 +5,7 @@ import { assertManifestUnique } from '../data/assets';
 import { FlightInput } from '../input/flightInput';
 import { AzureCoast } from '../world/azureCoast';
 import { heightAt } from '../world/terrain';
+import { CoastDiscovery } from '../world/discoveries';
 
 const FIXED_DT = 1 / 60;
 const MAX_STEPS = 5;
@@ -23,6 +24,11 @@ export class Game {
   private readonly camera: THREE.PerspectiveCamera;
   private readonly coast: AzureCoast;
   private readonly dragon = new DragonVisual();
+  private readonly discoveries = new CoastDiscovery();
+  private readonly waypointName = requireElement<HTMLElement>('#waypoint-name');
+  private readonly waypointDistance = requireElement<HTMLElement>('#waypoint-distance');
+  private readonly reveal = requireElement<HTMLElement>('#discovery-toast');
+  private revealTimer = 0;
   private readonly flight = newFlightState();
   private readonly input: FlightInput;
   private readonly intro = requireElement<HTMLElement>('#welcome');
@@ -114,12 +120,17 @@ export class Game {
     this.altitudeText.textContent = Math.round(Math.max(0, this.flight.y - ground)).toString();
     this.speedText.textContent = Math.round(this.flight.speed).toString();
     this.cameraText.textContent = cameraModes[this.cameraIndex] ?? 'CHASE';
+    const target = this.discoveries.nearest(this.flight.x, this.flight.z);
+    this.waypointName.textContent = target?.name ?? 'Coast fully charted';
+    this.waypointDistance.textContent = target ? Math.round(target.meters) + ' m' : '4 of 4 discoveries';
     if (this.diagnostics.hidden) return;
     const render = this.renderer.info.render;
     this.diagnostics.textContent = [
       'SEED 0x5ca1e0',
       'FPS ' + this.fps,
       'XYZ ' + Math.round(this.flight.x) + ', ' + Math.round(this.flight.y) + ', ' + Math.round(this.flight.z),
+      'TERRAIN TILES ' + this.coast.tileCount(),
+      'DISCOVERED ' + this.discoveries.count() + '/4',
       'DRAWS ' + render.calls,
       'TRIANGLES ' + render.triangles,
       'WEBGL ' + this.renderer.capabilities.isWebGL2,
@@ -155,7 +166,15 @@ export class Game {
         steps++;
       }
       this.coast.update(this.flight.x, this.flight.z);
+      const found = this.discoveries.update(this.flight.x, this.flight.z);
+      if (found.length) {
+        this.reveal.textContent = '✦  DISCOVERED  ·  ' + found.map((site) => site.name).join(', ');
+        this.revealTimer = 4.2;
+      }
+      this.revealTimer = Math.max(0, this.revealTimer - elapsed);
+      this.reveal.hidden = this.revealTimer === 0;
     } else this.accumulator = 0;
+    this.coast.animate(this.flight.time, this.flight.x, this.flight.y, this.flight.z);
     this.dragon.update(this.flight);
     this.updateCamera(elapsed);
     this.renderer.render(this.scene, this.camera);
