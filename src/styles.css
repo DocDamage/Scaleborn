@@ -159,3 +159,18 @@ button:focus-visible { outline: 3px solid white; outline-offset:3px; }
   #dragon-panel .traversal-buttons {gap:4px; margin-top:6px;}
   #dragon-panel .focus-indicator strong {font-size:10px;}
 }
+
+#tidegate-panel {
+  position:absolute; left:28px; top:160px; z-index:4; width:min(310px,38vw);
+  padding:14px 16px; border:1px solid rgba(161,229,211,.49); border-radius:9px;
+  background:linear-gradient(135deg,rgba(13,43,52,.84),rgba(40,76,71,.77));
+  box-shadow:0 8px 28px rgba(12,26,31,.23); backdrop-filter:blur(9px);
+}
+#tidegate-panel strong {display:block; margin:8px 0 4px; font-size:19px; font-weight:500; letter-spacing:.04em;}
+#tidegate-panel p {font:12px/1.4 Arial,sans-serif; color:#d7e8dc; margin:4px 0 11px;}
+#tidegate-action {padding:10px 15px; width:100%; background:#8dc5aa; color:#16363d; font:600 12px Arial,sans-serif;}
+@media(max-width:660px) {
+  #tidegate-panel {left:8px; top:114px; width:min(250px,46vw); padding:9px;}
+  #tidegate-panel strong {font-size:14px;}
+  #tidegate-panel p {font-size:10px;}
+}

@@ -10,6 +10,7 @@ import { CoastDiscovery } from '../world/discoveries';
 import { toggleDragonDive } from '../actors/dragon/swimming';
 import { toggleRiderControl, toggleRiderDive } from '../actors/rider/movement';
 import { SEA_LEVEL, LANDMARKS } from '../world/terrain';
+import { TIDEGATE, newTidegateState, stepTidegate, interactTidegate, tidegateNearby, tidegateHint } from '../world/tidegate';
 
 const FIXED_DT = 1 / 60;
 const MAX_STEPS = 5;
@@ -29,6 +30,10 @@ export class Game {
   private readonly coast: AzureCoast;
   private readonly dragon = new DragonVisual();
   private readonly discoveries = new CoastDiscovery();
+  private readonly tidegate = newTidegateState();
+  private readonly tidegatePanel = requireElement<HTMLElement>('#tidegate-panel');
+  private readonly tidegateHintText = requireElement<HTMLElement>('#tidegate-hint');
+  private readonly tidegateStatus = requireElement<HTMLElement>('#tidegate-status');
   private readonly waypointName = requireElement<HTMLElement>('#waypoint-name');
   private readonly waypointDistance = requireElement<HTMLElement>('#waypoint-distance');
   private readonly reveal = requireElement<HTMLElement>('#discovery-toast');
@@ -95,6 +100,7 @@ export class Game {
         __scalebornQaLaunch?: () => void;
         __scalebornQaWater?: () => void;
         __scalebornQaDive?: () => void;
+        __scalebornQaStageRiderRune?: () => void;
       };
       host.__scalebornQaLand = (): void => {
         // Stage and trigger atomically: no frame-rate-dependent input race.
@@ -134,6 +140,16 @@ export class Game {
         if (!result.ok) throw new Error('Unable to dive: ' + result.message);
         this.updateHud(0.2);
       };
+      host.__scalebornQaStageRiderRune = (): void => {
+        if (this.flight.form !== 'small' || this.flight.controlTarget !== 'rider') {
+          throw new Error('The rider must be independently controlled to stage the second rune');
+        }
+        this.flight.riderX = TIDEGATE.rider.x;
+        this.flight.riderZ = TIDEGATE.rider.z;
+        this.flight.riderY = heightAt(TIDEGATE.rider.x, TIDEGATE.rider.z) + 0.05;
+        this.flight.riderTargetY = this.flight.riderY;
+        this.updateHud(0.2);
+      };
       host.__scalebornQaAdvance = (frames: number): void => {
         if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
           throw new Error('QA frames must be an integer between 1 and 180');
@@ -161,6 +177,9 @@ export class Game {
     });
     requireElement<HTMLButtonElement>('#dive-button').addEventListener('click', () => {
       if (!this.paused) this.diveAction();
+    });
+    requireElement<HTMLButtonElement>('#tidegate-action').addEventListener('click', () => {
+      if (!this.paused) this.interactWithRune();
     });
     requireElement<HTMLButtonElement>('#start').addEventListener('click', () => this.begin(canvas));
     canvas.addEventListener('click', () => {
@@ -209,6 +228,12 @@ export class Game {
   private diveAction(): void {
     this.notify(this.flight.controlTarget === 'rider'
       ? toggleRiderDive(this.flight) : toggleDragonDive(this.flight));
+  }
+
+  private interactWithRune(): void {
+    this.notify(tidegateNearby(this.flight)
+      ? interactTidegate(this.tidegate, this.flight)
+      : { ok: false, message: 'No runestones within reach.' });
   }
 
   private focusPosition(): { x: number; y: number; z: number } {
@@ -279,6 +304,10 @@ export class Game {
     this.speedText.textContent = Math.round(Math.abs(rider ? this.flight.riderSpeed : this.flight.speed)).toString();
     this.formName.textContent = FORMS[this.flight.form].label.toUpperCase();
     this.focusName.textContent = rider ? 'RIDER' : 'DRAGON';
+    this.tidegatePanel.hidden = !tidegateNearby(this.flight);
+    this.tidegateHintText.textContent = tidegateHint(this.tidegate, this.flight);
+    this.tidegateStatus.textContent = this.tidegate.solved ? 'TIDEBOUND SIGIL AWAKENED'
+      : this.tidegate.dragonAnchored ? '1 / 2 RUNES' : '0 / 2 RUNES';
     this.modeName.textContent = this.flight.transition?.phase === 'landing' ? 'LANDING'
       : this.flight.transition?.phase === 'takingOff' ? 'TAKING OFF'
       : this.flight.transition?.phase === 'splashdown' ? 'SPLASHDOWN'
@@ -305,6 +334,7 @@ export class Game {
       'TRAVERSAL ' + (this.flight.transition?.phase ?? this.flight.mode),
       'CONTROL ' + this.flight.controlTarget,
       'RIDER ' + this.flight.riderMode,
+      'TIDEGATE ' + (this.tidegate.solved ? 'AWAKENED' : this.tidegate.dragonAnchored ? 'ANCHORED' : 'INACTIVE'),
       'TERRAIN TILES ' + this.coast.tileCount(),
       'DISCOVERED ' + this.discoveries.count() + '/' + LANDMARKS.length,
       'DRAWS ' + render.calls,
@@ -336,6 +366,7 @@ export class Game {
       if (this.input.take('land')) this.landAction();
       if (this.input.take('switchFocus')) this.notify(toggleRiderControl(this.flight));
       if (this.input.take('submerge')) this.diveAction();
+      if (this.input.take('interact')) this.interactWithRune();
       for (const form of FORM_ORDER) {
         if (this.input.take(form)) this.setForm(form);
       }
@@ -348,6 +379,7 @@ export class Game {
       let steps = 0;
       while (this.accumulator >= FIXED_DT && steps < MAX_STEPS) {
         stepFlight(this.flight, controls, FIXED_DT);
+        stepTidegate(this.tidegate, this.flight);
         this.accumulator -= FIXED_DT;
         steps++;
       }
@@ -365,6 +397,7 @@ export class Game {
     this.coast.setUnderwater(this.isUnderwater());
     this.waterTint.hidden = !this.isUnderwater();
     this.coast.animate(this.flight.time, focus.x, focus.y, focus.z);
+    this.coast.updateTidegate(this.tidegate, this.flight.time);
     this.dragon.update(this.flight);
     this.updateCamera(elapsed);
     this.renderer.render(this.scene, this.camera);

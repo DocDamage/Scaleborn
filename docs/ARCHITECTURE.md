@@ -86,3 +86,11 @@ animation-root-motion are intentionally deferred.
 - Sea-entry requires sufficiently deep water and low approach altitude. Ocean floor is bounded by deterministic terrain-height samples; no collision is computed against triangle meshes, and no fluid dynamics or oxygen consumption is simulated.
 - Form changes cannot dismount a rider in water, and remounting requires both actors on land within the established radius. The small dragon may not switch rider control while flying.
 - Controls: F land/splash/launch, C dive/surface, Q/E underwater depth, Tab rider/dragon, W/S travel while swimming or on foot, A/D steering. All control definitions remain centralized for future remapping.
+
+### G3.1 — Tidegate and rider-pose prototype
+
+- `src/world/tidegate.ts` is an engine-independent, session-local state machine with explicit proximity, small-dragon, ground, actor focus and anchored-rune preconditions. It deliberately does not grant rewards unless **both** actors complete their own interactions. An unsolved anchor releases if the dragon leaves its stone.
+- `src/world/tidegateVisual.ts` generates the rune plates and an awakening beacon. `AzureCoast` owns the visual object while the `Game` composition root owns the persistent-for-session puzzle state. No renderer objects enter the puzzle logic.
+- `src/actors/rider/pose.ts` evaluates deterministic rider locomotion/swimming pose channels. The generated rider now has named shoulder and hip pivot groups so new authored assets can replace procedural geometry without altering gameplay state.
+- G is the rune interaction key, avoiding conflict with E's existing bank/depth assignment. The on-screen panel reports nearby puzzle progress, including locked, anchored and awakened states.
+- `azure.tidegate` is a stable discovery/asset ID. This first puzzle is purposely in a dry meadow; complex underwater cooperation, shoulder perching and cross-region gating remain pending. No quest or inventory persistence is claimed.

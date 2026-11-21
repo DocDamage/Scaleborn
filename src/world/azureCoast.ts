@@ -5,6 +5,8 @@ import { addCoastalDressing } from './dressing';
 import { PainterlyOcean } from './ocean';
 import { PainterlySky } from './sky';
 import { addMarineDressing } from './marineDressing';
+import { TidegateVisual } from './tidegateVisual';
+import type { TidegateState } from './tidegate';
 
 type TerrainTile = { group: THREE.Group; signature: string };
 
@@ -22,6 +24,7 @@ export class AzureCoast {
   });
   private readonly water = new PainterlyOcean();
   private readonly sky = new PainterlySky();
+  private readonly tidegate = new TidegateVisual();
   private readonly airFog = new THREE.FogExp2(0xb6cbd4, 0.00055);
   private readonly seaFog = new THREE.FogExp2(0x1b5866, 0.012);
   private readonly airBackground = new THREE.Color(0xc4d9df);
@@ -42,6 +45,7 @@ export class AzureCoast {
     scene.add(this.sky.mesh, this.ocean);
     addCoastalDressing(scene);
     addMarineDressing(scene);
+    scene.add(this.tidegate.root);
   }
 
   update(x: number, z: number): void {
@@ -71,6 +75,10 @@ export class AzureCoast {
     for (const [key, tile] of this.tiles) {
       if (!required.has(key)) this.remove(key, tile);
     }
+  }
+
+  updateTidegate(state: TidegateState, time: number): void {
+    this.tidegate.update(state, time);
   }
 
   setUnderwater(active: boolean): void {

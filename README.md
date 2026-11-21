@@ -2,9 +2,9 @@
 
 **Scaleborn** is an original painterly 3D fantasy adventure about a 13-year-old dragon-human hybrid and her bonded dragon. The project begins with a **desktop-browser Azure Coast flight prototype** and is structured for a later **Unreal Engine implementation**. Browser gameplay will not automatically transfer to Unreal.
 
-## Current state: G0/G1/G2 and early G3 on-foot/water traversal
+## Current state: G0/G1/G2 and G3 cooperative exploration preview
 
-This branch contains a playable **first-flight preview**: an original code-generated dragon and rider, deterministic seam-stitched Azure Coast terrain streamed in tiles, animated shader ocean and coastal foam, layered cloud banks, clustered trees, coastal rocks, generated harbor cottages and piers, lighthouse, ancient temple and sea arch, four discoverable landmarks, three dragon forms with distinct flight profiles, animated landing/takeoff over fixed time, a directly controlled small dragon on land, separately scaled rider, deforming three-bone wings and multiple cameras. This branch adds independent rider walking, coast-to-water movement, dragon swimming/surface/diving, water transitions and a procedural submerged shrine. It does **not** yet include complete underwater quests, co-op puzzles, rider-on-shoulder behavior, combat, saves, audio, asset-export tooling or finished painterly textures. Dragon transformations are an early G2 implementation: small form requires landing before dismount; full free midair remounting, shoulder riding and co-op puzzles are later. These remain planned work, not hidden or simulated features.
+This branch contains a playable **first-flight preview**: an original code-generated dragon and rider, deterministic seam-stitched Azure Coast terrain streamed in tiles, animated shader ocean and coastal foam, layered cloud banks, clustered trees, coastal rocks, generated harbor cottages and piers, lighthouse, ancient temple and sea arch, four discoverable landmarks, three dragon forms with distinct flight profiles, animated landing/takeoff over fixed time, a directly controlled small dragon on land, separately scaled rider, deforming three-bone wings and multiple cameras. This branch adds independent rider walking, coast-to-water movement, dragon swimming/surface/diving, water transitions and a procedural submerged shrine. It does **not** yet include complete underwater quests, advanced cooperative puzzles, rider-on-shoulder behavior, combat, saves, audio, asset-export tooling or finished painterly textures. Dragon transformations are an early G2 implementation: small form requires landing before dismount; full free midair remounting, shoulder riding and co-op puzzles are later. These remain planned work, not hidden or simulated features.
 
 The 4 × 4 km world and all objects use meters with Y up. The packaged seed is `0x5ca1e0`. Geometry is procedurally generated and currently requires no third-party art/audio files.
 
@@ -30,6 +30,7 @@ Open the URL printed by Vite. Click **Take flight**. Press Esc to release pointe
 | F | Land / take off on land; splash down or launch from deep water |
 | 1 / 2 / 3 | Small / rideable / giant dragon; growth checks world clearance |
 | C | Dive / surface in water, for either rider or dragon |
+| G | Invoke or examine a nearby Tidegate rune stone |
 | Q / E | Dive deeper / swim upward while underwater |
 | Tab | Switch control between the grounded small dragon and independent rider |
 | V | Cycle five cameras |
@@ -41,7 +42,7 @@ Open the URL printed by Vite. Click **Take flight**. Press Esc to release pointe
 - **G0** — architecture, strict TypeScript, Vite, lint/tests/build, seeded generation and asset registry. Lockfile and smoke/benchmark verification remain.
 - **G1** — painterly Azure Coast, recognizable landmarks, world-streaming quality/LOD, water, foliage and coastal architecture. **In progress:** stitched 32:8 terrain LOD edges, shader ocean, foam contours, temple/arch and discoverable landmarks; painterly art direction and benchmarks remain.
 - **G2** — polished flight dynamics, original procedural dragon/rider rigs, expressive animation and all three dragon sizes. **In progress:** 3 size modes, distinct physics profiles, conservative collision proxies, eased landing/takeoff, diagonal ground gait, controllable small dragon, independent rider scale and animated skinned wing deformation. Real skeletal rig export, transitions, complete locomotion and animation QA remain.
-- **G3** — seamless on-foot, riding, swimming and underwater traversal, co-op exploration. **In progress:** rider-controlled land locomotion, beach wading, rider/dragon swimming and diving, no oxygen timer, submerged shrine, underwater fog; co-op puzzles and full environmental interactions remain.
+- **G3** — seamless on-foot, riding, swimming and underwater traversal, co-op exploration. **In progress:** independent rider walking, beach wading, swim/dive, underwater shrine and fog, articulated rider swim/walk pose, and first two-character Tidegate puzzle. More complex co-op puzzles and full environmental interactions remain.
 - **G4** — fire/elemental combat, threats and rider/dragon bond interactions.
 - **G5** — story opening, villages/NPCs, quests, progression and persistent saves.
 - **G6** — optimization, replacement art pipeline, accessibility, packaging and Unreal port plan.
@@ -95,3 +96,17 @@ Under software WebGL, frames can take longer than a full flight-transition phase
 **Quick tests:** `?start=meadow` starts near safe grass for F/1/Tab tests. `?start=water` starts above deep sea for F/C/Q/E tests. The default world remains fixed-seed. The browser screenshot smoke test also exercises a development-only underwater path.
 
 **Scope note:** swimming currently relies on analytical seabed-height and structure proxies; procedural water is not a full fluid solver, there are no currents or underwater combat yet. Rider movement is separate from dragon movement and neither needs external assets. A future iteration will add rider swimming strokes, navigation hazards, shore animations, co-op puzzles and a richer environment.
+
+## G3.1 — Tidegate dual-character trial
+
+**Tidegate Runestones** is a procedural landmark in the training meadow around **(-555, 100)**. This is an actual interactive cooperative puzzle, not just a pair of glowing props.
+
+1. Start near the meadow (`?start=meadow` is useful for testing), land with **F**, and shrink with **1**. Keep the small dragon on the left rune. Press **G** to anchor it.
+2. Press **Tab** to control the dismounted rider. Walk with W/S and steer with A/D toward the right rune, then press **G**. The dragon must still be near its rune for this to work.
+3. The runes activate and the **Tidebound Sigil** is awarded as an in-session exploration achievement. The nearby beacon illuminates. The state persists while the page is running; saving it across restarts belongs to G5.
+
+The hint panel appears within roughly 36 meters. Moving the dragon off its rune before completion releases the anchor. Attempting to activate with the wrong actor, while airborne, or at too great a distance fails with a specific explanation. The same interaction is available through the on-screen button. This is a new standalone trial, not yet a gate into the Sunken Shrine.
+
+For a quick browser QA pass, `npm run test:browser` exercises the dragon and rider interactions and captures a snapshot after the Sigil is awakened. No new runtime dependency or imported character art was added.
+
+**Rider motion update:** generated shoulder/hip joints now swing during on-foot movement and perform opposing arm strokes and leg kicks during swimming and diving. These are procedural pose channels on the existing generated character, not authored motion clips or a finished retargetable GLB skeleton.
