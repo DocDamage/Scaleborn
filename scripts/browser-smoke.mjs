@@ -25,7 +25,7 @@ async function main() {
     let connected = false;
     for (let attempt = 0; attempt < 12; attempt++) {
       try {
-        const response = await page.goto(url + '?qa=1', { waitUntil: 'networkidle', timeout: 6000 });
+        const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 6000 });
         assert.equal(response?.status(), 200);
         connected = true;
         break;
@@ -71,6 +71,9 @@ async function main() {
     assert.ok(hasWebGL, 'No WebGL2 context on game canvas');
     await page.screenshot({ path: 'artifacts/azure-coast-smoke.png' });
     // Exercise a complete animated landing/size change/takeoff in a deterministic meadow.
+    const meadowResponse = await page.goto(url + '?start=meadow&qa=1', { waitUntil: 'networkidle' });
+    assert.equal(meadowResponse?.status(), 200);
+    await page.locator('#start').click();
     await page.evaluate(() => {
       if (typeof window.__scalebornQaLand !== 'function') throw new Error('Dev landing hook missing');
       window.__scalebornQaLand();
@@ -82,12 +85,10 @@ async function main() {
     });
     await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'ON LAND', null, { timeout: 12000 });
     await page.keyboard.press('1');
-    await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'SMALL COMPANION', null, { timeout: 12000 });
-    await page.evaluate(() => window.__scalebornQaAdvance(45));
+    await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'SMALL COMPANION', null, { timeout: 6000 });
     await page.screenshot({ path: 'artifacts/azure-coast-small-meadow.png' });
     await page.keyboard.press('2');
-    await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'RIDEABLE', null, { timeout: 12000 });
-    await page.evaluate(() => window.__scalebornQaAdvance(45));
+    await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'RIDEABLE', null, { timeout: 6000 });
     await page.evaluate(() => {
       if (typeof window.__scalebornQaLaunch !== 'function') throw new Error('Dev takeoff hook missing');
       window.__scalebornQaLaunch();
