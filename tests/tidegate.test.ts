@@ -75,6 +75,7 @@ describe('Tidegate dual-character rune puzzle', () => {
     expect(interactTidegate(p, s).ok).toBe(false);
     s.riderMode = 'ground';
     s.riderX = TIDEGATE.rider.x;
+    s.riderZ = TIDEGATE.rider.z;
     expect(interactTidegate(p, s).ok).toBe(true);
   });
 });
