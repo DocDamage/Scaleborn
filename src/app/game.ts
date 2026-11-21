@@ -105,9 +105,11 @@ export class Game {
           throw new Error('QA frames must be an integer between 1 and 180');
         }
         const idle = { turn: 0, pitch: 0, bank: 0, boost: false, flap: false, move: 0 };
-        for (let i = 0; i < frames; i++) stepFlight(this.flight, idle, FIXED_DT);
+        for (let i = 0; i < frames; i++) {
+          stepFlight(this.flight, idle, FIXED_DT);
+          this.dragon.update(this.flight);
+        }
         this.accumulator = 0;
-        this.dragon.update(this.flight);
         this.updateHud(0.2);
       };
     }
