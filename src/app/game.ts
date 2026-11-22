@@ -12,6 +12,7 @@ import { toggleRiderControl, toggleRiderDive } from '../actors/rider/movement';
 import { LANDMARKS } from '../world/terrain';
 import { GRAND_LAKE, MIRRORFALL, headwaterProfileAt, waterSurfaceAt } from '../world/highlandLake';
 import { MIRRORFALL_IMPACT } from '../world/waterDynamics';
+import { findLakebedReviewViewpoint } from '../world/lakebedReviewViewpoint';
 import { AdaptiveResolution } from './adaptiveResolution';
 import { resolveCameraOcclusion } from './cameraOcclusion';
 import { OBSTACLES } from '../world/collision';
@@ -386,16 +387,10 @@ export class Game {
         // A shallow bed-level camera is needed to verify that lake rocks,
         // vegetation, caustics and sediments actually render. The older
         // midwater capture could only show fog over the 148m-deep basin.
-        const x = GRAND_LAKE.x - GRAND_LAKE.radiusX * .905;
-        const z = GRAND_LAKE.z;
-        const bed = heightAt(x,z);
-        const depth = GRAND_LAKE.surfaceY - bed;
-        if (depth < 8 || depth > 25) {
-          throw new Error('Lakebed visual QA site is not a safe planted shelf');
-        }
+        const { x, z, eyeY } = findLakebedReviewViewpoint();
         this.flight.x=x;
         this.flight.z=z;
-        this.flight.y=bed+5.5;
+        this.flight.y=eyeY;
         this.flight.waterTargetY=this.flight.y;
         this.flight.yaw=-Math.PI/2;
         this.flight.pitch=-.16;
