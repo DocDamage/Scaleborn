@@ -26,10 +26,11 @@ describe('Natural Mirrorfall environment rather than primitive props', () => {
     try {
       const sprites=clouds.root.children.filter(x=>x instanceof THREE.Sprite);
       expect(sprites).toHaveLength(0);
-      expect((sprites[0] as THREE.Sprite).material).toBeInstanceOf(THREE.SpriteMaterial);
       clouds.update(12.5);
       const high = new PainterlyClouds(new THREE.Scene(), 'high');
       expect(high.root.children).toHaveLength(16);
+      expect((high.root.children[0] as THREE.Sprite).material)
+        .toBeInstanceOf(THREE.SpriteMaterial);
       high.dispose();
     } finally {clouds.dispose();}
   });
