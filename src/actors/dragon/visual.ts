@@ -5,7 +5,7 @@ import { createWingRig, poseWing } from './wingRig';
 import { dragonPose } from './animationPose';
 import { riderPose } from '../rider/pose';
 import { applyDragonScales, makeDragonScaleTextures } from './skinSurface';
-import { loadCharacterModel } from './characterSources';
+import { CHARACTER_MODEL_SOURCES, loadCharacterModel } from './characterSources';
 import { ImportedCharacterRig, type CharacterKind, type CharacterModelFile } from '../rider/importedCharacterRig';
 import { loftDragon, ONYX_TORSO, ONYX_HEAD, taperedSpine, sculptFin } from './organicSculpt';
 import { makeScalebornRider } from '../rider/heroSculpt';
@@ -192,6 +192,12 @@ export class DragonVisual {
     // Model loading is independent of the deterministic fixed-step game.
     // Keep collision and existing animation usable if either asset fails.
     for (const kind of ['dragon', 'rider'] as const) {
+      // Until approved, authored GLBs are installed, the new original
+      // in-engine sculpts remain visible. No 404s and no donor skins.
+      if (!CHARACTER_MODEL_SOURCES[kind].installed) {
+        this.modelStatus[kind] = 'fallback';
+        continue;
+      }
       void loadCharacterModel(kind)
         .then((model) => {
           if (this.disposed) {
