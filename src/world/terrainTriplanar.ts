@@ -62,7 +62,8 @@ export function installTerrainTriplanar(
        #endif`,
     ).replace(
       '#include <roughnessmap_fragment>',
-      `#ifdef USE_ROUGHNESSMAP
+      `float roughnessFactor = roughness;
+       #ifdef USE_ROUGHNESSMAP
          roughnessFactor *= scTriSample(roughnessMap).g;
        #endif`,
     ).replace(
