@@ -34,6 +34,38 @@ describe('original Onyx expressive face, eyes and mobile crests',()=>{
     expect(swim.eyeOpen).toBeLessThan(calm.eyeOpen);
   });
 
+  it('has paired curved muzzle anatomy, without bright protruding bead nostrils',()=>{
+    const dragon=new DragonVisual();
+    try{
+      for(const side of ['left','right']){
+        for(const detail of ['nostril','upper-lip']){
+          const part=dragon.root.getObjectByName(
+            'creature.dragon.'+detail+'.'+side);
+          expect(part).toBeInstanceOf(THREE.Mesh);
+          const mesh=part as THREE.Mesh;
+          const position=mesh.geometry.getAttribute('position');
+          const normal=mesh.geometry.getAttribute('normal');
+          expect(position.count).toBeGreaterThan(100);
+          expect(normal.count).toBe(position.count);
+          for(let i=0;i<position.count;i++){
+            expect([position.getX(i),position.getY(i),position.getZ(i),
+              normal.getX(i),normal.getY(i),normal.getZ(i)]
+              .every(Number.isFinite)).toBe(true);
+          }
+        }
+      }
+      const eye=dragon.root.getObjectByName(
+        'creature.dragon.eye.iris.left') as THREE.Mesh;
+      expect((eye.material as THREE.MeshStandardMaterial).emissiveIntensity)
+        .toBeLessThan(.4);
+      const state=newFlightState();
+      state.time=3.22;
+      dragon.update(state);
+      expect(dragon.root.getObjectByName('creature.dragon.nostril.left'))
+        .toBeDefined();
+    }finally{dragon.dispose();}
+  });
+
   it('animates both sides of the complete original Onyx eye geometry',()=>{
     const dragon=new DragonVisual();
     try{

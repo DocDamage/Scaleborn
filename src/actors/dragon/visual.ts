@@ -31,11 +31,11 @@ const ridges = applyDragonScales(
   scaleTextures,
 );
 const iris = new THREE.MeshStandardMaterial({
-  color: 0x8fe3c0, emissive: 0x2e5a50, emissiveIntensity: 0.62, roughness: 0.39,
+  color: 0x8fe3c0, emissive: 0x2e5a50, emissiveIntensity: 0.30, roughness: 0.49,
 });
 const pupil = new THREE.MeshStandardMaterial({ color: 0x102329, roughness: 0.35 });
 const glimmer = new THREE.MeshStandardMaterial({
-  color: 0xe3f8e3, emissive: 0x648b84, emissiveIntensity: 0.20,
+  color: 0xe3f8e3, emissive: 0x648b84, emissiveIntensity: 0.10,
 });
 
 function ellipsoid(parent: THREE.Group, material: THREE.Material,
@@ -152,6 +152,23 @@ export class DragonVisual {
       lid.name='creature.dragon.upper-lid.'+(side<0?'left':'right');
       this.head.add(lid);
       this.eyes.push({iris:irisMesh,pupil:pupilMesh,glint,lid,brow,side});
+      // The original Onyx muzzle needs readable nostrils and a continuous
+      // upper-lip contour at close range. Curved lofted forms sit against the
+      // head's existing anatomical section, not on floating sphere beads.
+      const nostril=new THREE.Mesh(taperedSpine([
+        [side*.110,.031,-1.138],[side*.176,.051,-1.080],
+        [side*.236,.062,-.994],
+      ],.033,12,26),ridges);
+      nostril.name='creature.dragon.nostril.'+(side<0?'left':'right');
+      nostril.castShadow=true;
+      this.head.add(nostril);
+      const upperLip=new THREE.Mesh(taperedSpine([
+        [side*.155,-.255,-1.116],[side*.303,-.248,-.934],
+        [side*.410,-.191,-.731],[side*.452,-.174,-.502],
+      ],.044,12,32),highlight);
+      upperLip.name='creature.dragon.upper-lip.'+(side<0?'left':'right');
+      upperLip.castShadow=true;
+      this.head.add(upperLip);
       // Distinctive backward-swept paired horn and cartilage fin-crests.
       const horn=new THREE.Mesh(taperedSpine([
         [side*.37,.41,.33],[side*.46,.65,.44],
