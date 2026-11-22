@@ -9,6 +9,7 @@ import { CHARACTER_MODEL_SOURCES, loadCharacterModel } from './characterSources'
 import { ImportedCharacterRig, type CharacterKind, type CharacterModelFile } from '../rider/importedCharacterRig';
 import { loftDragon, ONYX_TORSO, ONYX_HEAD, taperedSpine, sculptFin } from './organicSculpt';
 import { makeScalebornRider } from '../rider/heroSculpt';
+import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
 
 const scaleTextures=makeDragonScaleTextures();
 const skin = applyDragonScales(
@@ -64,7 +65,8 @@ export class DragonVisual {
   private scene: THREE.Scene | null = null;
   private readonly wingL = createWingRig(-1);
   private readonly wingR = createWingRig(1);
-  private readonly tail = new THREE.Group();
+  private readonly tailRig = createDragonTailRig(skin);
+  private readonly tail = this.tailRig.root;
   private readonly head = new THREE.Group();
   private readonly eyes: THREE.Mesh[] = [];
   private readonly riderTail = this.rider.getObjectByName('rider.tail') as THREE.Group;
@@ -167,15 +169,9 @@ export class DragonVisual {
       }
     }
     this.body.add(this.wingL.root, this.wingR.root);
-    this.tail.name = 'tailTip';
-    this.tail.position.set(0, 0, 1.38);
-    this.tail.add(new THREE.Mesh(loftDragon([
-      [-.05,-.08,.31,.29],[.38,-.08,.34,.27],
-      [.78,-.10,.27,.21],[1.19,-.10,.19,.16],
-      [1.67,-.13,.12,.11],[2.23,-.16,.055,.052],
-      [2.49,-.16,.014,.014],
-    ],76,26),skin));
-    tailFin(this.tail);
+    // A continuous skinned tail replaces the formerly rigid loft. Tail fins
+    // inherit the end-bone motion while retaining original authoring coords.
+    tailFin(this.tailRig.finSocket);
     this.body.add(this.tail);
     this.root.add(this.body, this.rider);
     this.legacyDragonNodes.push(...this.body.children);
@@ -261,8 +257,7 @@ export class DragonVisual {
       leg.group.position.y = -0.45 + (pose.name === 'walk'
         ? Math.max(0, Math.sin(phase)) * pose.gaitAmount * 0.08 : 0);
     }
-    this.tail.rotation.y = pose.tailAngle;
-    this.tail.rotation.x = Math.sin(state.time * 1.65) * 0.07;
+    poseDragonTail(this.tailRig,pose,state.time);
     this.head.rotation.x = pose.neckAngle;
     this.head.rotation.y = -state.roll * 0.15 + Math.sin(state.time * 0.7) * 0.028;
     const blinking = (state.time % 7.3) > 7.08;

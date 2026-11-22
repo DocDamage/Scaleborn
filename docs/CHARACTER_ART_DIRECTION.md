@@ -96,3 +96,18 @@ rigged GLBs. A first playable sculpt is not equivalent to accepted final art.
 - The local-first GLB adapter is retained for future authored production
   models, with `installed:false` until valid original exports exist.
   No stock-model fallback or externally downloaded elf is approved.
+
+## Character visual continuation — deforming Onyx tail
+
+The first character sculpt kept its tail rigid and swung the entire mesh around
+a single root pivot. `src/actors/dragon/dragonTailRig.ts` now provides a
+continuous, three-bone skinned tail with normalized overlapping weights and
+smooth, distinct middle/tip motion for walk, cruise, surge and underwater
+swimming. The original split fins attach to an end-bone socket without
+changing their authoring coordinates or the existing `tailTip` root ID.
+This improves the playable creature's silhouette and expressive flexibility
+without touching flight collision or rider-scale logic.
+
+**Still required:** reviewed, production-quality sculpt/skin detailing,
+rigged body and facial expressions, authored GLB and full animation clips,
+and actual game screenshot/frame-rate acceptance.
