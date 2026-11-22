@@ -50,6 +50,15 @@ describe('original hybrid heroine second-pass anatomy and textiles', () => {
         expect(boot.geometry.boundingBox!.max.x).toBeLessThan(.1);
       }
       const coat=rider.getObjectByName('rider.fitted-coat') as THREE.Mesh;
+      expect(coat.geometry.getAttribute('position').count).toBeGreaterThan(1100);
+      const positions=coat.geometry.getAttribute('position');
+      const firstHem=positions.getY(0),scallopedHem=positions.getY(3);
+      expect(Math.abs(firstHem-scallopedHem)).toBeGreaterThan(.005);
+      for(const side of ['left','right']){
+        const lapel=rider.getObjectByName('rider.coat-lapel.'+side) as THREE.Mesh;
+        expect(lapel).toBeInstanceOf(THREE.Mesh);
+        expect(lapel.geometry.getAttribute('position').count).toBeGreaterThan(150);
+      }
       const mat=coat.material as THREE.MeshStandardMaterial;
       expect(mat.map).toBeInstanceOf(THREE.DataTexture);
       expect(mat.normalMap).toBeInstanceOf(THREE.DataTexture);

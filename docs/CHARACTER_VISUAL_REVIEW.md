@@ -200,3 +200,11 @@ A renderer-neutral tiny yaw, pitch and bank follows her grounded breathing
 and dragon banking, while her pelvis remains anchored to the saddle. It is
 not a borrowed GLB, does not affect quest/save or physics and requires
 fresh face/side and mounted real WebGL acceptance.
+
+### Original heroine fitted coat seam and fabric silhouette
+The existing child-size original torso loft now has a waist-shaped fitted
+coat profile and gentle six-pleat lower hem, rather than an even straight
+cylinder. Narrow original collar-to-chest cloth lapels lie on its existing
+surface, retaining clothing palette, three form sockets and hero identity.
+It remains first-pass code-authored fabric, not a skinned production garment;
+actual WebGL side and mounted captures must determine visual acceptance.

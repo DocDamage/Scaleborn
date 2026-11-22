@@ -14,7 +14,7 @@ type Profile = readonly [height:number, width:number, depth:number, z:number];
 
 function shapedTorso(
   profile: readonly Profile[], material:THREE.Material, name:string,
-  samples=36, radial=24, region:'plain'|'face'='plain',
+  samples=36, radial=24, region:'plain'|'face'|'coat'='plain',
 ):THREE.Mesh {
   const positions:number[]=[], uvs:number[]=[], index:number[]=[];
   const rising=profile[profile.length-1]![0]>=profile[0]![0];
@@ -46,9 +46,15 @@ function shapedTorso(
         : 0;
       const jaw=region==='face'
         ? Math.exp(-Math.pow((y-1.228)/.058,2)*2):0;
-      const r=region==='face'?0:.0022*Math.sin(angle*7+t*19);
+      const coatFall=Math.pow(1-t,7);
+      const coatPleat=region==='coat'
+        ? (.004+.006*coatFall)*Math.cos(angle*6)*(.55+.45*Math.sin(t*Math.PI)) : 0;
+      const r=region==='face'?0
+        : region==='coat' ? coatPleat : .0022*Math.sin(angle*7+t*19);
+      // Fitted weathered coat, not an evenly extruded tube.
+      const hem=region==='coat' ? -.013*coatFall*Math.cos(angle*4) : 0;
       positions.push(nx*(width+r)*(1-.033*jaw),
-        y,centerZ+Math.sin(angle)*(depth+r)-cheek*.013);
+        y+hem,centerZ+Math.sin(angle)*(depth+r)-cheek*.013);
       uvs.push(j/radial,t);
       if(i<samples&&j<radial) {
         const base=i*(radial+1)+j,next=base+radial+1;
@@ -249,10 +255,23 @@ export function makeScalebornRider():THREE.Group {
   group.add(head);
 
   group.add(shapedTorso([
-    [.56,.160,.126,.02],[.72,.168,.139,.005],
-    [.89,.179,.135,-.005],[1.055,.204,.141,-.008],
-    [1.16,.13,.106,-.02],
-  ],coat,'rider.fitted-coat'));
+    [.56,.172,.130,.020],[.65,.177,.138,.014],
+    [.78,.151,.127,.004],[.88,.163,.132,-.002],
+    [.995,.186,.137,-.006],[1.075,.200,.141,-.009],
+    [1.16,.130,.106,-.020],
+  ],coat,'rider.fitted-coat',42,28,'coat'));
+  // Narrow original cloth lapels hug the collar-to-chest seam.
+  for(const side of [-1,1] as const) {
+    const lapel=new THREE.Mesh(taperedSpine([
+      [side*.142,1.125,-.070],
+      [side*.098,1.084,-.110],
+      [side*.063,1.016,-.136],
+      [side*.035,.957,-.140],
+    ],.014,10,28),trim);
+    lapel.name=side<0?'rider.coat-lapel.left':'rider.coat-lapel.right';
+    lapel.castShadow=true;
+    group.add(lapel);
+  }
 
   group.add(shapedTorso([
     [1.145,.063,.073,-.01],[1.19,.071,.075,-.018],
