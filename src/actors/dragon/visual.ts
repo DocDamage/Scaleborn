@@ -7,12 +7,16 @@ import { riderPose } from '../rider/pose';
 import { applyDragonScales, makeDragonScaleTextures } from './skinSurface';
 import { loadCharacterModel } from './characterSources';
 import { ImportedCharacterRig, type CharacterKind, type CharacterModelFile } from '../rider/importedCharacterRig';
+import { loftDragon, ONYX_TORSO, ONYX_HEAD, taperedSpine, sculptFin } from './organicSculpt';
+import { makeScalebornRider } from '../rider/heroSculpt';
 
 const scaleTextures=makeDragonScaleTextures();
 const skin = applyDragonScales(
   new THREE.MeshStandardMaterial({ color: 0x263f4a, roughness: 0.65, metalness: 0.05 }),
   scaleTextures,
 );
+const bodySkin = skin.clone();
+bodySkin.vertexColors = true;
 const highlight = applyDragonScales(
   new THREE.MeshStandardMaterial({ color: 0x426b74, roughness: 0.62, metalness: 0.06 }),
   scaleTextures,
@@ -38,52 +42,13 @@ function ellipsoid(parent: THREE.Group, material: THREE.Material,
   return mesh;
 }
 
-function makeRider(): THREE.Group {
-  const group = new THREE.Group();
-  group.name = 'character.rider.hero';
-  const coat = new THREE.MeshStandardMaterial({ color: 0x9c705a, roughness: 0.93 });
-  const cloth = new THREE.MeshStandardMaterial({ color: 0x4c7f89, roughness: 0.9 });
-  const skinMaterial = new THREE.MeshStandardMaterial({ color: 0xcba68b, roughness: 0.94 });
-  const hair = new THREE.MeshStandardMaterial({ color: 0x322d32, roughness: 0.93 });
-  ellipsoid(group, cloth, [0, 0.80, 0.1], [0.25, 0.40, 0.20]);
-  ellipsoid(group, skinMaterial, [0, 1.38, -0.02], [0.23, 0.27, 0.22]);
-  ellipsoid(group, hair, [0, 1.56, 0.01], [0.23, 0.14, 0.24]);
-  for (const side of [-1, 1]) {
-    const name = side < 0 ? 'left' : 'right';
-    const arm = new THREE.Group();
-    arm.name = 'rider.' + name + 'Arm';
-    arm.position.set(side * 0.29, 1.07, -0.01);
-    ellipsoid(arm, coat, [0, -0.30, -0.17], [0.11, 0.38, 0.12]);
-    ellipsoid(arm, skinMaterial, [side * -0.04, -0.67, -0.35], [0.12, 0.12, 0.12]);
-    group.add(arm);
-    const leg = new THREE.Group();
-    leg.name = 'rider.' + name + 'Leg';
-    leg.position.set(side * 0.22, 0.54, 0.14);
-    ellipsoid(leg, cloth, [0, -0.27, 0.12], [0.15, 0.30, 0.16]);
-    group.add(leg);
-    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.29, 7), skinMaterial);
-    horn.position.set(side * 0.14, 1.77, -0.05);
-    horn.rotation.z = side * -0.3;
-    group.add(horn);
-  }
-  const cloak = new THREE.Mesh(new THREE.ConeGeometry(0.34, 0.84, 6, 1, true), coat);
-  cloak.rotation.x = -0.12;
-  cloak.position.set(0, 0.58, 0.23);
-  group.add(cloak);
-  return group;
-}
-
 function tailFin(parent: THREE.Group): void {
-  const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.36, 1.4, 6), highlight);
-  leaf.rotation.x = Math.PI / 2;
-  leaf.position.set(0, -0.10, 2.9);
-  parent.add(leaf);
-  for (const sign of [-1, 1]) {
-    const sideFin = new THREE.Mesh(new THREE.ConeGeometry(0.32, 1.13, 6), skin);
-    sideFin.position.set(sign * 0.31, -0.08, 2.82);
-    sideFin.rotation.z = sign * 0.72;
-    sideFin.rotation.x = 0.6;
-    parent.add(sideFin);
+  parent.add(sculptFin([0,0,2.15],[0,.32,2.85],.42,
+    highlight,'creature.dragon.tail-fin.central',28));
+  for(const side of [-1,1] as const) {
+    parent.add(sculptFin([0,-.08,2.05],
+      [side*.63,-.07,2.68],.38,skin,
+      side<0?'creature.dragon.tail-fin.left':'creature.dragon.tail-fin.right',24));
   }
 }
 
@@ -94,7 +59,7 @@ function tailFin(parent: THREE.Group): void {
  */
 export class DragonVisual {
   readonly root = new THREE.Group();
-  readonly rider = makeRider();
+  readonly rider = makeScalebornRider();
   readonly body = new THREE.Group();
   private scene: THREE.Scene | null = null;
   private readonly wingL = createWingRig(-1);
@@ -102,6 +67,7 @@ export class DragonVisual {
   private readonly tail = new THREE.Group();
   private readonly head = new THREE.Group();
   private readonly eyes: THREE.Mesh[] = [];
+  private readonly riderTail = this.rider.getObjectByName('rider.tail') as THREE.Group;
   private readonly riderLimbs = {
     leftArm: this.rider.getObjectByName('rider.leftArm') as THREE.Group,
     rightArm: this.rider.getObjectByName('rider.rightArm') as THREE.Group,
@@ -124,38 +90,54 @@ export class DragonVisual {
     this.root.name = 'creature.dragon.onyx';
     this.root.userData.assetId = 'creature.dragon.onyx';
     this.body.name = 'creature.dragon.body';
-    ellipsoid(this.body, skin, [0, 0, 0], [0.79, 0.66, 1.72], 20);
-    ellipsoid(this.body, highlight, [0, 0.38, -0.32], [0.55, 0.28, 1.22], 18);
-    ellipsoid(this.body, skin, [0, 0.30, -1.28], [0.49, 0.52, 0.78]);
+    // One organic longitudinal torso/neck/tail silhouette; no stacked
+    // stretched sphere- or cube-shaped body parts remain.
+    const core = new THREE.Mesh(loftDragon(ONYX_TORSO,124,40),bodySkin);
+    core.name='creature.dragon.onyx.anatomical-torso';
+    core.castShadow=true;core.receiveShadow=true;
+    this.body.add(core);
     this.head.name = 'head';
-    this.head.position.set(0, 0.42, -1.83);
-    ellipsoid(this.head, skin, [0, 0.10, -0.19], [0.62, 0.44, 0.73], 20);
-    ellipsoid(this.head, highlight, [0, -0.12, -0.60], [0.48, 0.26, 0.65], 18);
+    this.head.position.set(0, 0.32, -1.54);
+    const skull=new THREE.Mesh(loftDragon(ONYX_HEAD,76,36),bodySkin);
+    skull.name='creature.dragon.onyx.sculpted-skull';
+    skull.castShadow=true;
+    this.head.add(skull);
+    const lowerJaw=new THREE.Mesh(loftDragon([
+      [-1.10,-.26,.08,.05],[-.85,-.29,.30,.115],
+      [-.56,-.24,.43,.14],[-.21,-.20,.39,.15],[.08,-.16,.18,.10],
+    ],42,26),highlight);
+    lowerJaw.name='creature.dragon.lower-jaw';
+    this.head.add(lowerJaw);
     for (const side of [-1, 1]) {
       ellipsoid(this.head, iris, [side * 0.51, 0.20, -0.35], [0.165, 0.22, 0.10], 16);
       const eye = ellipsoid(this.head, pupil, [side * 0.57, 0.21, -0.41], [0.065, 0.16, 0.05], 12);
       this.eyes.push(eye);
       ellipsoid(this.head, glimmer, [side * 0.60, 0.31, -0.45], [0.04, 0.047, 0.025], 8);
-      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.19, 0.79, 7), ridges);
-      horn.position.set(side * 0.40, 0.66, 0.28);
-      horn.rotation.set(0.43, 0, side * -0.24);
+      // Distinctive backward-swept paired horn and cartilage fin-crests.
+      const horn=new THREE.Mesh(taperedSpine([
+        [side*.37,.41,.33],[side*.46,.65,.44],
+        [side*.54,.88,.66],[side*.64,.93,.91],
+      ],.175,14),ridges);
+      horn.name=side<0?'creature.dragon.horn.left':'creature.dragon.horn.right';
       this.head.add(horn);
-      const ear = ellipsoid(this.head, highlight, [side * 0.68, 0.38, 0.07], [0.17, 0.31, 0.17]);
-      ear.rotation.z = side * -0.55;
+      this.head.add(sculptFin([side*.49,.23,.14],
+        [side*1.02,.44,.83],.60,highlight,
+        side<0?'creature.dragon.crest.left':'creature.dragon.crest.right',30));
+      // The broad eye-brow ridge reads when the creature banks at speed.
+      this.head.add(new THREE.Mesh(taperedSpine([
+        [side*.30,.30,-.78],[side*.51,.37,-.44],
+        [side*.62,.34,-.14],
+      ],.11,12),ridges));
     }
     this.body.add(this.head);
     // Original tapered ridge scales break up the smooth back silhouette
     // without adding a low-resolution box-like plate mesh.
     for (let i=0;i<9;i++) {
       const z=-1.13+i*.37;
-      const ridge=new THREE.Mesh(
-        new THREE.ConeGeometry(.14+i*.006,.34+Math.sin(i*.47)*.11,11),
-        ridges,
-      );
-      ridge.name='creature.dragon.dorsal-ridge.'+i;
-      ridge.position.set(0,.62-.05*(i/9),z);
-      ridge.rotation.x=-.23;
-      this.body.add(ridge);
+      const height=.55-.05*(i/9);
+      this.body.add(sculptFin([0,height,z-.11],
+        [0,height+.29+Math.sin(i*.47)*.12,z+.22],
+        .20,ridges,'creature.dragon.dorsal-ridge.'+i,16));
     }
     // Hinged procedural legs: diagonal pairs step in opposition on land.
     for (const side of [-1, 1]) {
@@ -164,12 +146,20 @@ export class DragonVisual {
         const z = front ? -1.05 : 1.03;
         leg.name = 'leg.' + (front ? 'front' : 'hind') + (side < 0 ? 'Left' : 'Right');
         leg.position.set(side * 0.55, -0.45, z);
-        ellipsoid(leg, skin, [0, -0.18, 0], [0.27, 0.47, 0.30]);
-        ellipsoid(leg, ridges, [0, -0.68, -0.12], [0.31, 0.16, 0.39]);
-        for (const toe of [-0.14, 0.14]) {
-          const claw = new THREE.Mesh(new THREE.ConeGeometry(0.078, 0.30, 6), highlight);
-          claw.rotation.x = -Math.PI / 2;
-          claw.position.set(toe, -0.71, -0.40);
+        leg.add(new THREE.Mesh(taperedSpine([
+          [0,.12,0],[side*.08,-.18,.03],
+          [side*.11,-.45,-.17],[side*.08,-.67,-.23],
+        ],front?.26:.32,18,36),skin));
+        const paw=new THREE.Mesh(loftDragon([
+          [-.52,-.66,.08,.055],[-.38,-.68,.29,.135],
+          [-.09,-.65,.30,.12],[.13,-.65,.18,.09],
+        ],24,20),ridges);
+        leg.add(paw);
+        for(const toe of [-.17,0,.17]){
+          const claw=new THREE.Mesh(taperedSpine([
+            [toe,-.65,-.38],[toe,-.67,-.52],
+            [toe*.9,-.71,-.63],
+          ],.073,9,18),highlight);
           leg.add(claw);
         }
         this.body.add(leg);
@@ -179,11 +169,12 @@ export class DragonVisual {
     this.body.add(this.wingL.root, this.wingR.root);
     this.tail.name = 'tailTip';
     this.tail.position.set(0, 0, 1.38);
-    for (let i = 0; i < 6; i++) {
-      ellipsoid(this.tail, i % 2 ? skin : highlight,
-        [0, -i * 0.04, i * 0.44],
-        [0.38 - i * 0.05, 0.34 - i * 0.045, 0.45]);
-    }
+    this.tail.add(new THREE.Mesh(loftDragon([
+      [-.05,-.08,.31,.29],[.38,-.08,.34,.27],
+      [.78,-.10,.27,.21],[1.19,-.10,.19,.16],
+      [1.67,-.13,.12,.11],[2.23,-.16,.055,.052],
+      [2.49,-.16,.014,.014],
+    ],76,26),skin));
     tailFin(this.tail);
     this.body.add(this.tail);
     this.root.add(this.body, this.rider);
@@ -278,6 +269,10 @@ export class DragonVisual {
     this.riderLimbs.rightArm.rotation.x = riderMotion.rightArm;
     this.riderLimbs.leftLeg.rotation.x = riderMotion.leftLeg;
     this.riderLimbs.rightLeg.rotation.x = riderMotion.rightLeg;
+    this.riderTail.rotation.y=Math.sin(state.time*2.15)*.12
+      +(state.form==='small' ? Math.sin(state.time*.66)*.08 : state.roll*.16);
+    this.riderTail.rotation.x=state.riderMode==='underwater'
+      ? Math.sin(state.time*4.1)*.22 : -.04;
     if (state.form === 'small') {
       if (this.scene && this.rider.parent !== this.scene) this.scene.add(this.rider);
       this.rider.position.set(
