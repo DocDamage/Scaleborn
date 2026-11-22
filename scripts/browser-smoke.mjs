@@ -148,7 +148,7 @@ async function main() {
     await page.keyboard.press('g');
     await page.waitForFunction(() => document.querySelector('#echo-stage')?.textContent === 'COMPLETE', null, { timeout: 12000 });
     const stored = await page.evaluate(() => {
-      const raw = localStorage.getItem('scaleborn.azure-progress.v1');
+      const raw = window.localStorage.getItem('scaleborn.azure-progress.v1');
       return raw ? JSON.parse(raw) : null;
     });
     assert.equal(stored?.tidegateSolved, true);
