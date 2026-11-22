@@ -146,10 +146,10 @@ async function main() {
       window.__scalebornQaStageShrine();
     });
     await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'DIVING', null, { timeout: 12000 });
-    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-tidal-echo-before.png', timeout: 60000 });
+    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-tidal-echo-before.png' });
     await page.locator('#echo-action').evaluate((button) => button.click());
     await page.waitForFunction(() => document.querySelector('#echo-stage')?.textContent === 'ECHO COLLECTED', null, { timeout: 12000 });
-    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-tidal-echo.png', timeout: 60000 });
+    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-tidal-echo.png' });
     await page.evaluate(() => {
       if (typeof window.__scalebornQaStageEchoReturn !== 'function') throw new Error('Echo return QA hook missing');
       window.__scalebornQaStageEchoReturn();
