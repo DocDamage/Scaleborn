@@ -4,6 +4,7 @@ import { heightAt } from '../world/terrain';
 import { makeBondSurgePatchGeometry, makeBondSurgePatchTexture } from './bondSurgeFx';
 import { taperedSpine } from '../actors/dragon/organicSculpt';
 import { makeGloamHoundBody, makeGloamHoundLeg, makeGloamHoundPaw, makeGloamPeltNormal } from './gloamHoundSculpt';
+import { makeDragonFlameRibbonGeometry, makeDragonFlameRibbonTexture } from './flameRibbon';
 
 interface HoundRig {
   root: THREE.Group;
@@ -27,6 +28,7 @@ export class CombatVisual {
   private readonly rigs = new Map<string, HoundRig>();
   private readonly plume: THREE.InstancedMesh;
   private readonly flameMaterial: THREE.MeshBasicMaterial;
+  private readonly flameTexture: THREE.DataTexture;
   private readonly flameLight: THREE.PointLight;
   private readonly sigil: THREE.InstancedMesh;
   private readonly sigilMaterial: THREE.MeshBasicMaterial;
@@ -56,11 +58,13 @@ export class CombatVisual {
   constructor(scene: THREE.Scene, combat: CombatState) {
     this.root.name = 'encounter.azure.gloam-den';
     for (const enemy of combat.hounds) this.buildHound(enemy);
-    const geometry = new THREE.ConeGeometry(0.54, 1.65, 10, 1, true);
-    geometry.translate(0, 0.8, 0); // Plume trails behind its visible tip.
+    // Soft cross-ribbons: no hard geometric fire cones or additive clipping.
+    const geometry = makeDragonFlameRibbonGeometry();
+    this.flameTexture = makeDragonFlameRibbonTexture();
     this.flameMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.75,
-      depthWrite: false, blending: THREE.AdditiveBlending, fog: true,
+      color: 0xffffff, map: this.flameTexture,
+      side: THREE.DoubleSide, transparent: true, opacity: 0.62,
+      depthWrite: false, blending: THREE.NormalBlending, fog: true,
     });
     this.plume = new THREE.InstancedMesh(geometry, this.flameMaterial, FLAME_COUNT);
     this.plume.name = 'fx.dragon.fire-breath';
@@ -269,7 +273,7 @@ export class CombatVisual {
     this.orientation.setFromUnitVectors(UP, this.forward);
     const progress = Math.min(1, (this.fireAge + 0.02) / 0.24);
     const fade = Math.max(0, 1 - this.fireAge / duration);
-    this.flameMaterial.opacity = 0.69 * fade;
+    this.flameMaterial.opacity = 0.62 * fade;
     for (let i = 0; i < FLAME_COUNT; i++) {
       const t = (i + 0.5) / FLAME_COUNT;
       const distance = (1.3 + t * cast.range) * progress;
@@ -297,7 +301,7 @@ export class CombatVisual {
       cast.origin.y + this.forward.y * Math.min(14, cast.range * 0.34) * progress,
       cast.origin.z + this.forward.z * Math.min(14, cast.range * 0.34) * progress,
     );
-    this.flameLight.intensity = 2.9 * fade;
+    this.flameLight.intensity = 2.35 * fade;
   }
 
   private updateMagic(): void {
@@ -379,6 +383,7 @@ export class CombatVisual {
     materials.forEach((m) => m.dispose());
     this.bondTexture.dispose();
     this.houndNormal.dispose();
+    this.flameTexture.dispose();
     this.root.removeFromParent();
     this.rigs.clear();
   }

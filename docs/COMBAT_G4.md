@@ -54,3 +54,16 @@ geometry, material and all three live enemies.
 
 Final character art, polished animation and real GPU frame times still need
 review before the playable quality gate is accepted.
+
+### Onyx directional breath visual repair
+
+Live G4 screenshots showed fire as hard, over-exposed triangle/cone
+geometry rather than a flowing painted flame. The existing 54 pooled
+projectile visuals now draw narrow crossed **alpha-feathered fire ribbons**
+with coherent taper/soft ends. Original palette gradients remain, while
+non-additive blending and moderated emissive light prevent white clipping.
+Damage, hit direction, cooldown, resource cost, terrain occlusion and
+underwater restrictions are unchanged. The textures, geometry and runtime
+pool remain bounded and disposable.
+
+This is a better in-game effect, not an authored final VFX sequence.
