@@ -25,3 +25,18 @@ Open `/?start=combat` (optionally `&quality=low`) and click **Take flight**. Thi
 ## Next G4 work (not yet delivered)
 
 Additional threat archetypes/behaviors, encounter reward and checkpoint migration, enemy navigation improvements, authored impact/sound/facial/animation sets, targeting/accessibility options, and real RTX 3060 profiling/screenshot acceptance. Initial rider sigil/bond burst logic is functional but still needs browser gameplay acceptance and animation polish.
+
+### Actual-screen review: bonded surge VFX correction
+
+The first integrated gameplay screenshot showed an unnatural over-bright
+burst of long white spikes covering the screen. The combat adapter now uses
+36 **feathered, alpha-textured, terrain-hugging painted energy petals** in
+one instanced draw batch, with blue/teal/amethyst palette variation and
+bounded, non-additive luminosity. Animated radial spread remains tied to
+the real 15-metre Bond Surge gameplay event, without changing target damage,
+range, cooldowns, or save state. Runtime updates reuse one buffer and shader
+material. Regression tests prevent reintroducing tall cone spikes, flat
+opaque textures or unbounded off-terrain particles.
+
+This is a visual improvement in the game, not a final VFX art acceptance.
+Review the next real browser capture and RTX 3060 performance.

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { CombatState, FireCast, GloamHound, SigilCast, BondCast } from './combat';
 import { heightAt } from '../world/terrain';
+import { makeBondSurgePatchGeometry, makeBondSurgePatchTexture } from './bondSurgeFx';
 
 interface HoundRig {
   root: THREE.Group;
@@ -29,6 +30,7 @@ export class CombatVisual {
   private readonly sigilMaterial: THREE.MeshBasicMaterial;
   private readonly bond: THREE.InstancedMesh;
   private readonly bondMaterial: THREE.MeshBasicMaterial;
+  private readonly bondTexture: THREE.DataTexture;
   private readonly bondLight: THREE.PointLight;
   private magic: SigilCast | null = null;
   private magicAge = 1;
@@ -80,13 +82,24 @@ export class CombatVisual {
     this.sigil.visible = false;
     this.sigil.frustumCulled = false;
 
+    // Painterly, terrain-following luminous petals, not exploding cones.
+    // Normal blending avoids the white clipping evident in real QA screenshots.
+    this.bondTexture = makeBondSurgePatchTexture();
     this.bondMaterial = new THREE.MeshBasicMaterial({
-      color: 0xa5e9e1, transparent: true, opacity: 0.75,
-      depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: true,
+      color: 0xffffff, map: this.bondTexture,
+      transparent: true, opacity: 0.56,
+      depthWrite: false, depthTest: true, blending: THREE.NormalBlending,
+      side: THREE.DoubleSide, fog: true,
     });
     this.bond = new THREE.InstancedMesh(
-      new THREE.ConeGeometry(0.2, 1.5, 9), this.bondMaterial, BOND_COUNT,
+      makeBondSurgePatchGeometry(), this.bondMaterial, BOND_COUNT,
     );
+    for(let i=0;i<BOND_COUNT;i++){
+      // Irregular sea-glass blue, teal and amethyst patches.
+      this.tint.setHSL(.51+Math.sin(i*2.29)*.065,.47,.54+Math.sin(i*1.41)*.08);
+      this.bond.setColorAt(i,this.tint);
+    }
+    if(this.bond.instanceColor)this.bond.instanceColor.needsUpdate=true;
     this.bond.name = 'fx.bond.surge';
     this.bond.visible = false;
     this.bond.frustumCulled = false;
@@ -321,20 +334,21 @@ export class CombatVisual {
     if (!cast || !this.bond.visible) return;
     const progress = Math.min(1, (this.bondAge + 0.01) / 0.35);
     const fade = Math.max(0, 1 - this.bondAge / duration);
-    this.bondMaterial.opacity = 0.75 * fade;
-    this.bondLight.position.set(cast.x, cast.y, cast.z);
-    this.bondLight.intensity = 3.4 * fade;
+    this.bondMaterial.opacity = 0.56 * fade;
+    this.bondLight.position.set(cast.x, cast.y + 1.1, cast.z);
+    this.bondLight.intensity = 1.2 * fade;
     for (let i = 0; i < BOND_COUNT; i++) {
-      // Uneven radial spokes instead of the perfect white torus rings used
-      // in the original waterfall prototype.
+      const t = (i + 0.5) / BOND_COUNT;
       const angle = i * 2.39996 + cast.id * 0.13;
-      const r = (0.35 + i / BOND_COUNT * 0.65) * cast.radius * progress;
-      const rx = Math.cos(angle), rz = Math.sin(angle);
-      this.position.set(cast.x + rx * r, cast.y - 0.5 + Math.sin(i * 1.9) * 0.6, cast.z + rz * r);
-      this.forward.set(rx, 0.1 + Math.sin(angle * 3) * 0.23, rz).normalize();
-      this.orientation.setFromUnitVectors(UP, this.forward);
-      const width = (0.25 + i % 3 * 0.11) * fade;
-      this.scale.set(width, (2.0 + i % 5 * 0.6) * fade, width);
+      const radius = (0.16 + t * 0.79) * cast.radius * progress;
+      const x = cast.x + Math.cos(angle) * radius;
+      const z = cast.z + Math.sin(angle) * radius;
+      // Actual collision heightfield keeps soft ribbons close to uneven land.
+      this.position.set(x, heightAt(x, z) + 0.14, z);
+      this.orientation.setFromAxisAngle(UP, angle + Math.sin(i * 1.67) * .19);
+      const length = (0.78 + t * 1.20) * (0.4 + progress * .6) * fade;
+      const width = (0.52 + Math.sin(i * 1.91) * .14) * fade;
+      this.scale.set(length, 1, width);
       this.matrix.compose(this.position, this.orientation, this.scale);
       this.bond.setMatrixAt(i, this.matrix);
     }
@@ -352,6 +366,7 @@ export class CombatVisual {
     });
     geometry.forEach((g) => g.dispose());
     materials.forEach((m) => m.dispose());
+    this.bondTexture.dispose();
     this.root.removeFromParent();
     this.rigs.clear();
   }
