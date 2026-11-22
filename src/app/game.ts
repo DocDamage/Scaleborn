@@ -108,7 +108,7 @@ export class Game {
     // the same world seed; only GPU cost, vegetation density and shading change.
     const params=new URLSearchParams(window.location.search);
     this.quality = params.get('quality') === 'low' ? 'low' : 'high';
-    this.qaRender=params.get('qa')==='1';
+    this.qaRender=import.meta.env.DEV && params.get('qa')==='1';
     const requestedDpr=Math.min(window.devicePixelRatio||1,
       this.quality === 'low' ? 0.68 : 1.4);
     this.resolution=new AdaptiveResolution({
@@ -189,6 +189,13 @@ export class Game {
         __scalebornQaLakeDive?: () => void;
         __scalebornQaShore?: () => void;
         __scalebornQaForest?: () => void;
+        __scalebornQaCombatSnapshot?: () => {
+          hp: number; ember: number; focus: number; respawns: number;
+          fireSequence: number; sigilSequence: number; bondSequence: number;
+          hounds: Array<{ id: string; hp: number; maxHp: number; alert: boolean; windup: number }>;
+        };
+        __scalebornQaStageCombat?: (mode: 'rider' | 'bond' | 'melee') => void;
+        __scalebornQaAdvanceCombat?: (frames: number) => void;
       };
       host.__scalebornQaLand = (): void => {
         // Stage and trigger atomically: no frame-rate-dependent input race.
@@ -399,6 +406,57 @@ export class Game {
         this.dragon.update(this.flight);
         this.updateCamera(1, true);
         this.coast.updateAtmosphere(this.flight.time, this.camera.position);
+        this.updateHud(0.2);
+      };
+      // Read-only combat diagnostics; no fake damage or enemy state changes.
+      host.__scalebornQaCombatSnapshot = () => ({
+        hp: this.combat.hp,
+        ember: this.combat.ember,
+        focus: this.combat.focus,
+        respawns: this.combat.respawns,
+        fireSequence: this.combat.fireSequence,
+        sigilSequence: this.combat.sigilSequence,
+        bondSequence: this.combat.bondSequence,
+        hounds: this.combat.hounds.map((h) => ({
+          id: h.id, hp: h.hp, maxHp: h.maxHp, alert: h.alert, windup: h.windup,
+        })),
+      });
+      host.__scalebornQaStageCombat = (mode): void => {
+        // Only actor placement is staged for screenshot speed. Every cast,
+        // AI reaction and damage change still passes through gameplay code.
+        const x = mode === 'bond' ? -422 : mode === 'melee' ? -394 : -434;
+        const z = mode === 'melee' ? -39 : -55;
+        const form = mode === 'melee' ? 'rideable' : 'small';
+        this.flight.x = x; this.flight.z = z;
+        this.flight.y = heightAt(x, z) + FORMS[form].standHeight;
+        this.flight.yaw = Math.PI / 2;
+        this.flight.pitch = 0; this.flight.roll = 0; this.flight.speed = 0;
+        this.flight.mode = 'ground'; this.flight.form = form;
+        this.flight.transition = null;
+        this.flight.riderX = x + 1; this.flight.riderZ = z;
+        this.flight.riderY = heightAt(x + 1, z) + 0.05;
+        this.flight.riderTargetY = this.flight.riderY;
+        this.flight.riderYaw = Math.PI / 2;
+        this.flight.riderSpeed = 0; this.flight.riderMode = 'ground';
+        this.flight.controlTarget = mode === 'rider' ? 'rider' : 'dragon';
+        this.coast.update(x, z);
+        this.dragon.update(this.flight);
+        this.updateCamera(1, true);
+        this.updateHud(0.2);
+      };
+      host.__scalebornQaAdvanceCombat = (frames): void => {
+        if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
+          throw new Error('QA combat frames must be between 1 and 180');
+        }
+        const idle = { turn: 0, pitch: 0, bank: 0, boost: false, flap: false, move: 0 };
+        for (let i = 0; i < frames; i++) {
+          stepFlight(this.flight, idle, FIXED_DT);
+          stepCombat(this.combat, this.flight, FIXED_DT);
+          stepTidegate(this.tidegate, this.flight);
+        }
+        this.accumulator = 0;
+        this.dragon.update(this.flight);
+        this.combatVisual.update(this.combat, this.flight.time, frames * FIXED_DT);
         this.updateHud(0.2);
       };
       host.__scalebornQaAdvance = (frames: number): void => {

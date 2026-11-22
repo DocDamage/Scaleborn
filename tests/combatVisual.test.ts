@@ -51,6 +51,13 @@ describe('Gloam combat scene adapter', () => {
       const target = scene.getObjectByName(first.id) as THREE.Group;
       expect(target.visible).toBe(true);
       const beforeChildren = target.children.length;
+      const health = scene.getObjectByName(first.id + '.vitality') as THREE.Group;
+      expect(health.visible).toBe(true);
+      expect(health.children).toHaveLength(2);
+      const fill = health.children[1] as THREE.Sprite;
+      first.hp = first.maxHp / 2;
+      visual.update(c, 1.1, 1 / 60);
+      expect(fill.scale.x).toBeCloseTo(1.14, 4);
       first.hp = 0; first.deathAge = 0.9;
       visual.update(c, 2, 1 / 60);
       expect(target.visible).toBe(false);

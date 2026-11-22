@@ -2,6 +2,7 @@ import type { FlightState, InteractionResult } from '../actors/dragon/flight';
 import type { DragonForm } from '../actors/dragon/forms';
 import { FORMS } from '../actors/dragon/forms';
 import { canStand } from '../world/collision';
+import { steerGroundThreat } from './houndNavigation';
 import { heightAt } from '../world/terrain';
 
 const clamp = (n: number, low: number, high: number): number => Math.max(low, Math.min(high, n));
@@ -254,16 +255,21 @@ export function castBondSurge(c: CombatState, s: FlightState): InteractionResult
   return { ok: true, message: hits ? 'Bond surge struck ' + hits + ' enemy.' : 'The bond surge blossoms.' };
 }
 
-function moveHound(h: GloamHound, targetX: number, targetZ: number, speed: number, dt: number): void {
-  const dx = targetX - h.x, dz = targetZ - h.z;
-  const distance = Math.hypot(dx, dz);
-  if (distance < 0.01) return;
-  const step = Math.min(distance, speed * dt);
-  const nx = h.x + dx / distance * step;
-  const nz = h.z + dz / distance * step;
-  if (!canStand(nx, nz, 'small').ok) return;
-  h.x = nx; h.z = nz; h.y = heightAt(nx, nz);
-  h.yaw = Math.atan2(dx, -dz);
+/** Collision-safe local avoidance shared by pursuit and return-to-home. */
+function moveHound(
+  h: GloamHound, all: readonly GloamHound[],
+  targetX: number, targetZ: number, speed: number, dt: number,
+): void {
+  const step = steerGroundThreat(h, { x: targetX, z: targetZ }, speed, dt,
+    (x, z) => {
+      if (!canStand(x, z, 'small').ok) return false;
+      // Avoid walking straight up vertical terrain and through packmates.
+      if (Math.abs(heightAt(x, z) - h.y) > 0.65) return false;
+      return !all.some((other) => other !== h && other.hp > 0 &&
+        Math.hypot(other.x - x, other.z - z) < 1.05);
+    }, h.id.endsWith('02') ? -1 : 1);
+  if (!step.moved) return;
+  h.x = step.x; h.z = step.z; h.y = heightAt(step.x, step.z); h.yaw = step.yaw;
 }
 
 function respawnAtMeadow(c: CombatState, s: FlightState): void {
@@ -310,7 +316,7 @@ export function stepCombat(c: CombatState, s: FlightState, dt: number): void {
     h.alert = close;
     if (!close) {
       h.windup = 0;
-      if (tether > 0.3) moveHound(h, h.homeX, h.homeZ, 3.6, dt);
+      if (tether > 0.3) moveHound(h, c.hounds, h.homeX, h.homeZ, 3.6, dt);
       continue;
     }
     if (h.stagger > 0) continue;
@@ -334,7 +340,7 @@ export function stepCombat(c: CombatState, s: FlightState, dt: number): void {
       continue;
     }
     if (distance > ATTACK_REACH) {
-      moveHound(h, player.x, player.z, 4.7, dt);
+      moveHound(h, c.hounds, player.x, player.z, 4.7, dt);
     } else if (h.attackCooldown <= 0) {
       h.windup = 0.64;
     }

@@ -17,7 +17,9 @@ Open `/?start=combat` (optionally `&quality=low`) and click **Take flight**. Thi
 - `src/combat/combat.ts`: renderer-independent fixed-step combat, directional damage, terrain occlusion, cooldown/resource math, enemy AI, telegraph, hit immunity, checkpoint recovery.
 - `src/combat/visuals.ts`: original code-sculpted Three.js enemy and pooled fire-breath visuals, with stable enemy IDs and disposal. Meshes never determine gameplay hits.
 - `src/app/game.ts`: composition + input, HUD and pause alignment.
-- `tests/combat.test.ts` and `tests/combatVisual.test.ts`: deterministic regression tests. Run `npm run check` and inspect an actual browser/WebGL playthrough.
+- `src/combat/houndNavigation.ts`: deterministic local sidestepping with midpoint/end clearance, bounded step heights and pack separation; this is not full navmesh pathfinding.
+- `tests/combat.test.ts` and `tests/combatVisual.test.ts`: deterministic regression tests. Run `npm run check`.
+- `npm run test:combat-browser`: Playwright/SwiftShader battle QA against a running Vite server, using real combat keyboard input, read-only damage snapshots and dev-only actor placement. Captures Gloam Den, flame, rider sigil and bonded surge screenshots. GitHub Actions uploads the PNGs as `scaleborn-g4-webgl-combat`. **Software WebGL does not validate painterly production quality or target-GPU frame rate.**
 
 ## Next G4 work (not yet delivered)
 

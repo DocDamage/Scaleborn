@@ -13,7 +13,8 @@
     "check": "npm run lint && npm run test && npm run build",
     "test:browser": "node scripts/browser-smoke.mjs",
     "test:visual": "node scripts/visual-capture.mjs",
-    "test:characters": "node scripts/character-capture.mjs"
+    "test:characters": "node scripts/character-capture.mjs",
+    "test:combat-browser": "node scripts/combat-smoke.mjs"
   },
   "dependencies": {
     "three": "0.175.0"

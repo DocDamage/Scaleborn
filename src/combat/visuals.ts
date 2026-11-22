@@ -6,6 +6,8 @@ interface HoundRig {
   legs: THREE.Group[];
   skin: THREE.MeshStandardMaterial;
   eyes: THREE.MeshStandardMaterial;
+  lifeBar: THREE.Group;
+  lifeFill: THREE.Sprite;
 }
 const FLAME_COUNT = 54;
 const SIGIL_COUNT = 21;
@@ -160,10 +162,26 @@ export class CombatVisual {
         legs.push(pivot);
       }
     }
+    // World-space billboards show enemy vitality only when fighting.
+    // They are attached to the real enemy and disappear with its death.
+    const lifeBar = new THREE.Group();
+    lifeBar.name = enemy.id + '.vitality';
+    lifeBar.position.y = 2.65;
+    const backdrop = new THREE.Sprite(new THREE.SpriteMaterial({
+      color: 0x1a1824, opacity: 0.87, transparent: true, depthTest: true,
+    }));
+    backdrop.scale.set(2.40, 0.16, 1);
+    const lifeFill = new THREE.Sprite(new THREE.SpriteMaterial({
+      color: 0xc46d58, opacity: 0.98, transparent: true, depthTest: true,
+    }));
+    lifeFill.scale.set(2.28, 0.10, 1);
+    lifeBar.add(backdrop, lifeFill);
+    lifeBar.visible = false;
+    root.add(lifeBar);
     root.position.set(enemy.x, enemy.y, enemy.z);
     root.rotation.y = -enemy.yaw;
     this.root.add(root);
-    this.rigs.set(enemy.id, { root, legs, skin, eyes });
+    this.rigs.set(enemy.id, { root, legs, skin, eyes, lifeBar, lifeFill });
   }
 
   /** Called after each fixed simulation frame; never computes gameplay damage. */
@@ -178,6 +196,12 @@ export class CombatVisual {
       rig.root.rotation.y = -hound.yaw;
       rig.skin.emissiveIntensity = hound.flash > 0 ? 1.1 : hound.windup > 0 ? 0.38 : 0.06;
       rig.eyes.emissiveIntensity = hound.alert ? 3.6 : 1.6;
+      // Health readouts appear only when engaged or after taking damage.
+      rig.lifeBar.visible = hound.hp > 0 && (hound.alert || hound.hp < hound.maxHp);
+      const percent = Math.max(0, Math.min(1, hound.hp / hound.maxHp));
+      rig.lifeFill.scale.x = 2.28 * percent;
+      rig.lifeFill.position.x = -(2.28 - rig.lifeFill.scale.x) * 0.5;
+      rig.root.rotation.x = hound.windup > 0 ? -0.12 : 0;
       for (let i = 0; i < rig.legs.length; i++) {
         const gait = hound.alert && hound.stagger <= 0 && hound.windup <= 0
           ? Math.sin(time * 9 + ((i % 3) === 0 ? Math.PI : 0)) * 0.30 : 0;
@@ -310,7 +334,7 @@ export class CombatVisual {
     const geometry = new Set<THREE.BufferGeometry>();
     const materials = new Set<THREE.Material>();
     this.root.traverse((node) => {
-      if (!(node instanceof THREE.Mesh)) return;
+      if (!(node instanceof THREE.Mesh || node instanceof THREE.Sprite)) return;
       geometry.add(node.geometry);
       const mats = Array.isArray(node.material) ? node.material : [node.material];
       mats.forEach((mat) => materials.add(mat));

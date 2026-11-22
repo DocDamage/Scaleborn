@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newFlightState, type FlightState } from '../src/actors/dragon/flight';
 import { FORMS } from '../src/actors/dragon/forms';
 import { heightAt } from '../src/world/terrain';
+import { steerGroundThreat } from '../src/combat/houndNavigation';
 import {
   GLOAM_SPAWNS, castDragonFire, castRiderSigil, castBondSurge, combatNearby, combatRemaining,
   newCombatState, stepCombat,
@@ -224,6 +225,46 @@ describe('G4 deterministic encounter and dragon breath', () => {
     s.controlTarget = 'dragon';
     expect(castRiderSigil(c, s).ok).toBe(false);
     expect(c.focus).toBeCloseTo(51, 4);
+  });
+
+
+  it('detours around a blocking barrier without teleporting through it', () => {
+    const from = { x: -0.35, z: 0 };
+    const target = { x: 5, z: 0 };
+    const open = (x: number, _z: number): boolean => x <= -0.32;
+    const next = steerGroundThreat(from, target, 4.7, 0.1, open, 1);
+    expect(next.moved).toBe(true);
+    expect(next.z).not.toBeCloseTo(0);
+    expect(open(next.x, next.z)).toBe(true);
+    expect(next.x).toBeGreaterThanOrEqual(from.x - 0.0001);
+    expect(Math.hypot(next.x - from.x, next.z - from.z)).toBeLessThanOrEqual(0.471);
+  });
+
+  it('rejects impossible navigation and large deltas without motion', () => {
+    const from = { x: 0, z: 0 }, to = { x: 9, z: 4 };
+    expect(steerGroundThreat(from, to, 5, 0.05, () => false).moved).toBe(false);
+    expect(steerGroundThreat(from, to, 5, 0.5, () => true).moved).toBe(false);
+    expect(steerGroundThreat(from, to, NaN, 0.05, () => true).moved).toBe(false);
+    const direct = steerGroundThreat(from, to, 4, 0.05, () => true);
+    expect(direct.moved).toBe(true);
+    expect(direct.yaw).toBeCloseTo(Math.atan2(to.x, -to.z), 4);
+  });
+
+  it('keeps pursuing threats separated and terrain-aligned during a crowd approach', () => {
+    const s = groundDragon(-410, -38), c = newCombatState();
+    for (let i = 0; i < 180; i++) {
+      s.time += 1 / 60;
+      stepCombat(c, s, 1 / 60);
+      for (const h of c.hounds) {
+        expect(h.y).toBeCloseTo(heightAt(h.x, h.z), 3);
+      }
+      for (let j = 0; j < c.hounds.length; j++) {
+        for (let k = j + 1; k < c.hounds.length; k++) {
+          const a = c.hounds[j]!, b = c.hounds[k]!;
+          expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThanOrEqual(1.04);
+        }
+      }
+    }
   });
 
 });
