@@ -41,7 +41,12 @@ describe('Mirrorfall waterfall-to-lake coupling', () => {
     const y = GRAND_LAKE.surfaceY;
     const surface = plungeVelocityAt(x, y, z);
     const depth = plungeVelocityAt(x, y - 12, z);
-    const rise = plungeVelocityAt(x + 35, y - 12, z);
+    // The repositioned plunge now lies near the eastern shore: +X is dry
+    // cliff bank, while -X is the navigable basin's return-current band.
+    expect(lakeContains(x - 35, z)).toBe(true);
+    expect(lakeContains(x + 35, z)).toBe(false);
+    const rise = plungeVelocityAt(x - 35, y - 12, z);
+    expect(plungeVelocityAt(x + 35, y - 12, z).magnitude).toBe(0);
     const far = plungeVelocityAt(GRAND_LAKE.x, y - 12, GRAND_LAKE.z);
     expect(surface.y).toBe(0);
     expect(depth.y).toBeLessThan(-1.0);
