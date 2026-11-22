@@ -14,16 +14,19 @@ export const CHARACTER_MODEL_SOURCES: Readonly<Record<CharacterKind, {
   readonly id: string;
   readonly file: string;
   readonly design: string;
+  readonly installed: boolean;
 }>> = {
   dragon: {
     id: 'creature.dragon.onyx',
     file: 'models/characters/onyx-scaleborn-original.glb',
     design: 'scaleborn.onyx.design.v1',
+    installed: false,
   },
   rider: {
     id: 'character.rider.hero',
     file: 'models/characters/hero-hybrid-original.glb',
     design: 'scaleborn.hero.design.v1',
+    installed: false,
   },
 };
 
@@ -42,6 +45,9 @@ export async function loadCharacterModel(
   loader = new GLTFLoader(),
 ): Promise<CharacterModelFile> {
   const source = CHARACTER_MODEL_SOURCES[kind];
+  if (!source.installed) {
+    throw new Error('Original Scaleborn GLB has not been authored: ' + source.file);
+  }
   const asset = await loader.loadAsync(characterAssetUrl(kind));
   const actual = asset.scene.userData.scalebornDesign;
   if (actual !== source.design) {
