@@ -732,3 +732,20 @@ An upper creek is not the open 148m deep lake, so it does not receive ocean
 sized wind waves or deep-water entry clearance. The deterministic seed, lake
 shoreline and existing saved quest flags are unchanged. Next: render the
 actual surface from this profile and verify the lip/waterfall join in browser.
+
+### Real feeder-river surface in the game scene
+
+The new `MirrorfallHeadwaters` draws an open 132m source creek along the
+same `headwaterProfileAt` centerline and dry bank constraints as the
+collision terrain. A single fixed, fine-tessellated mesh has restrained
+riffles synchronized with `headwaterWaveAt`, a world-space directional
+flow pattern that travels toward the falls, foam breakup at the crest and
+transparent fog-safe PBR-inspired surface color. Both presets share one
+material and quality-scaled vertex budgets. The existing Mirrorfall cascade
+begins exactly at this stream lip; the upper water no longer hangs in air.
+Optical tint is also classified as freshwater when a camera enters the
+shallow source stream.
+
+This is a *small river and a realistic-looking transition*, not a fully
+simulated 3D fluid volume. Aquatic flow/buoyancy and a more detailed headwater
+catchment remain visual and physics acceptance tasks.

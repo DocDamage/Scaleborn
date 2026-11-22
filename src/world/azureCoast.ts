@@ -4,6 +4,7 @@ import { makeTerrainTile, disposeTerrainTile } from './terrainTile';
 import { addCoastalDressing } from './dressing';
 import { PainterlyWaterSurface, LakeShoreFoam, makeFoamShader } from './waterSurface';
 import { MirrorfallCascade } from './mirrorfallCascade';
+import { MirrorfallHeadwaters } from './mirrorfallHeadwaters';
 import { LakeCaustics } from './lakeCaustics';
 import { LakebedHabitat } from './lakebedHabitat';
 import { UnderwaterLightShafts } from './underwaterLightShafts';
@@ -44,6 +45,7 @@ export class AzureCoast {
   private readonly shafts: UnderwaterLightShafts;
   private readonly particulates: UnderwaterParticulates;
   private readonly waterfall: MirrorfallCascade;
+  private readonly headwaters: MirrorfallHeadwaters;
   private readonly nature: PainterlyNature;
   private readonly nearGrass: LocalGroundcover;
   private readonly reeds: ShorelineReeds;
@@ -101,8 +103,9 @@ export class AzureCoast {
     this.shafts = new UnderwaterLightShafts(quality);
     this.particulates = new UnderwaterParticulates(scene, quality);
     this.waterfall = new MirrorfallCascade(quality);
+    this.headwaters = new MirrorfallHeadwaters(quality);
     scene.add(this.sky.mesh, this.ocean, this.caustics.mesh, this.shafts.mesh,
-      this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group);
+      this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group, this.headwaters.mesh);
     if (this.water.midMesh) scene.add(this.water.midMesh);
     if (this.water.nearMesh) scene.add(this.water.nearMesh);
     this.nature = new PainterlyNature(scene, quality);
@@ -197,6 +200,7 @@ export class AzureCoast {
     this.caustics.update(time);
     this.lakebed.update(time,x,z);
     this.waterfall.update(time);
+    this.headwaters.update(time);
     this.cliffs.update(time);
     this.outcrops.update(x,z);
     this.sediment.update(x,z);
@@ -241,6 +245,7 @@ export class AzureCoast {
     this.shafts.dispose();
     this.particulates.dispose();
     this.waterfall.dispose();
+    this.headwaters.dispose();
     this.nature.dispose();
     this.nearGrass.dispose();
     this.reeds.dispose();
