@@ -38,7 +38,13 @@ async function main() {
     assert.ok(connected, 'Vite dev server was not reachable');
     await page.locator('#start').click();
     await page.locator('#welcome').waitFor({ state: 'hidden' });
-    await page.waitForFunction(() => Number(document.querySelector('#speed')?.textContent) > 0, null, { timeout: 15000 });
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaAdvance === 'function') {
+        window.__scalebornQaAdvance(1);
+      }
+    });
+    await page.waitForFunction(() => Number(document.querySelector('#speed')?.textContent) > 0,
+      null, { timeout: 30000 });
     await page.waitForTimeout(800);
     await mkdir('artifacts', { recursive: true });
     await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-chase.png' });

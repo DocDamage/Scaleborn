@@ -22,7 +22,7 @@ async function main() {
       if (m.type() === 'error') errors.push(m.text());
     });
     const url = (process.env.SCALEBORN_URL ?? 'http://127.0.0.1:5173')
-      + '?start=lake&quality=low';
+      + '?start=lake&quality=low&qa=1';
     const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
     assert.equal(response?.status(), 200, 'The game must load successfully');
     await page.locator('#start').click();
@@ -30,6 +30,14 @@ async function main() {
       null, { timeout: 30000 });
     await mkdir('artifacts', { recursive: true });
     await page.screenshot({ path: 'artifacts/mirrorfall-actual-browser.png', timeout: 120000 });
+    // Shoreline view exposes grass blades and procedural PBR detail.
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaShore !== 'function') {
+        throw new Error('Shoreline camera hook missing');
+      }
+      window.__scalebornQaShore();
+    });
+    await page.screenshot({ path: 'artifacts/mirrorfall-shoreline-browser.png', timeout: 120000 });
     assert.deepEqual(errors, [], 'WebGL/JavaScript renderer errors');
     console.log('PASS: Mirrorfall actual browser screenshot rendered without console errors.');
   } finally {

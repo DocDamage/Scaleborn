@@ -148,6 +148,7 @@ export class Game {
         __scalebornQaStageShrine?: () => void;
         __scalebornQaStageEchoReturn?: () => void;
         __scalebornQaLake?: () => void;
+        __scalebornQaShore?: () => void;
       };
       host.__scalebornQaLand = (): void => {
         // Stage and trigger atomically: no frame-rate-dependent input race.
@@ -241,6 +242,28 @@ export class Game {
         this.flight.riderSpeed = 0;
         this.flight.riderMode = 'ground';
         this.coast.update(this.flight.x, this.flight.z);
+        this.updateHud(0.2);
+      };
+      host.__scalebornQaShore = (): void => {
+        // A distinct view of detailed shoreline material, vegetation and
+        // natural lake contours; no reload or second WebGL context.
+        this.flight.x = GRAND_LAKE.x + 258;
+        this.flight.z = GRAND_LAKE.z + 320;
+        this.flight.y = Math.max(heightAt(this.flight.x,this.flight.z)+14,
+          GRAND_LAKE.surfaceY+19);
+        this.flight.yaw = 0.51;
+        this.flight.pitch = -0.08;
+        this.flight.roll = 0;
+        this.flight.speed = 0;
+        this.flight.form = 'rideable';
+        this.flight.mode = 'air';
+        this.flight.controlTarget = 'dragon';
+        this.flight.transition = null;
+        this.cameraIndex = 0;
+        this.coast.update(this.flight.x,this.flight.z);
+        this.coast.setUnderwater(false);
+        this.dragon.update(this.flight);
+        this.updateCamera(1,true);
         this.updateHud(0.2);
       };
       host.__scalebornQaLake = (): void => {
