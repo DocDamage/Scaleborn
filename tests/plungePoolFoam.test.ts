@@ -44,7 +44,7 @@ describe('Mirrorfall impact foam and spray rendering',()=>{
       expect(p.count).toBe(12);
       expect(uv.count).toBe(12);
       const data=tex.image.data as Uint8Array;
-      const alpha=(x:number,y:number):number=>data[(y*64+x)*4+3];
+      const alpha=(x:number,y:number):number=>data[(y*64+x)*4+3] ?? 0;
       expect(alpha(31,31)).toBeGreaterThan(140);
       expect(alpha(1,1)).toBe(0);
       expect(tex.colorSpace).toBe(THREE.SRGBColorSpace);
