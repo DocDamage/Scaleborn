@@ -41,7 +41,9 @@ describe('rigged GLB dragon and rider replacement',()=>{
       expect(asset.rigId).toMatch(/rig\.(dragon|rider)\.v2/);
       expect(characterAssetUrl(kind,'/scaleborn/'))
         .toBe('/scaleborn/'+CHARACTER_MODEL_SOURCES[kind].file);
-      expect(CHARACTER_MODEL_SOURCES[kind].license).toBe('CC0-1.0');
+      expect(CHARACTER_MODEL_SOURCES[kind].design)
+        .toMatch(/^scaleborn\.(onyx|hero)\.design\.v1$/);
+      expect(CHARACTER_MODEL_SOURCES[kind].file).toContain('original.glb');
     }
   });
 
