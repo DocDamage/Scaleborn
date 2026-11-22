@@ -44,9 +44,11 @@ describe('Onyx original shoulder tendons and arched finger-bone wings',()=>{
         expect(rig.tip.rotation.y*side).toBeLessThan(-.2);
         expect(Math.abs(rig.shoulder.rotation.z)).toBeLessThan(.38);
         // Left and right wings rise toward the same dorsal shelf.
-        expect(rig.shoulder.rotation.z*side).toBeGreaterThan(.25);
-        expect(rig.elbow.rotation.z*side).toBeGreaterThan(.12);
-        expect(rig.tip.rotation.z*side).toBeGreaterThan(.06);
+        expect(rig.shoulder.rotation.z*side).toBeGreaterThan(.045);
+        expect(rig.shoulder.rotation.z*side).toBeLessThan(.07);
+        expect(rig.elbow.rotation.z*side).toBeGreaterThan(.02);
+        expect(rig.tip.rotation.z*side).toBeGreaterThan(.01);
+        expect(rig.root.position.y).toBeCloseTo(.55,6);
       }finally{
         rig.root.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose();});
       }
@@ -74,13 +76,16 @@ describe('Onyx original shoulder tendons and arched finger-bone wings',()=>{
         state.mode='ground';state.time=1.4;state.speed=0;
         poseWing(rig,side,dragonPose(state));
         expect(rig.mesh.morphTargetInfluences![0]).toBeCloseTo(1,6);
-        expect(rig.root.scale.x).toBeCloseTo(.52,6);
-        expect(rig.root.scale.z).toBeCloseTo(.52,6);
+        expect(rig.root.scale.x).toBeCloseTo(.44,6);
+        expect(rig.root.scale.y).toBeCloseTo(.65,6);
+        expect(rig.root.scale.z).toBeCloseTo(.44,6);
         state.mode='air';
         poseWing(rig,side,dragonPose(state));
         expect(rig.mesh.morphTargetInfluences![0]).toBeCloseTo(0,6);
         expect(rig.root.scale.x).toBeCloseTo(1,6);
+        expect(rig.root.scale.y).toBeCloseTo(1,6);
         expect(rig.root.scale.z).toBeCloseTo(1,6);
+        expect(rig.root.position.y).toBeCloseTo(.40,6);
         expect(rig.mesh.skeleton.bones).toHaveLength(3);
       }finally{
         rig.root.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose();});

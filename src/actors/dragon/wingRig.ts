@@ -206,8 +206,13 @@ export function poseWing(rig: WingRig, side: -1 | 1, pose: DragonPose): void {
   // away from the torso even at a complete fold (verified in WebGL).
   // The bend-linked projection contracts WITH the pleated membrane; this
   // only changes the renderer's folded silhouette, never collision/wingspan.
-  const compact = 1 - .48 * pleat;
-  rig.root.scale.set(compact,1,compact);
+  // A giant form can magnify even small positive hinge angles into two tall
+  // 'antlers'. Fold the finger chain back along the dorsal contour instead:
+  // shorten all axes, keep the membrane pleated, and tuck the shoulder into
+  // the upper back without affecting fully open flight geometry or controls.
+  const compact = 1 - .56 * pleat;
+  rig.root.scale.set(compact,1 - .35 * pleat,compact);
+  rig.root.position.y=.40 + .15 * pleat;
   const openShoulder = side * (0.11 + Math.sin(phase) * pose.flapAmount);
   const openElbow = side * (0.15 + Math.sin(phase - 0.55) * pose.flapAmount * 0.85);
   const openTip = side * (0.08 + Math.sin(phase - 1.0) * pose.flapAmount * 0.50);
@@ -219,9 +224,9 @@ export function poseWing(rig: WingRig, side: -1 | 1, pose: DragonPose): void {
   // At full fold the phalanges must rest along Onyx's raised back.
   // Negative sign formerly swept their tips below the shoulder and created
   // spear-like silhouettes in genuine giant/rideable side WebGL captures.
-  rig.shoulder.rotation.z = openShoulder * (1 - fold) + side * .29 * fold;
-  rig.elbow.rotation.z = openElbow * (1 - fold) + side * .15 * fold;
-  rig.tip.rotation.z = openTip * (1 - fold) + side * .07 * fold;
+  rig.shoulder.rotation.z = openShoulder * (1 - fold) + side * .055 * fold;
+  rig.elbow.rotation.z = openElbow * (1 - fold) + side * .030 * fold;
+  rig.tip.rotation.z = openTip * (1 - fold) + side * .012 * fold;
   rig.shoulder.rotation.x = Math.sin(phase + 0.3) * 0.065 * (1 - fold)
     + Math.sin(phase * 0.6) * 0.025 * fold;
 }

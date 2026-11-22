@@ -120,3 +120,15 @@ sockets, gait channels, claws, water physics and three form scales remain.
 Paired left/right regression tests assert embedded first control rings.
 Visual acceptance requires new real WebGL close-ups; avoid claiming the
 disk seams are fully resolved until review.
+
+### Actual QA feedback: over-raised wing bones (5e04af5)
+Real SwiftShader screenshots from
+[45080194645](https://github.com/DocDamage/Scaleborn/actions/runs/45080194645)
+showed the rest-fold phalanges raised like two oversized branches behind
+the giant rider, after the `f2b651a` upward bend fix. This is a confirmed
+regression despite passing automated geometry tests. The correction now tucks
+the three skinned bones at a restrained +0.055/+0.030/+0.012 radian mirrored
+dorsal bend, shortens the resting bind pose to 44% along span/chord,
+65% vertically, and raises the attachment 15 cm into the dorsal contour.
+All form physics and named bones are unchanged. Needs new real screenshot
+confirmation; visual acceptance remains BLOCKING.
