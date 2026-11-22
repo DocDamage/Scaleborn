@@ -29,6 +29,16 @@ describe('deterministic foliage instance visibility',()=>{
         tree.getMatrixAt(i,m);
         expect(m.toArray()).toEqual(original);
       });
+      const unfilteredCount=tree.count;
+      const camera=new THREE.PerspectiveCamera(71,16/9,.2,1500);
+      camera.position.set(GRAND_LAKE.x,GRAND_LAKE.surfaceY+12,GRAND_LAKE.z);
+      camera.lookAt(GRAND_LAKE.x+100,GRAND_LAKE.surfaceY+12,GRAND_LAKE.z);
+      nature.update(4,GRAND_LAKE.x,GRAND_LAKE.z,camera);
+      expect(tree.count).toBeGreaterThan(0);
+      expect(tree.count).toBeLessThan(unfilteredCount);
+      // The camera optimization must not destroy the seed-stable trees.
+      nature.update(5,GRAND_LAKE.x,GRAND_LAKE.z);
+      expect(tree.count).toBe(unfilteredCount);
     }finally{nature.dispose();}
   });
 
