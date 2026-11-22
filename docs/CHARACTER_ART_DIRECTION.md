@@ -127,3 +127,17 @@ integration inside `DragonVisual.update` and focused tests for deterministic
 blinks, physical facial parts, crest motion and retained rider scale.
 Full face morph targets, lip/teeth animation, expressive voice/breath audio,
 and authored GLB facial rigging are still outstanding.
+
+## Onyx painted wing material detail
+
+`src/actors/dragon/wingSurface.ts` adds a deterministic original painted
+membrane triplet: violet-tinted albedo, rib/vein tangent normals and local
+roughness variation, tiled on the existing two high-resolution skinned wings.
+The physically lit membrane retains the design's darker vertex-color
+pigments and includes restrained clearcoat, sheen and violet iridescence
+instead of a uniform flat plastic surface. No external textures, stock
+dragon material, per-frame texture allocations, or altered wing bones.
+
+The material remains an approximation: production wing hand-painting,
+translucent scattering, close-up shader QA, correct posed normals and GPU
+profile still require acceptance before final art signoff.
