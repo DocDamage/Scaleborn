@@ -34,7 +34,7 @@ describe('synchronized forest wind and alpha-tested shadow rendering',()=>{
     expect(leaves.vertexShader).toContain('uScTreeWindTime*2.05');
     expect(leaves.uniforms.uScTreeWindTime).toBe(clock);
     clock.value=5;
-    expect(wood.uniforms.uScTreeWindTime.value).toBe(5);
+    expect(wood.uniforms.uScTreeWindTime!.value).toBe(5);
     material.dispose();leafMaterial.dispose();
   });
 
@@ -51,7 +51,7 @@ describe('synchronized forest wind and alpha-tested shadow rendering',()=>{
       expect(leafDepth.map).toBe(leafColor.map);
       expect(leafDepth.alphaTest).toBe(leafColor.alphaTest);
       const woodColor=compileWind(wood.material as THREE.Material);
-      const woodShadow=compileWind(wood.customDepthMaterial);
+      const woodShadow=compileWind(wood.customDepthMaterial!);
       const leafShader=compileWind(leaves.material as THREE.Material);
       const leafShadow=compileWind(leafDepth);
       for(const shader of [woodColor,woodShadow,leafShader,leafShadow]){
@@ -63,7 +63,7 @@ describe('synchronized forest wind and alpha-tested shadow rendering',()=>{
       expect(leafShader.uniforms.uScTreeWindTime).toBe(shared);
       expect(leafShadow.uniforms.uScTreeWindTime).toBe(shared);
       nature.update(6.75);
-      expect(shared.value).toBe(6.75);
+      expect(shared!.value).toBe(6.75);
     }finally{nature.dispose();}
   });
 
