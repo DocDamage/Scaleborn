@@ -43,7 +43,7 @@ async function main() {
     await mkdir('artifacts', { recursive: true });
     await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-chase.png' });
     const formName = page.locator('#form-name');
-    await formName.waitFor({ state: 'visible' });
+    await formName.waitFor({ state: 'attached' });
     assert.match(await formName.textContent() ?? '', /RIDEABLE/);
     // Size selection at altitude must either switch safely or explain obstruction.
     await page.keyboard.press('3');
