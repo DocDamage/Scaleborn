@@ -2,6 +2,8 @@ name: Combat WebGL playthrough
 on:
   push:
     branches: ["feat/g4-combat-foundation"]
+  pull_request:
+    branches: [main, feat/visual-pass6-plunge-pool-spray]
   workflow_dispatch:
 jobs:
   chromium-combat:
