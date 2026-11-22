@@ -77,11 +77,12 @@ describe('sculpted dragon limbs', () => {
           expect(flesh).toBeInstanceOf(THREE.Mesh);
           const geo=flesh.geometry;
           const attr=geo.getAttribute('position');
-          const first=attr.getX(0);
-          // First root point curves inward, relative to the same old hip.
+          // Average opposite radial vertices to measure the ring CENTRE,
+          // not its outside edge; the whole shoulder root is embedded.
+          const centerX=(attr.getX(0)+attr.getX(11))*.5;
           const sign=side==='Left'?-1:1;
-          const minX=leg.position.x + first;
-          expect(minX*sign).toBeLessThan(.55);
+          const inward=leg.position.x + centerX;
+          expect(inward*sign).toBeLessThan(.45);
           expect(attr.getY(0)).toBeGreaterThan(.2);
           const foot=leg.getObjectByName('creature.dragon.ankle') as THREE.Group;
           expect(foot).toBeInstanceOf(THREE.Group);
