@@ -3,7 +3,7 @@ import { heightfieldNormalAt, seamNormalWeight } from '../src/world/terrainNorma
 
 describe('tile-independent terrain lighting', () => {
   it('returns a finite upward-facing unit normal for cliffs, lake and coast', () => {
-    for (const [x, z] of [[-550, 100], [330, 740], [1400, 1400], [200, -600]]) {
+    for (const [x, z] of [[-550, 100], [330, 740], [1400, 1400], [200, -600]] as const) {
       const normal = heightfieldNormalAt(x, z);
       expect(normal.every(Number.isFinite)).toBe(true);
       expect(Math.hypot(...normal)).toBeCloseTo(1, 8);
