@@ -719,3 +719,16 @@ currents, curtain geometry and named landmark follow the common
 appearance without changing the shared lake basin, seed, saved quest flags
 or player controls. Browser views and physics clearance must be checked
 before approving the change.
+
+### Collision-matched feeder headwaters above Mirrorfall
+
+The waterfall now has a real source valley instead of water appearing from
+nowhere. `headwaterProfileAt` defines a narrow curved upper river starting at
+the cliff lip, stretching 132 metres up the escarpment. The **same** profile
+carves a shallow 1.5m channel with gently raised banks into the existing
+heightfield, exposes a shallow water volume to rider/dragon collision and
+supplies a separate ~10cm calm-water wave to the shared physics sampler.
+An upper creek is not the open 148m deep lake, so it does not receive ocean
+sized wind waves or deep-water entry clearance. The deterministic seed, lake
+shoreline and existing saved quest flags are unchanged. Next: render the
+actual surface from this profile and verify the lip/waterfall join in browser.

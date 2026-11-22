@@ -1,4 +1,5 @@
-import { lakeContains, waterSurfaceAt } from './highlandLake';
+import { lakeContains, headwaterContains, headwaterWaveAt,
+  waterSurfaceAt } from './highlandLake';
 import { plungeWaveAt } from './waterDynamics';
 
 /**
@@ -24,6 +25,7 @@ const waveDirections = [
 
 export function waterWaveOffsetAt(x: number, z: number, time: number): number {
   if (![x,z,time].every(Number.isFinite)) return 0;
+  if(headwaterContains(x,z))return headwaterWaveAt(x,z,time);
   let y=0;
   for(const w of waveDirections){
     const length=Math.hypot(w.x,w.z);
