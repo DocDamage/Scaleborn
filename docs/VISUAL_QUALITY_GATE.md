@@ -1006,3 +1006,18 @@ Acceptance remains blocked on actual rider-height and close-up WebGL frames:
 verify ground contact in all three dragon forms, toe deformation during
 walking and swimming, shadow fidelity, and silhouette agreement with the
 user's intended creature design. Hardware draw-call cost also remains open.
+
+### Actual Onyx close-up review: grass proportion and actor response
+
+The first true close-up software-WebGL screenshots showed multiple meter-tall
+pale spiky grass tufts filling the camera and hiding dog-sized Onyx. Both
+globally instanced meadow grass and bounded local blades now have shorter,
+slimmer curved geometry, with blade tips below a human knee at normal scale.
+The shader bends nearby blades close to the controlled dragon/rider with
+smooth 0.65–3.1m falloff, keeping rooted stems, deterministic placement and
+the original one-draw-batch submissions. This behavior applies to normal
+play, not just the screenshot QA route.
+
+This corrects an observable blocker from actual renders. It does not
+substitute for professionally authored vegetation or real GPU performance
+review on the user's hardware.

@@ -19,7 +19,8 @@ export function makeGrassPatch(quality: Quality): THREE.BufferGeometry {
     const sideX = -dz, sideZ = dx;
     const rootX = Math.sin(i * 3.17) * .31;
     const rootZ = Math.cos(i * 3.17) * .31;
-    const height = .58 + (i % 5) * .13;
+    // Meadow grass should not grow taller than the dog-sized Onyx.
+    const height = .36 + (i % 5) * .065;
     const width = .056 + (i % 3) * .015;
     const hue = Math.sin(i * 2.61) * .055;
     const first = positions.length / 3;
@@ -71,6 +72,7 @@ export class LocalGroundcover {
   readonly mesh: THREE.InstancedMesh;
   private readonly material: THREE.MeshStandardMaterial;
   private readonly time={value:0};
+  private readonly actorPosition={value:new THREE.Vector2()};
   private readonly radius: number;
   private readonly spacing: number;
   private readonly dummy=new THREE.Object3D();
@@ -93,9 +95,10 @@ export class LocalGroundcover {
     const fadeRadius={value:this.radius};
     this.material.onBeforeCompile=(shader)=>{
       shader.uniforms.uScGrassDetailTime=wind;
+      shader.uniforms.uScGrassActor=this.actorPosition;
       shader.uniforms.uScGrassDetailRadius=fadeRadius;
       shader.vertexShader=shader.vertexShader.replace('#include <common>',
-        '#include <common>\nuniform float uScGrassDetailTime;\nuniform float uScGrassDetailRadius;');
+        '#include <common>\nuniform float uScGrassDetailTime;\nuniform float uScGrassDetailRadius;\nuniform vec2 uScGrassActor;');
       shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',
         `#include <begin_vertex>
           #ifdef USE_INSTANCING
@@ -114,10 +117,14 @@ export class LocalGroundcover {
           float scDetailFade=1.0-smoothstep(
             uScGrassDetailRadius-17.0,uScGrassDetailRadius-3.0,fadeDistance);
           transformed*=scDetailFade;
+          // Trample only the flexible blade, never its terrain-anchored root.
+          float actorDistance=length(instanceMatrix[3].xz-uScGrassActor);
+          float closeDisturbance=1.0-smoothstep(.65,3.1,actorDistance);
+          transformed.y*=1.0-.74*closeDisturbance;
           #endif
         `);
     };
-    this.material.customProgramCacheKey=()=> 'scaleborn-groundcover-wind-fade-v2';
+    this.material.customProgramCacheKey=()=> 'scaleborn-groundcover-wind-fade-v2-actor-response';
     this.mesh=new THREE.InstancedMesh(makeGrassPatch(quality),this.material,capacity);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.count=0;
@@ -129,6 +136,7 @@ export class LocalGroundcover {
 
   update(x:number,z:number,time:number):void {
     this.time.value=time;
+    this.actorPosition.value.set(x,z);
     if(!Number.isFinite(x)||!Number.isFinite(z))return;
     const centerX=Math.floor(x/(this.spacing*4));
     const centerZ=Math.floor(z/(this.spacing*4));

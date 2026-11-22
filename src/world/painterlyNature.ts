@@ -16,15 +16,15 @@ function grassTuft(): THREE.BufferGeometry {
   const positions: number[] = [];
   for(let i=0;i<7;i++){
     const angle = i * Math.PI*2/7;
-    const base = new THREE.Vector3(Math.cos(angle)*0.14,0,Math.sin(angle)*0.14);
-    const middle = new THREE.Vector3(Math.cos(angle)*0.28,0.50,Math.sin(angle)*0.28);
-    const tip = new THREE.Vector3(Math.cos(angle)*0.44,1.10+(i%3)*0.12,Math.sin(angle)*0.44);
+    const base = new THREE.Vector3(Math.cos(angle)*0.09,0,Math.sin(angle)*0.09);
+    const middle = new THREE.Vector3(Math.cos(angle)*0.16,0.26,Math.sin(angle)*0.16);
+    const tip = new THREE.Vector3(Math.cos(angle)*0.27,0.52+(i%3)*0.07,Math.sin(angle)*0.27);
     const s=new THREE.Vector3(-Math.sin(angle),0,Math.cos(angle));
     const verts=[
-      base.clone().addScaledVector(s,-0.095),
-      base.clone().addScaledVector(s,0.095),
-      middle.clone().addScaledVector(s,-0.057),
-      middle.clone().addScaledVector(s,0.057),
+      base.clone().addScaledVector(s,-0.064),
+      base.clone().addScaledVector(s,0.064),
+      middle.clone().addScaledVector(s,-0.037),
+      middle.clone().addScaledVector(s,0.037),
     ];
     for(const p of [verts[0],verts[1],verts[2],verts[1],verts[3],verts[2],
       verts[2],verts[3],tip]){
@@ -46,6 +46,7 @@ export class PainterlyNature {
   private readonly visibility = new InstanceVisibility();
   private grassWind: { value: number } | null = null;
   private leafWind: { value: number } | null = null;
+  private readonly actorGrassPosition={value:new THREE.Vector2()};
   constructor(scene: THREE.Scene, quality: 'high' | 'low' = 'high') {
     this.root.name='vegetation.azure.painterly-nature';
     scene.add(this.root);
@@ -184,9 +185,10 @@ export class PainterlyNature {
     grassMat.onBeforeCompile=(shader)=>{
       const time={value:0};
       shader.uniforms.uScWindTime=time;
+      shader.uniforms.uScGrassActor=this.actorGrassPosition;
       this.grassWind=time;
       shader.vertexShader=shader.vertexShader.replace('#include <common>',
-        '#include <common>\nuniform float uScWindTime;');
+        '#include <common>\nuniform float uScWindTime;\nuniform vec2 uScGrassActor;');
       shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',
         `#include <begin_vertex>
           #ifdef USE_INSTANCING
@@ -196,9 +198,15 @@ export class PainterlyNature {
           #endif
           transformed.x += sin(uScWindTime*1.26+phase+position.y*1.2)
             * position.y*position.y*0.085;
+          #ifdef USE_INSTANCING
+            // A close dragon or rider brushes grass aside. Roots stay put.
+            float scActorDistance=length(instanceMatrix[3].xz-uScGrassActor);
+            float scFlatten=1.0-smoothstep(.65,3.1,scActorDistance);
+            transformed.y*=1.0-.74*scFlatten;
+          #endif
         `);
     };
-    grassMat.customProgramCacheKey=()=> 'scaleborn-grass-wind-v1';
+    grassMat.customProgramCacheKey=()=> 'scaleborn-grass-wind-v1-actor-response';
     this.materials.push(woodMat,rockMat,leafMat,grassMat);
     this.textures.push(leafTex);
 
@@ -299,6 +307,7 @@ export class PainterlyNature {
   update(time:number,x?:number,z?:number,camera?:THREE.Camera):void{
     if(this.grassWind)this.grassWind.value=time;
     if(this.leafWind)this.leafWind.value=time;
+    if(Number.isFinite(x)&&Number.isFinite(z))this.actorGrassPosition.value.set(x,z);
     if(x!==undefined&&z!==undefined)this.visibility.update(x,z,camera);
   }
   dispose():void{
