@@ -207,12 +207,12 @@ export class Game {
         __scalebornQaCombatSnapshot?: () => {
           hp: number; ember: number; focus: number; respawns: number;
           maxEmber: number; gloamCleared: boolean;
-          fireSequence: number; sigilSequence: number; bondSequence: number;
+          fireSequence: number; clawSequence: number; sigilSequence: number; bondSequence: number;
           player: { x: number; y: number; z: number; yaw: number; form: DragonForm; mode: string };
           lastFire: { origin: { x: number; y: number; z: number }; direction: { x: number; y: number; z: number } } | null;
           hounds: Array<{ id: string; x: number; y: number; z: number; hp: number; maxHp: number; alert: boolean; windup: number }>;
         };
-        __scalebornQaStageCombat?: (mode: 'dragon' | 'rider' | 'bond' | 'melee') => void;
+        __scalebornQaStageCombat?: (mode: 'dragon' | 'claw' | 'rider' | 'bond' | 'melee') => void;
         __scalebornQaAdvanceCombat?: (frames: number) => void;
       };
       // Screenshot tests capture one fresh scene frame, then stop the CPU
@@ -547,6 +547,7 @@ export class Game {
         focus: this.combat.focus,
         respawns: this.combat.respawns,
         fireSequence: this.combat.fireSequence,
+        clawSequence: this.combat.clawSequence,
         player: { x: this.flight.x, y: this.flight.y, z: this.flight.z,
           yaw: this.flight.yaw, form: this.flight.form, mode: this.flight.mode },
         lastFire: this.combat.lastFire ? { origin: this.combat.lastFire.origin,
@@ -567,9 +568,10 @@ export class Game {
           throw new Error('QA target not alive for ' + mode);
         }
         const offset = mode === 'bond' ? 6 : mode === 'melee' ? 2.5
-          : mode === 'rider' ? 11 : 13;
+          : mode === 'claw' ? 3 : mode === 'rider' ? 11 : 13;
         const x = victim.x - offset, z = victim.z;
-        const form = mode === 'dragon' || mode === 'melee' ? 'rideable' : 'small';
+        const form = mode === 'dragon' || mode === 'claw' ||
+          mode === 'melee' ? 'rideable' : 'small';
         this.flight.x = x; this.flight.z = z;
         this.flight.y = heightAt(x, z) + FORMS[form].standHeight;
         this.flight.yaw = Math.PI / 2;

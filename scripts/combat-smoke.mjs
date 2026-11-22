@@ -43,6 +43,7 @@ try {
   const first = await snapshot();
   assert.equal(first.hounds.length, 3);
   assert.equal(first.fireSequence, 0);
+  assert.equal(first.clawSequence, 0);
   assert.equal(first.hp, 100);
   await mkdir('artifacts', { recursive: true });
   const hasWebGL = await page.locator('#game').evaluate((canvas) =>
@@ -66,6 +67,20 @@ try {
   assert.ok(alive(dragon) < alive(first), 'Dragon fire must hit an enemy ahead');
   await captureQaScreenshot(page, { path: 'artifacts/combat-dragon-fire.png', timeout: 120000 });
 
+  // A separate physical claw attack is triggered through ordinary Z input.
+  // The QA hook only stages rider/dragon placement, never damage or cooldown.
+  await page.evaluate(() => window.__scalebornQaStageCombat('claw'));
+  await page.keyboard.press('z');
+  await page.waitForFunction(() =>
+    window.__scalebornQaCombatSnapshot()?.clawSequence === 1,
+  null, { timeout: 40000 });
+  const claw = await snapshot();
+  assert.ok(alive(claw) < alive(dragon),
+    'Grounded dragon claw must strike the real forward enemy');
+  assert.equal(claw.ember, dragon.ember,
+    'The melee claw must not consume dragon-fire Ember');
+  await captureQaScreenshot(page, { path: 'artifacts/combat-dragon-claw.png', timeout: 120000 });
+
   // Staging changes player placement only; rider attack uses regular R input.
   await page.evaluate(() => window.__scalebornQaStageCombat('rider'));
   await page.keyboard.press('r');
@@ -74,7 +89,7 @@ try {
   null, { timeout: 40000 });
   const rider = await snapshot();
   assert.ok(rider.focus < first.focus, 'Rider sigil must consume independent Focus');
-  assert.ok(alive(rider) < alive(dragon), 'Rider sigil must damage the actual threat');
+  assert.ok(alive(rider) < alive(claw), 'Rider sigil must damage the actual threat');
   await captureQaScreenshot(page, { path: 'artifacts/combat-rider-sigil.png', timeout: 120000 });
 
   await page.evaluate(() => window.__scalebornQaStageCombat('bond'));
@@ -98,7 +113,7 @@ try {
   assert.ok(melee.hp < first.hp || melee.respawns > 0,
     'Real AI must close, telegraph and hit a nearby grounded player');
   assert.deepEqual(errors, [], 'Combat browser console/WebGL reported errors');
-  console.log('PASS: real WebGL2 Gloam encounter, keyboard fire/sigil/bond, hostility and recovery.');
+  console.log('PASS: real WebGL2 Gloam encounter, keyboard fire/claw/sigil/bond, hostility and recovery.');
 } finally {
   await browser.close();
 }
