@@ -236,6 +236,18 @@ export function makeScalebornRider():THREE.Group {
     color:0x354d67,metalness:.19,roughness:.52,
   });
 
+  // Independent head joint with a neutral rest-space offset. Every original
+  // facial vertex keeps its authored absolute height, so named features and
+  // cosmetic asset IDs remain stable under mounting and dismounting.
+  const head=new THREE.Group();
+  head.name='rider.head';
+  head.position.y=1.19;
+  const rest=new THREE.Group();
+  rest.name='rider.head-rest-space';
+  rest.position.y=-1.19;
+  head.add(rest);
+  group.add(head);
+
   group.add(shapedTorso([
     [.56,.160,.126,.02],[.72,.168,.139,.005],
     [.89,.179,.135,-.005],[1.055,.204,.141,-.008],
@@ -247,7 +259,7 @@ export function makeScalebornRider():THREE.Group {
     [1.225,.075,.08,-.02],
   ],warmSkin,'rider.neck',12));
 
-  group.add(shapedTorso([
+  rest.add(shapedTorso([
     [1.20,.097,.095,-.005],[1.24,.136,.124,-.018],
     [1.30,.173,.151,-.011],[1.352,.169,.156,.003],
     [1.414,.149,.142,.019],[1.458,.116,.115,.035],
@@ -255,13 +267,13 @@ export function makeScalebornRider():THREE.Group {
   ],warmSkin,'rider.face',48,30,'face'));
 
   // Hood-like angular hairline, parting in the middle to reveal the brows.
-  group.add(shapedTorso([
+  rest.add(shapedTorso([
     [1.40,.169,.142,.034],[1.46,.172,.149,.048],
     [1.50,.126,.123,.052],[1.525,.036,.059,.051],
   ],hair,'rider.crown',18));
   for(const side of [-1,1] as const){
-    smallEye(group,side,shadowSkin,eyes,irises);
-    group.add(new THREE.Mesh(taperedSpine([
+    smallEye(rest,side,shadowSkin,eyes,irises);
+    rest.add(new THREE.Mesh(taperedSpine([
       [side*.112,1.462,.032],[side*.151,1.39,.053],
       [side*.158,1.298,.069],
     ],.055),hair));
@@ -271,7 +283,7 @@ export function makeScalebornRider():THREE.Group {
       [side*.185,1.517,.210],[side*.212,1.487,.274],
     ],.039,14),scale);
     horn.name=side<0?'rider.horn.left':'rider.horn.right';
-    group.add(horn);
+    rest.add(horn);
     // The previous side tusks looked like stray ears in real screenshots.
     // Small scales now lie along her cheek/temple, inside the face outline.
     const smallScales=new THREE.Mesh(taperedSpine([
@@ -279,7 +291,7 @@ export function makeScalebornRider():THREE.Group {
       [side*.16,1.274,-.072],
     ],.014,10),scale);
     smallScales.name=side<0?'rider.temple-scales.left':'rider.temple-scales.right';
-    group.add(smallScales);
+    rest.add(smallScales);
     createRiderArm(group,side,coat,warmSkin,trim);
     createRiderLeg(group,side,cloth,boot,trim);
   }
@@ -290,7 +302,7 @@ export function makeScalebornRider():THREE.Group {
     [0,1.268,-.166],[0,1.256,-.171],
   ],.015,12,24),warmSkin);
   nose.name='rider.nose';
-  group.add(nose);
+  rest.add(nose);
 
   // Subtle expression line follows the child heroine's lower facial contour.
   // The lip is embedded in the sculpt, not a black floating cartoon mouth.
@@ -299,7 +311,7 @@ export function makeScalebornRider():THREE.Group {
     [0,1.216,-.136],[.036,1.218,-.126],[.062,1.222,-.109],
   ],.0055,10,28),shadowSkin);
   mouth.name='rider.mouth';
-  group.add(mouth);
+  rest.add(mouth);
 
   // Trouser belt and coastal talisman are visible without bulky armor.
   group.add(shapedTorso([

@@ -191,3 +191,12 @@ still must be inspected before visual signoff.
 
 ### Original 64px Onyx pigment saturation correction
 The first actual 64² source-painting WebGL image at [run 45081399370](https://github.com/DocDamage/Scaleborn/actions/runs/45081399370) revealed strong olive/green speckling on Onyx's midnight-navy hide. Instead of deleting the AI-assisted original artwork, the existing 64x64 index map now compresses the source-palette albedo modulation into a narrow dark indigo/violet band. The original scale pattern/UVs and PBR surface normals, roughness and identity are preserved. Requires fresh actual-game side/head and flight screenshots to verify; **quality gate remains blocking**.
+
+### Original rider head and neck articulation
+The complete original young hybrid face, eyes/eyelids/brows, horns, hair,
+cheek scales, nose and mouth now share one explicit `rider.head` rotation
+pivot, retaining a neutral 1.19m rest offset and every existing child name.
+A renderer-neutral tiny yaw, pitch and bank follows her grounded breathing
+and dragon banking, while her pelvis remains anchored to the saddle. It is
+not a borrowed GLB, does not affect quest/save or physics and requires
+fresh face/side and mounted real WebGL acceptance.

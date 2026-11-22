@@ -91,6 +91,7 @@ export class DragonVisual {
   private readonly jawPivot=new THREE.Group();
   private readonly riderTail = this.rider.getObjectByName('rider.tail') as THREE.Group;
   private readonly riderMouth = this.rider.getObjectByName('rider.mouth') as THREE.Mesh;
+  private readonly riderHead = this.rider.getObjectByName('rider.head') as THREE.Group;
   private readonly riderEyes = ([-1,1] as const).map(side => {
     const suffix=side<0?'left':'right';
     return {
@@ -399,6 +400,8 @@ export class DragonVisual {
       feature.brow.position.y=riderFace.browLift;
     }
     this.riderMouth.position.y=riderFace.mouthShift;
+    this.riderHead.rotation.set(
+      riderFace.headPitch,riderFace.headYaw,riderFace.headBank);
     this.cloakMotion.update(state.time,
       state.form === 'small' ? state.riderSpeed : state.speed,
       state.form === 'small' ? 0 : state.roll);

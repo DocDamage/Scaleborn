@@ -16,6 +16,8 @@ describe("young Scaleborn heroine's original subtle facial expressions",()=>{
     expect(resting.eyeOpen).toBe(1);
     expect(blink.eyeOpen).toBeLessThan(.09);
     expect(blink).toEqual(riderFacialPose(state,riderPose(state)));
+    expect(Math.abs(blink.headPitch)).toBeLessThan(.0751);
+    expect(Math.abs(blink.headYaw)).toBeLessThan(.039);
     state.form='rideable';state.mode='air';state.roll=.6;
     const focused=riderFacialPose(state,riderPose(state));
     expect(focused.browLift).toBeLessThan(resting.browLift);
@@ -28,6 +30,13 @@ describe("young Scaleborn heroine's original subtle facial expressions",()=>{
     const dragon=new DragonVisual(),state=newFlightState();
     try{
       const mouth=dragon.rider.getObjectByName('rider.mouth') as THREE.Mesh;
+      const head=dragon.rider.getObjectByName('rider.head') as THREE.Group;
+      const face=dragon.rider.getObjectByName('rider.face') as THREE.Mesh;
+      const eyeL=dragon.rider.getObjectByName('rider.eye.left') as THREE.Mesh;
+      expect(head).toBeInstanceOf(THREE.Group);
+      expect(mouth.parent?.parent).toBe(head);
+      expect(face.parent?.parent).toBe(head);
+      expect(eyeL.parent?.parent).toBe(head);
       expect(mouth).toBeInstanceOf(THREE.Mesh);
       expect(mouth.geometry).not.toBeInstanceOf(THREE.SphereGeometry);
       expect(mouth.geometry.getAttribute('position').count).toBeGreaterThan(100);
@@ -43,6 +52,11 @@ describe("young Scaleborn heroine's original subtle facial expressions",()=>{
         .toBeLessThan(-.01);
       state.form='rideable';state.roll=.45;state.time=5;
       dragon.update(state);
+      expect(head.rotation.y).toBeLessThan(-.05);
+      expect(head.rotation.z).toBeLessThan(-.02);
+      expect(Math.abs(head.rotation.x)).toBeLessThan(.076);
+      // The same visible head is reused for small and giant forms.
+      expect(head.position.y).toBeCloseTo(1.19,6);
       expect(Math.abs(mouth.position.y)).toBeLessThan(.01);
       expect(dragon.rider.scale.x).toBe(1);
       expect(dragon.rider.getObjectByName('rider.elf-ear')).toBeUndefined();
