@@ -6,6 +6,7 @@ import { createWingRig, poseWing } from './wingRig';
 import { dragonPose } from './animationPose';
 import { riderPose } from '../rider/pose';
 import { applyDragonScales, makeDragonScaleTextures } from './skinSurface';
+import { makeOnyxPaintedScaleMap } from './onyxPaintedScales';
 import { CHARACTER_MODEL_SOURCES, loadCharacterModel } from './characterSources';
 import { ImportedCharacterRig, type CharacterKind, type CharacterModelFile } from '../rider/importedCharacterRig';
 import { loftDragon, ONYX_TORSO, ONYX_HEAD, taperedSpine, sculptFin } from './organicSculpt';
@@ -23,6 +24,9 @@ const skin = applyDragonScales(
 );
 const bodySkin = skin.clone();
 bodySkin.vertexColors = true;
+// Preserve the original shader's normals/roughness while applying actual
+// AI-assisted source-painting pigment to the torso and skull.
+bodySkin.map = makeOnyxPaintedScaleMap();
 const highlight = applyDragonScales(
   new THREE.MeshStandardMaterial({ color: 0x494265, roughness: 0.56, metalness: 0.11 }),
   scaleTextures,

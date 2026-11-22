@@ -1,5 +1,7 @@
 name: Scaleborn original-character visual QA
 on:
+  push:
+    branches: [feat/integrate-visual-character-combat]
   pull_request:
     branches: [main, feat/visual-pass6-plunge-pool-spray]
   workflow_dispatch:

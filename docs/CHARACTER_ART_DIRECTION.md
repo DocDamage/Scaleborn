@@ -208,3 +208,13 @@ socket names, wing forms and flight controls are preserved.
 The change does not alter aerodynamic collision or gameplay speed.
 WebGL screenshot acceptance is still required; this remains a
 work-in-progress sculpt.
+
+### AI-assisted original hand-painted scale integration — November 22
+The character renderer now uses `src/actors/dragon/onyxPaintedScales.ts`
+for actual palette-sampled pixel color from the original generated navy/violet
+Onyx scale painting. This is a **32x32 indexed working sample** (not the full
+1254x1254 original painting), expanded synchronously into a mipmapped WebGL
+albedo texture and applied to Onyx's original torso/skull materials while
+preserving normal and roughness maps. It is not an unrelated model and is not a
+concept screenshot. The high-resolution original art is still required in a
+production UV atlas, and this low-resolution sample is **not visual acceptance**.
