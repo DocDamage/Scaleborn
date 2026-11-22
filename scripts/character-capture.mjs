@@ -30,7 +30,10 @@ try {
     window.__scalebornQaAdvance(100);
   });
   await page.waitForFunction(()=>document.querySelector('#mode-name')?.textContent==='ON LAND');
-  // Actual chase camera, for character readability at gameplay distance.
+  // Real chase camera at the uncluttered character-review meadow. Earlier
+  // screenshots had large quest rings directly between Onyx and the camera.
+  await page.evaluate(() => window.__scalebornQaCharacterGameplay('rideable'));
+  await page.waitForTimeout(350);
   await captureQaScreenshot(page, {path:'artifacts/characters-onyx-gameplay.png',timeout:120000});
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('rideable'));
   await page.waitForTimeout(500);
@@ -59,6 +62,9 @@ try {
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('rider-side'));
   await page.waitForTimeout(350);
   await captureQaScreenshot(page, {path:'artifacts/characters-hybrid-hero-side.png',timeout:120000});
+  await page.evaluate(() => window.__scalebornQaCharacterGameplay('rider'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-rider-gameplay.png',timeout:120000});
 
   await page.evaluate(()=>window.__scalebornQaLake());
   await page.keyboard.press('3');

@@ -13,6 +13,9 @@ describe('real-character close-up visual acceptance cameras', () => {
     const camera=new THREE.PerspectiveCamera(71,16/9,.2,6500);
     for(const form of ['small','rideable','giant'] as const){
       expect(stageCharacterPortrait(state,form,heightAt)).toBe('dragon');
+      // Unlike the old landing QA staging point, this has no Tidegate rings
+      // crowding the ordinary gameplay-distance camera.
+      expect(Math.hypot(state.x+555,state.z-100)).toBeGreaterThan(150);
       expect(state.form).toBe(form);
       expect(state.mode).toBe('ground');
       expect(state.y).toBeCloseTo(heightAt(state.x,state.z)+FORMS[form].standHeight,5);

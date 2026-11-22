@@ -193,6 +193,7 @@ export class Game {
         __scalebornQaHoldNextFrame?: () => Promise<void>;
         __scalebornQaResumeFrames?: () => void;
         __scalebornQaCharacterPortrait?: (pose: PortraitPose) => void;
+        __scalebornQaCharacterGameplay?: (pose: DragonForm | 'rider') => void;
         __scalebornQaLand?: () => void;
         __scalebornQaLaunch?: () => void;
         __scalebornQaWater?: () => void;
@@ -229,6 +230,23 @@ export class Game {
           throw new Error('Invalid character review pose');
         }
         this.qaPortraitSubject = stageCharacterPortrait(this.flight, pose, heightAt);
+        this.coast.update(this.flight.x,this.flight.z);
+        this.coast.setUnderwater(false);
+        this.dragon.update(this.flight);
+        this.updateCamera(1,true);
+        this.coast.updateAtmosphere(this.flight.time,this.camera.position);
+        this.updateHud(.2);
+      };
+      // Same real character scene, but with the ordinary player chase lens
+      // from the unobstructed meadow. This fixes the old gameplay snapshot
+      // framing giant Tidegate ring props instead of Onyx or the rider.
+      host.__scalebornQaCharacterGameplay = (pose: DragonForm | 'rider'): void => {
+        if(!['small','rideable','giant','rider'].includes(pose)){
+          throw new Error('Invalid gameplay character review pose');
+        }
+        stageCharacterPortrait(this.flight,pose,heightAt);
+        this.qaPortraitSubject = null;
+        this.cameraIndex = 0;
         this.coast.update(this.flight.x,this.flight.z);
         this.coast.setUnderwater(false);
         this.dragon.update(this.flight);
