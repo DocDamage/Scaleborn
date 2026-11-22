@@ -36,6 +36,9 @@ describe('terrain cliff triplanar PBR projection', () => {
         expect(shader.fragmentShader).toContain('scTriSample(roughnessMap)');
         expect(shader.fragmentShader).toContain('float roughnessFactor = roughness;');
         expect(shader.fragmentShader).toContain('scWorldNormal');
+        // With a flat normal map, perturbation is zero and the original
+        // geometry normal must survive the triplanar blend.
+        expect(shader.fragmentShader).toContain('normalize(scFace + scPerturb)');
         expect(shader.fragmentShader).not.toContain('#include <map_fragment>');
         expect(mat.customProgramCacheKey()).toContain('terrain-triplanar-v1');
         if (quality === 'high') {
