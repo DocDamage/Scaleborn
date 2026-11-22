@@ -97,3 +97,7 @@ the named three-bone skinned mesh and all open-flight angles unchanged.
 Mirrored left/right joint assertions prevent regression. Next real WebGL
 side-view captures must confirm both sides sit above the flank without
 intersecting the fixed-scale rider or actual terrain; quality gate BLOCKING.
+
+### Rider cloak surface fidelity and bank response — 2026-11-22
+
+The existing live `makeScalebornRider` travel cloak had a woven albedo/normal/roughness material but **no UV attribute**, so the texture detail could not be sampled meaningfully. The cloak is now UV-unwrapped with tiled fabric maps, shallow painted vertex-pigment variation, pinned mantle shoulders, an asymmetrically folded back surface and an irregular weighted hem. Its persistent vertex buffer deforms with speed and bank, without changing the child-scale rider, mount sockets or traversal simulation; a conservative culling bound protects the mobile hem. Added `tests/riderCloakSurface.test.ts` covering geometry, texture sampling attributes, pinned seams, roll response and live `DragonVisual` integration. Full automated checks and genuine rider-height WebGL appearance remain **unverified** for this batch; no final character-art signoff.

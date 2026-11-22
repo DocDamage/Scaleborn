@@ -28,10 +28,13 @@ export class RiderCloakMotion {
     this.rest = new Float32Array(position.array);
   }
 
-  update(time: number, speed: number): void {
+  update(time: number, speed: number, roll = 0): void {
     const t = Number.isFinite(time) ? time : 0;
     const wind = Math.min(.32, Math.max(0,
       Math.abs(Number.isFinite(speed) ? speed : 0) * .008));
+    // Rider banking adds a restrained sideways crosswind; pinned shoulder
+    // seams and stable local geometry remain unchanged.
+    const bank = Math.max(-1,Math.min(1,Number.isFinite(roll)?roll:0));
     const values = this.position.array as Float32Array;
     for (let row = 0; row <= this.rows; row++) {
       const along = row / this.rows;
@@ -42,11 +45,14 @@ export class RiderCloakMotion {
         // Entire first row remains unchanged at the shoulders.
         const wave = Math.sin(t * 3.2 - along * 5.9 + side * 4.2);
         const pleat = Math.sin(side * Math.PI * 4 + t * 1.1);
-        values[i] = this.rest[i]! + weight * wave * (.009 + wind * .15);
+        values[i] = this.rest[i]! +
+          weight * (wave * (.009 + wind * .12) + bank * .086);
         values[i + 1] = this.rest[i + 1]! +
-          weight * Math.sin(t * 2.1 + side * 3.1) * (.008 + wind * .09);
+          weight * (Math.sin(t * 2.1 + side * 3.1) * (.008 + wind * .09)
+            + wind * .12 - Math.abs(bank) * Math.abs(side) * .018);
         values[i + 2] = this.rest[i + 2]! +
-          weight * (wave * (.012 + wind * .33) + pleat * .012);
+          weight * (wave * (.012 + wind * .22) + pleat * .009
+            + wind * .50 + bank * side * .025);
       }
     }
     this.position.needsUpdate = true;

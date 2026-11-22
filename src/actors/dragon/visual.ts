@@ -398,7 +398,8 @@ export class DragonVisual {
     }
     this.riderMouth.position.y=riderFace.mouthShift;
     this.cloakMotion.update(state.time,
-      state.form === 'small' ? state.riderSpeed : state.speed);
+      state.form === 'small' ? state.riderSpeed : state.speed,
+      state.form === 'small' ? 0 : state.roll);
     this.importedRider?.animateRider(riderMotion, Math.abs(state.riderSpeed), dt);
     this.riderLimbs.leftArm.rotation.x = riderMotion.leftArm;
     this.riderLimbs.rightArm.rotation.x = riderMotion.rightArm;

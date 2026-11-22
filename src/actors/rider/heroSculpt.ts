@@ -285,18 +285,29 @@ export function makeScalebornRider():THREE.Group {
   group.add(pendant);
 
   // Broad cloak is a double-sided, hanging cloth mesh rather than a cone.
-  const positions:number[]=[],indexes:number[]=[];
+  const positions:number[]=[],uvs:number[]=[],colors:number[]=[],indexes:number[]=[];
   const cols=16,rows=14;
   for(let row=0;row<=rows;row++) {
     const t=row/rows;
     for(let col=0;col<=cols;col++){
       const s=col/cols*2-1;
-      // Shoulder-fitted cloak with a narrower hem and natural vertical
-      // folds. Avoid the previous rectangular wing-like cape silhouette.
-      const pleat=Math.sin(s*Math.PI*3)*.016*t;
-      positions.push(s*(.215+t*.225),
-        1.12-t*.68+Math.sin(Math.abs(s)*3)*t*.019,
-        .142+Math.sin(Math.PI*t)*.13+.055*Math.cos(s*3)*t+pleat);
+      // The mantle is pinned at both collarbones, wraps the back and falls
+      // outward into a slightly scalloped weighted hem. Three-dimensional
+      // diagonal drape and six shallow fabric pleats break up the old flat
+      // trapezoidal sail at rider-height camera angles.
+      const edge=Math.abs(s), fall=t*t;
+      const crease=Math.cos(s*Math.PI*6)*fall;
+      positions.push(
+        s*(.215+.18*t),
+        1.12-.72*t+.032*edge*edge*fall+.018*Math.cos(s*Math.PI*5)*fall*t,
+        .142+.28*t+.11*Math.sin(Math.PI*t)+.065*fall
+          -.055*edge*edge*t+.019*crease+.012*Math.sin(s*Math.PI*4)*t,
+      );
+      // The original woven albedo/normal/roughness maps were never sampled
+      // on this live mesh because it had no UV attribute.
+      uvs.push(col/cols*2, t*2.6);
+      const pigment=1-.08*edge*edge-.055*t+.035*crease;
+      colors.push(.95*pigment,.92*pigment,pigment);
       if(row<rows&&col<cols){
         const k=row*(cols+1)+col,l=k+cols+1;
         indexes.push(k,k+1,l,l,k+1,l+1);
@@ -305,8 +316,15 @@ export function makeScalebornRider():THREE.Group {
   }
   const cloakGeo=new THREE.BufferGeometry();
   cloakGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  cloakGeo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  cloakGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
   cloakGeo.setIndex(indexes);cloakGeo.computeVertexNormals();
-  const cloak=new THREE.Mesh(cloakGeo,cloakMat);
+  // Dynamic cloth keeps a conservative local bound throughout banking and
+  // flight; frustum culling must not clip its displaced scalloped hem.
+  cloakGeo.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.75,.41),1.25);
+  const cloakFabric=cloakMat.clone();
+  cloakFabric.vertexColors=true;
+  const cloak=new THREE.Mesh(cloakGeo,cloakFabric);
   cloak.name='rider.travel-cloak';
   group.add(cloak);
 

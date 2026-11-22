@@ -1074,3 +1074,7 @@ a fixed-width fourth-power wall, with relief fissures confined to the
 shoulders. The lakebed, water lip, shared world height/collision interface,
 seed, river carving, and ongoing waterfall trajectory validation remain.
 This must be compared with new real screenshots before approval.
+
+### Original rider cloth material and silhouette follow-up
+
+The live rider's travel cloak now has proper UV coordinates for its already-created woven albedo/normal/roughness maps (the missing UV previously left those maps ineffective), subtle pigment color variation, a sculpted folded mantle and a nonuniform hanging hem. Speed and dragon banking displace only the hem, with pinned shoulders, a persistent geometry buffer and a conservative bound. Actual game rig IDs and child proportions are unchanged; this is a procedural material/geometry improvement, **not** a final authored garment or proof of acceptable visual quality. Automated build/tests, real WebGL rider-height review and target-GPU profiling remain open.
