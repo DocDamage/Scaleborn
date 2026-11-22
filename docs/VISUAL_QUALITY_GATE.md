@@ -201,3 +201,24 @@ addition to ribbon back-face suppression), and the waterfall's transparent
 curtains opt into the scene's depth-aware fog. The resulting optical behavior
 is still an approximation; the next captured frames must be reviewed for
 readability and improved masking.
+
+### Visual pass 5 — forest silhouettes and understory
+
+The earlier prototype instanced four random variations of essentially one
+tree mesh. Rider-height captures showed skeletal, repeating canopies and large
+bare spaces. A new `treeCanopy.ts` now constructs four physically distinguishable
+profiles (broad oak, high birch, conical shore pine, waterside alder), including
+multi-segment tapered trunks, secondary twigs and thicker multi-angle leaf
+clusters. A generated four-region leaf atlas gives each species different
+individual alpha-tested shapes. These are still original procedural meshes,
+not scanned or downloaded PBR forest assets.
+
+`fernUnderstory.ts` supplies curved fronds with actual separate leaflets and
+the same instanced wind-responsive material as ground grass. Plants are placed
+only on suitable terrain heights and slopes; shoreline bank samples add
+undergrowth without obstructing the established lake overflight corridor.
+Meshes remain instanced by species/geometry with high/low detail budgets.
+
+Art and performance acceptance remains **open** until the actual rider-height
+captures are reviewed for canopy silhouette, groundcover coverage and
+triangle/overdraw cost on an RTX 3060.

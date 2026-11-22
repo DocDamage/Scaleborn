@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { createTreePrototype, makeLeafAtlas, type TreeSpecies } from './treeCanopy';
+import { makeFernTuft } from './fernUnderstory';
 import { rng, fbm } from '../core/random';
 import { AZURE_SEED, heightAt, LANDMARKS } from './terrain';
 import { GRAND_LAKE, MIRRORFALL, waterSurfaceAt, lakeShoreDistance } from './highlandLake';
@@ -7,102 +8,6 @@ import { makeBarkMaterial, makeRockMaterial } from './materials';
 
 interface PlantSite { x: number; y: number; z: number; scale: number; hue: number }
 const dummy = new THREE.Object3D();
-
-function taperBranch(a: THREE.Vector3, b: THREE.Vector3, bottom: number, top: number): THREE.BufferGeometry {
-  const axis = b.clone().sub(a);
-  const geo = new THREE.CylinderGeometry(top, bottom, axis.length(), 7, 3);
-  geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(
-    new THREE.Vector3(0, 1, 0), axis.clone().normalize()));
-  geo.translate((a.x+b.x)/2,(a.y+b.y)/2,(a.z+b.z)/2);
-  return geo;
-}
-
-function leafTexture(): THREE.DataTexture {
-  const size = 64;
-  const bytes = new Uint8Array(size * size * 4);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const u = (x + 0.5) / size * 2 - 1;
-      const v = (y + 0.5) / size * 2 - 1;
-      const span = Math.pow(Math.max(0, 1 - v * v), 0.65);
-      const notch = 0.025 * Math.sin(v * 29) * Math.sin(v * 13);
-      const edge = span * (0.61 + 0.25 * (1 - Math.abs(v))) + notch;
-      const inside = Math.abs(u) < edge;
-      const vein = Math.exp(-Math.abs(u) * 14);
-      const i = (y * size + x) * 4;
-      bytes[i] = Math.round(121 + vein * 22 + (1 - v) * 8);
-      bytes[i + 1] = Math.round(168 + vein * 10 - v * 10);
-      bytes[i + 2] = Math.round(104 + vein * 12);
-      // Antialiased lobes instead of hard cardboard edges.
-      const feather=Math.max(0,Math.min(1,(edge-Math.abs(u))*7.5));
-      bytes[i + 3] = inside ? Math.round(255*feather) : 0;
-    }
-  }
-  const texture = new THREE.DataTexture(bytes, size, size, THREE.RGBAFormat);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.magFilter = THREE.LinearFilter;
-  texture.minFilter = THREE.LinearMipmapLinearFilter;
-  texture.generateMipmaps = true;
-  texture.needsUpdate = true;
-  return texture;
-}
-
-function addLeaf(vertices: number[], uv: number[],
-  pos: THREE.Vector3, angle: number, length: number, width: number): void {
-  const axis = new THREE.Vector3(
-    Math.cos(angle), 0.24 + Math.sin(angle * 1.7) * 0.15, Math.sin(angle)).normalize();
-  // Lean the leaf plane upright. Earlier horizontal-only leaf cards were
-  // almost edge-on in third-person views, making canopies look skeletal.
-  const side = new THREE.Vector3(
-    -Math.sin(angle)*.68,
-    .57+.23*Math.sin(angle*2.7),
-    Math.cos(angle)*.68,
-  ).normalize();
-  const root = pos;
-  const tip = root.clone().addScaledVector(axis, length);
-  const left = root.clone().addScaledVector(axis, length * 0.50).addScaledVector(side, width);
-  const right = root.clone().addScaledVector(axis, length * 0.50).addScaledVector(side, -width);
-  const add = (p: THREE.Vector3, u: number, v: number): void => {
-    vertices.push(p.x,p.y,p.z);
-    uv.push(u,v);
-  };
-  add(root,0.5,0); add(left,0,0.5); add(tip,0.5,1);
-  add(root,0.5,0); add(tip,0.5,1); add(right,1,0.5);
-}
-
-/** Four distinct branch distributions share one high-density leaf-card material. */
-function treePrototypes(seed: number, quality: 'high'|'low'): {wood: THREE.BufferGeometry; foliage: THREE.BufferGeometry} {
-  const rand = rng(seed);
-  const wood: THREE.BufferGeometry[] = [];
-  const leaves: number[] = [], uv: number[] = [];
-  const trunkHeight = 9.0 + rand() * 2.8;
-  const trunk = new THREE.Vector3(Math.sin(seed)*0.16,trunkHeight,Math.cos(seed)*0.15);
-  wood.push(taperBranch(new THREE.Vector3(0,0,0), trunk, 0.46, 0.10));
-  for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * Math.PI * 2 + rand() * 0.72;
-    const y = 3.7 + (i / 10) * 5.3;
-    const distance = 3.0 + rand() * 2.7;
-    const start = new THREE.Vector3(0.08 * Math.sin(a), y, 0.08 * Math.cos(a));
-    const end = new THREE.Vector3(Math.cos(a) * distance, y + 1.7 + rand() * 1.6,
-      Math.sin(a) * distance);
-    wood.push(taperBranch(start, end, 0.18 + rand() * .11, 0.035));
-    for (let k = 0; k < (quality==='high'?42:30); k++) {
-      const t = 0.33 + rand() * 0.83;
-      const p = start.clone().lerp(end,t);
-      p.x += (rand()-.5) * 1.75; p.y += (rand()-.5) * 2.5;
-      p.z += (rand()-.5) * 1.75;
-      addLeaf(leaves,uv,p,a+rand()*6.28,0.48+rand()*0.64,0.20+rand()*0.25);
-    }
-  }
-  const combined = mergeGeometries(wood, false);
-  if (!combined) throw new Error('Procedural tree branch merge failed');
-  wood.forEach(g => g.dispose());
-  const crown = new THREE.BufferGeometry();
-  crown.setAttribute('position', new THREE.Float32BufferAttribute(leaves,3));
-  crown.setAttribute('uv', new THREE.Float32BufferAttribute(uv,2));
-  crown.computeVertexNormals();
-  return { wood: combined, foliage: crown };
-}
 
 function grassTuft(): THREE.BufferGeometry {
   const positions: number[] = [];
@@ -154,7 +59,7 @@ export class PainterlyNature {
     scene.add(this.root);
     const rand=rng(AZURE_SEED+181);
     const trees: PlantSite[][]=[[],[],[],[]];
-    const grasses: PlantSite[] = [], rocks: PlantSite[] = [];
+    const grasses: PlantSite[] = [], ferns: PlantSite[] = [], rocks: PlantSite[] = [];
 
     const overlook = { x:GRAND_LAKE.x+258, z:GRAND_LAKE.z+320 };
     const isOverlook=(x:number,z:number):boolean=>
@@ -173,6 +78,8 @@ export class PainterlyNature {
         trees[type]!.push({x,y,z,scale:0.85+rand()*0.96,hue:rand()});
       } else {
         if(rand()<.72)grasses.push({x,y:y+.04,z,scale:0.34+rand()*0.9,hue:rand()});
+        if(rand()<.13 && y>water+1.6 && density>-.25)
+          ferns.push({x,y:y+.04,z,scale:.46+rand()*1.2,hue:rand()});
         if(rand()<.035)rocks.push({x,y,z,scale:.55+rand()*2.75,hue:rand()});
       }
     }
@@ -200,7 +107,12 @@ export class PainterlyNature {
         }
       }else if(pick<.57){
         grasses.push({x,y:y+.06,z,scale:.65+rand()*.82,hue:rand()});
-      }else if(pick<.65){
+      }else if(pick<.70){
+        const e=3;
+        const slope=Math.hypot(heightAt(x+e,z)-heightAt(x-e,z),
+          heightAt(x,z+e)-heightAt(x,z-e))/(e*2);
+        if(slope<.86)ferns.push({x,y:y+.04,z,scale:.70+rand()*1.35,hue:rand()});
+      }else if(pick<.78){
         rocks.push({x,y,z,scale:.85+rand()*2.9,hue:rand()});
       }
     }
@@ -242,12 +154,15 @@ export class PainterlyNature {
       if(slope>1.12)continue;
       const heightBias=isOverlook(x,z) ? 1.25 : .70;
       grasses.push({x,y:y+.04,z,scale:heightBias*(.65+rand()*.82),hue:rand()});
+      if(rand()<.22 && y>waterY+1.8){
+        ferns.push({x,y:y+.05,z,scale:heightBias*(.60+rand()*.92),hue:rand()});
+      }
     }
     const woodMat=makeBarkMaterial(quality);
     const rockMat=makeRockMaterial(quality);
-    const leafTex=leafTexture();
+    const leafTex=makeLeafAtlas(quality==='high'?256:128);
     const leafMat=new THREE.MeshStandardMaterial({
-      color:0x8ebb79,map:leafTex,roughness:.88,metalness:0,
+      color:0xffffff,map:leafTex,roughness:.88,metalness:0,
       side:THREE.DoubleSide,alphaTest:0.28,depthWrite:true,
     });
     // Gentle leaf motion follows the rooted tree, not a rotating billboard.
@@ -301,7 +216,8 @@ export class PainterlyNature {
 
     for(let species=0;species<4;species++){
       const sites=trees[species]!;
-      const proto=treePrototypes(AZURE_SEED+species*439,quality);
+      const proto=createTreePrototype(species as TreeSpecies,quality,
+        AZURE_SEED+species*439);
       const wood=new THREE.InstancedMesh(proto.wood,woodMat,sites.length);
       const crown=new THREE.InstancedMesh(proto.foliage,leafMat,sites.length);
       sites.forEach((item,i)=>{
@@ -310,10 +226,11 @@ export class PainterlyNature {
         dummy.scale.setScalar(item.scale);
         dummy.updateMatrix();
         wood.setMatrixAt(i,dummy.matrix);crown.setMatrixAt(i,dummy.matrix);
-        const tint=new THREE.Color().setHSL(
-          item.hue<.19 ? .09+item.hue*.2 : .28+item.hue*.07,
-          .28+item.hue*.15,.55+item.hue*.10);
-        crown.setColorAt(i,tint);
+        const hue=[.24,.22,.34,.27][species]!;
+        crown.setColorAt(i,new THREE.Color().setHSL(
+          hue+(item.hue-.5)*.045,.22+item.hue*.15,.66+item.hue*.15));
+        wood.setColorAt(i,new THREE.Color().setHSL(
+          species===1?.11:.065,.09+.06*item.hue,.73+.09*item.hue));
       });
       wood.name='vegetation.azure.pbr-tree-wood.'+species;
       crown.name='vegetation.azure.pbr-tree-leaves.'+species;
@@ -335,6 +252,20 @@ export class PainterlyNature {
     grass.name='vegetation.azure.waving-grass';
     grass.receiveShadow = quality === 'high';
     this.root.add(grass);this.meshes.push(grass);
+
+    // Broadleaf canopy plus real understory makes the landscape readable at
+    // rider height; a fern patch is one draw call rather than separate props.
+    const fern=new THREE.InstancedMesh(makeFernTuft(quality),grassMat,ferns.length);
+    ferns.forEach((p,i)=>{
+      dummy.position.set(p.x,p.y,p.z);
+      dummy.rotation.set(0,p.hue*Math.PI*2,0);
+      dummy.scale.setScalar(p.scale);
+      dummy.updateMatrix();fern.setMatrixAt(i,dummy.matrix);
+      fern.setColorAt(i,new THREE.Color().setHSL(.27+p.hue*.05,.29,.43+p.hue*.20));
+    });
+    fern.name='vegetation.azure.forest-ferns';
+    fern.receiveShadow=quality==='high';
+    this.root.add(fern);this.meshes.push(fern);
 
     const rock=new THREE.InstancedMesh(irregularRock(),rockMat,rocks.length);
     rocks.forEach((p,i)=>{
