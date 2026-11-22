@@ -53,8 +53,13 @@ export function makeWakeCrestTexture(size=64):THREE.DataTexture {
   const pixels=new Uint8Array(size*size*4);
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const u=(x+.5)/size,v=(y+.5)/size;
-    const taper=Math.pow(Math.max(0,Math.sin(Math.PI*u)),.75);
-    const edge=Math.pow(Math.max(0,Math.sin(Math.PI*v)),.63);
+    // Explicitly clear the first and last texel on every edge. Sampling
+    // pixel centers alone left faint but nonzero alpha along the border,
+    // producing white seams in pooled wake ribbons with mipmaps enabled.
+    const taper=(x===0||x===size-1)?0:
+      Math.pow(Math.max(0,Math.sin(Math.PI*u)),.75);
+    const edge=(y===0||y===size-1)?0:
+      Math.pow(Math.max(0,Math.sin(Math.PI*v)),.63);
     const foam=.84+.16*Math.sin(u*57+Math.sin(v*16)*1.5)
       *Math.sin(v*23-u*9);
     const alpha=Math.max(0,Math.min(1,taper*edge*foam));
