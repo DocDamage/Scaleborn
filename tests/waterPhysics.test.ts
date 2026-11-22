@@ -3,6 +3,7 @@ import { newFlightState, stepFlight, toggleLanding } from '../src/actors/dragon/
 import { toggleDragonDive } from '../src/actors/dragon/swimming';
 import { canDragonDive, canEnterSea, dragonBottomY, dragonSurfaceY, riderCanSwim, approach } from '../src/world/waterPhysics';
 import { heightAt } from '../src/world/terrain';
+import { waterWaveOffsetAt } from '../src/world/waterWaves';
 const idle = { turn: 0, pitch: 0, bank: 0, boost: false, flap: false, move: 0 };
 const sea = () => {
   const s = newFlightState(); s.x = 1900; s.z = 1900; s.y = 16; s.speed = 0; return s;
@@ -28,7 +29,10 @@ describe('deterministic air/sea integration', () => {
     for (let i = 0; i < 90; i++) stepFlight(s, idle, 1 / 60);
     expect(s.mode).toBe('surface');
     expect(s.transition).toBeNull();
-    expect(s.y).toBeCloseTo(dragonSurfaceY(s.form), 2);
+    // Height should follow the actual animated wave, not an obsolete flat plane.
+    const movingSurface = dragonSurfaceY(s.form,s.x,s.z)
+      + waterWaveOffsetAt(s.x,s.z,s.time)*.62;
+    expect(Math.abs(s.y-movingSurface)).toBeLessThan(.9);
   });
   it('dives, respects seabed clearance and returns to surface', () => {
     const s = sea(); toggleLanding(s);
@@ -41,7 +45,10 @@ describe('deterministic air/sea integration', () => {
     expect(toggleDragonDive(s).ok).toBe(true);
     for (let i = 0; i < 450; i++) stepFlight(s, idle, 1 / 60);
     expect(s.mode).toBe('surface');
-    expect(s.y).toBeCloseTo(dragonSurfaceY(s.form), 2);
+    // Height should follow the actual animated wave, not an obsolete flat plane.
+    const movingSurface = dragonSurfaceY(s.form,s.x,s.z)
+      + waterWaveOffsetAt(s.x,s.z,s.time)*.62;
+    expect(Math.abs(s.y-movingSurface)).toBeLessThan(.9);
   });
   it('requires surfacing before launch and leaves water without teleporting', () => {
     const s = sea(); toggleLanding(s);

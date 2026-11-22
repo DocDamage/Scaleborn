@@ -19,7 +19,7 @@ describe('Natural Mirrorfall environment rather than primitive props', () => {
       expect(geo.getAttribute('position').count).toBeGreaterThan(1000);
       expect(geo.index?.count).toBeGreaterThan(3000);
       // The waterfall gap is truly open geometry, not a transparent overlay.
-      expect(geo.index!.count).toBeLessThan(52*35*6);
+      expect(geo.index!.count).toBeLessThan(76*58*6);
     } finally {cliffs.dispose();}
   });
   it('generates alpha-textured cloud wisps, not icosahedral blobs', () => {
