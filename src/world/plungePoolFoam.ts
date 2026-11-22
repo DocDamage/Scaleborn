@@ -12,6 +12,7 @@ import { MIRRORFALL_IMPACT } from './waterDynamics';
  * waves and a deterministic radial impact region.
  */
 const vertex = `
+  #include <fog_pars_vertex>
   uniform float uTime;
   uniform vec2 uImpactWorld;
   attribute float aRing;
@@ -36,11 +37,14 @@ const vertex = `
     vWorld=world.xyz;
     vFoamUv=uv;
     vRing=aRing;
-    gl_Position=projectionMatrix*viewMatrix*world;
+    vec4 mvPosition=viewMatrix*world;
+    gl_Position=projectionMatrix*mvPosition;
+    #include <fog_vertex>
   }
 `;
 const fragment = `
   precision highp float;
+  #include <fog_pars_fragment>
   uniform float uTime;
   varying vec2 vFoamUv;
   varying float vRing;
@@ -74,6 +78,7 @@ const fragment = `
     vec3 color=mix(vec3(.48,.69,.69),vec3(.89,.96,.92),
       clamp(.24+.55*fizz+.21*eddies,0.0,1.0));
     gl_FragColor=vec4(color,clamp(alpha,0.0,.46));
+    #include <fog_fragment>
   }
 `;
 
@@ -131,12 +136,12 @@ export class PlungePoolFoam {
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
     const material=new THREE.ShaderMaterial({
-      uniforms:{
+      uniforms:THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{
         uTime:{value:0},
         uImpactWorld:{value:new THREE.Vector2(MIRRORFALL_IMPACT.x,MIRRORFALL_IMPACT.z)},
-      },
+      }]),
       vertexShader:vertex,fragmentShader:fragment,
-      transparent:true,depthWrite:false,side:THREE.DoubleSide,
+      transparent:true,depthWrite:false,side:THREE.DoubleSide,fog:true,
       depthTest:true,blending:THREE.NormalBlending,
     });
     this.mesh=new THREE.Mesh(geometry,material);
