@@ -70,9 +70,13 @@ describe('Onyx original shoulder tendons and arched finger-bone wings',()=>{
         state.mode='ground';state.time=1.4;state.speed=0;
         poseWing(rig,side,dragonPose(state));
         expect(rig.mesh.morphTargetInfluences![0]).toBeCloseTo(1,6);
+        expect(rig.root.scale.x).toBeCloseTo(.52,6);
+        expect(rig.root.scale.z).toBeCloseTo(.52,6);
         state.mode='air';
         poseWing(rig,side,dragonPose(state));
         expect(rig.mesh.morphTargetInfluences![0]).toBeCloseTo(0,6);
+        expect(rig.root.scale.x).toBeCloseTo(1,6);
+        expect(rig.root.scale.z).toBeCloseTo(1,6);
         expect(rig.mesh.skeleton.bones).toHaveLength(3);
       }finally{
         rig.root.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose();});

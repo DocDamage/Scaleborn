@@ -202,6 +202,12 @@ export function poseWing(rig: WingRig, side: -1 | 1, pose: DragonPose): void {
   if (rig.mesh.morphTargetInfluences) {
     rig.mesh.morphTargetInfluences[0]=pleat;
   }
+  // Joint rotation alone retained a four-metre rib stretched diagonally
+  // away from the torso even at a complete fold (verified in WebGL).
+  // The bend-linked projection contracts WITH the pleated membrane; this
+  // only changes the renderer's folded silhouette, never collision/wingspan.
+  const compact = 1 - .48 * pleat;
+  rig.root.scale.set(compact,1,compact);
   const openShoulder = side * (0.11 + Math.sin(phase) * pose.flapAmount);
   const openElbow = side * (0.15 + Math.sin(phase - 0.55) * pose.flapAmount * 0.85);
   const openTip = side * (0.08 + Math.sin(phase - 1.0) * pose.flapAmount * 0.50);

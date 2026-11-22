@@ -67,3 +67,21 @@ fins embeds 45 mm into that surface, becomes shorter over the rider's mounting
 lane, and tapers naturally toward the tail. Material and names are retained.
 Unit tests compare the dorsal sampler to real mesh vertices at all nine fin
 positions; a fresh side-view WebGL capture is required before visual signoff.
+
+### Side-by-side actual WebGL review at `c2e7f26`
+
+The character QA workflow [45078900638](https://github.com/DocDamage/Scaleborn/actions/runs/45078900638)
+completed successfully with original real in-engine captures in all three dragon
+forms, independent rider, mounted rider and ordinary meadow chase framing.
+
+**Visible improvements confirmed (not final art signoff):** rideable rider shins
+and boots now clear Onyx's upper torso, giant rider is seated on the dorsal
+shelf instead of buried, and original nine dorsal fins track tapering skin.
+Grounded membrane chord is significantly narrower after three-bone morph.
+
+**Still visibly blocking:** the folded leading-edge phalanges remain long
+diagonal strips, especially across the giant side shot; small tail fins
+appear disconnected, and the child and creature remain visibly procedural.
+The next wing pass contracts the posed rib projection in tandem with pleated
+membranes, with embedded tail-fin bases, no physics changes and dedicated
+bounds/attachment regressions. Requires fresh actual screenshots to verify.

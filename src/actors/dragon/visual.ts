@@ -56,11 +56,13 @@ function ellipsoid(parent: THREE.Group, material: THREE.Material,
 }
 
 function tailFin(parent: THREE.Group): void {
-  parent.add(sculptFin([0,0,2.15],[0,.32,2.85],.42,
+  // The skinned tail at z≈2.15 has center y=-.16 and dorsal radius≈.05.
+  // Old fin roots were ~11cm above the skin and rendered as loose petals.
+  parent.add(sculptFin([0,-.125,2.11],[0,.17,2.67],.31,
     highlight,'creature.dragon.tail-fin.central',28));
   for(const side of [-1,1] as const) {
-    parent.add(sculptFin([0,-.08,2.05],
-      [side*.63,-.07,2.68],.38,skin,
+    parent.add(sculptFin([0,-.165,2.09],
+      [side*.48,-.13,2.62],.29,skin,
       side<0?'creature.dragon.tail-fin.left':'creature.dragon.tail-fin.right',24));
   }
 }
