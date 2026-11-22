@@ -59,9 +59,11 @@ export function createWingRig(side: -1 | 1): WingRig {
       const center=.44+.56*Math.sin(Math.PI*v);
       // Hand-painted violet iridescence and darker wing-finger striations.
       const dusk=.5+.5*Math.sin(u*10.8+v*16.3);
-      colors.push((.16+.07*dusk+.045*vein)*center,
-        (.23+.035*dusk+.04*vein)*center,
-        (.44+.13*dusk+.09*vein)*center);
+      // Midnight navy wing pigment with gentle violet iridescence, not
+      // large opaque lavender sails. Painted material still supplies veins.
+      colors.push((.15+.05*dusk+.03*vein)*center,
+        (.22+.05*dusk+.03*vein)*center,
+        (.35+.09*dusk+.06*vein)*center);
       if(u<=.43) {
         const t=u/.43;
         joints.push(0,1,0,0);weights.push(1-t,t,0,0);

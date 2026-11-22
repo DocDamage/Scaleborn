@@ -153,3 +153,18 @@ Scaleborn-specific sculpt and GLB identity contract.
 
 This is preliminary in-engine cloth animation, not fully authored rigging
 or an approved final visual character.
+
+### Screenshot-directed face and membrane proportion pass
+
+The first actual close-up captures exposed green eyes protruding like round
+toy globes and a comparatively bright lavender wing surface. The original
+13-year-old heroine now has smaller almond-proportioned eyes closer to
+her face, swept short dragon-hybrid horns and an original subtle nose
+bridge, retaining every original actor ID and animation socket. No elf model
+or adult replacement was introduced.
+
+Onyx's existing high-resolution, skinned wings now use deeper navy vertex
+pigments with restrained violet variation, retaining painted vein maps,
+material iridescence and three-bone deformation. These improvements are
+testable geometry/material changes, not final visual approvals. Review
+real close-up gameplay captures on a dedicated GPU.

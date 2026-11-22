@@ -51,13 +51,17 @@ function material(color:number, roughness=.9):THREE.MeshStandardMaterial {
 
 function smallEye(parent:THREE.Group,side:number,
   skin:THREE.Material,eye:THREE.Material,iris:THREE.Material):void {
+  // Small almond-shaped eyes sit against the facial surface rather than
+  // floating as round green toy-like globes in real close-up screenshots.
   const white = new THREE.Mesh(new THREE.SphereGeometry(1,18,14),eye);
-  white.position.set(side*.118,1.295,-.173);
-  white.scale.set(.052,.039,.019);
+  white.name=side<0?'rider.eye.left':'rider.eye.right';
+  white.position.set(side*.118,1.295,-.156);
+  white.scale.set(.046,.026,.012);
   parent.add(white);
   const jewel=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),iris);
-  jewel.position.set(side*.120,1.296,-.193);
-  jewel.scale.set(.023,.032,.013);
+  jewel.name=side<0?'rider.iris.left':'rider.iris.right';
+  jewel.position.set(side*.118,1.295,-.168);
+  jewel.scale.set(.016,.019,.008);
   parent.add(jewel);
   const brow=new THREE.Mesh(taperedSpine([
     [side*.060,1.357,-.172],[side*.110,1.366,-.192],
@@ -170,9 +174,9 @@ export function makeScalebornRider():THREE.Group {
     ],.055),hair));
     // Dragon ancestry is subtle: swept short horns, not adult antlers.
     const horn=new THREE.Mesh(taperedSpine([
-      [side*.102,1.474,.056],[side*.145,1.545,.071],
-      [side*.176,1.595,.121],
-    ],.067,11),scale);
+      [side*.102,1.474,.056],[side*.143,1.526,.111],
+      [side*.173,1.568,.173],
+    ],.052,12),scale);
     horn.name=side<0?'rider.horn.left':'rider.horn.right';
     group.add(horn);
     const smallScales=new THREE.Mesh(taperedSpine([
@@ -183,6 +187,13 @@ export function makeScalebornRider():THREE.Group {
     createRiderArm(group,side,coat,warmSkin,trim);
     createRiderLeg(group,side,cloth,boot,trim);
   }
+
+  // Subtle dragon-hybrid nose bridge keeps the painted face dimensional.
+  const nose=new THREE.Mesh(taperedSpine([
+    [0,1.297,-.151],[0,1.266,-.176],[0,1.245,-.174],
+  ],.026,10,18),warmSkin);
+  nose.name='rider.nose';
+  group.add(nose);
 
   // Trouser belt and coastal talisman are visible without bulky armor.
   group.add(shapedTorso([
