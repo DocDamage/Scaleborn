@@ -377,3 +377,19 @@ attractive rendered output or stable frame rate. Review actual browser captures
 from rider height and near the cliff, shader compile logs and dedicated-GPU
 frame budgets before accepting the visual overhaul. Original procedural maps
 are not equivalent to high-resolution authored or scanned environment assets.
+
+### Wake surface alignment (visual pass 6 continuation)
+
+A fixed-origin height on the two 9 m swimmer wake shoulders left their
+far tips cutting through or hovering above animated wind waves. The pooled
+wake meshes now use a per-event vertex deformation that evaluates the same
+four wave frequencies and the same lake-specific waterfall ripple as
+`waterSurface.ts` and `waterWaves.ts`. The CPU origin sample is subtracted
+because the mesh is already translated to the sampled water level. The
+freshwater V-crests also clip their fragments against the real radial shore
+mask, avoiding a white V continuing over dry lake-bank geometry.
+
+The wave-following geometry is not two-way fluid displacement or a
+fluid-pressure wake. Confirm contact and foam breakup in an **actual**
+rider-height moving-water browser capture; keep final quality blocked until
+that evidence and dedicated-GPU profiling exist.
