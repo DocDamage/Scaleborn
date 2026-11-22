@@ -5,6 +5,7 @@ import { addCoastalDressing } from './dressing';
 import { PainterlyWaterSurface, LakeShoreFoam, makeFoamShader } from './waterSurface';
 import { MirrorfallCascade } from './mirrorfallCascade';
 import { LakeCaustics } from './lakeCaustics';
+import { LakebedHabitat } from './lakebedHabitat';
 import { UnderwaterLightShafts } from './underwaterLightShafts';
 import { underwaterOpticsAt } from './underwaterOptics';
 import { PainterlyNature } from './painterlyNature';
@@ -35,6 +36,7 @@ export class AzureCoast {
   private readonly lake = new PainterlyWaterSurface('lake');
   private readonly lakeFoam = new LakeShoreFoam();
   private readonly caustics: LakeCaustics;
+  private readonly lakebed: LakebedHabitat;
   private readonly shafts: UnderwaterLightShafts;
   private readonly waterfall: MirrorfallCascade;
   private readonly nature: PainterlyNature;
@@ -85,6 +87,7 @@ export class AzureCoast {
     scene.add(this.sun,this.sunTarget);
     this.ocean = this.water.mesh;
     this.caustics = new LakeCaustics(quality);
+    this.lakebed = new LakebedHabitat(scene,quality);
     this.shafts = new UnderwaterLightShafts(quality);
     this.waterfall = new MirrorfallCascade(quality);
     scene.add(this.sky.mesh, this.ocean, this.caustics.mesh, this.shafts.mesh,
@@ -174,6 +177,7 @@ export class AzureCoast {
     this.lake.update(time);
     this.lakeFoam.update(time);
     this.caustics.update(time);
+    this.lakebed.update(time,x,z);
     this.waterfall.update(time);
     if(state){
       this.wake.update(state,time);
@@ -211,6 +215,7 @@ export class AzureCoast {
     this.lake.dispose();
     this.lakeFoam.dispose();
     this.caustics.dispose();
+    this.lakebed.dispose();
     this.shafts.dispose();
     this.waterfall.dispose();
     this.nature.dispose();

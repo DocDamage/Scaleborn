@@ -314,3 +314,14 @@ bounded gravity and drag, stop at the shared animated water surface and
 are recycled without new per-frame geometry or texture allocation. This
 is visually driven contact splash, **not** dynamic fluid displacement
 or rigid-body buoyancy.
+
+### Mirrorfall lakebed habitat
+
+`LakebedHabitat` adds deterministic submerged river stones and ribbon
+freshwater plants tied to the same physical heightfield used by swimming and
+caustics. Two instanced materials/batches provide high/low density budgets;
+the plants bend with a low-frequency underwater current. The habitat becomes
+invisible outside a bounded lake viewing radius. Rocks are low and partly
+buried; large collidable boulders, caves, wildlife, and photogrammetric
+replacements are still future work. The lake depth remains navigable and the
+procedural habitat does not alter terrain collision or quest state.
