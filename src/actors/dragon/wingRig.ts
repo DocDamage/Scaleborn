@@ -98,7 +98,8 @@ export function createWingRig(side: -1 | 1): WingRig {
   // interrupt the rear edge rather than a single eleven-vertex triangle fan.
   // Three skeletal controls (shoulder/elbow/tip) deform every membrane row.
   const sections=80,chordSections=16;
-  const vertices:number[]=[], uv:number[]=[], colors:number[]=[];
+  const vertices:number[]=[], foldedVertices:number[]=[];
+  const uv:number[]=[], colors:number[]=[];
   const joints:number[]=[], weights:number[]=[], triangles:number[]=[];
   for(let i=0;i<=sections;i++) {
     const u=i/sections;
@@ -112,8 +113,15 @@ export function createWingRig(side: -1 | 1): WingRig {
       // Taper the depth of sculpted wing arches toward each narrow fingertip.
       const endTaper=.10+.90*Math.sin(Math.PI*Math.min(.999,u));
       const crease=.025*Math.sin(v*23+u*35)*Math.sin(Math.PI*v);
-      vertices.push(side*span,
-        .07*Math.sin(Math.PI*u)+camber*endTaper+crease*endTaper,z);
+      const y=.07*Math.sin(Math.PI*u)+camber*endTaper+crease*endTaper;
+      vertices.push(side*span,y,z);
+      // A folded wing is a narrow pleated membrane wrapped against its
+      // curved fingers, NOT the wide triangular sail seen in real QA.
+      // Absolute morph position stays in the existing three-bone bind space.
+      const pleat=Math.sin(v*Math.PI*8)*Math.sin(u*Math.PI)*.042;
+      const foldedChord=.18*v
+        +.003*Math.sin(v*Math.PI*6)*Math.sin(u*Math.PI);
+      foldedVertices.push(side*span,y+pleat,front+(rear-front)*foldedChord);
       uv.push(u,v);
       const vein=Math.pow(Math.max(0,Math.cos(v*Math.PI*4.4+u*9.2)),18);
       const center=.44+.56*Math.sin(Math.PI*v);
@@ -148,6 +156,16 @@ export function createWingRig(side: -1 | 1): WingRig {
   geo.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(joints,4));
   geo.setAttribute('skinWeight',new THREE.Float32BufferAttribute(weights,4));
   geo.computeVertexNormals();
+  geo.morphAttributes.position=[
+    new THREE.Float32BufferAttribute(foldedVertices,3),
+  ];
+  // Correct shading at full fold, without per-frame normal recomputation.
+  const foldNormals=new THREE.BufferGeometry();
+  foldNormals.setIndex(triangles);
+  foldNormals.setAttribute('position',new THREE.Float32BufferAttribute(foldedVertices,3));
+  foldNormals.computeVertexNormals();
+  geo.morphAttributes.normal=[foldNormals.getAttribute('normal').clone()];
+  foldNormals.dispose();
 
   const shoulder=new THREE.Bone();
   shoulder.name=side<0?'leftWing.shoulder':'rightWing.shoulder';
@@ -159,6 +177,7 @@ export function createWingRig(side: -1 | 1): WingRig {
   tip.name=side<0?'leftWing.tip':'rightWing.tip';
   shoulder.add(elbow);elbow.add(tip);
   const mesh=new THREE.SkinnedMesh(geo,membraneMaterial);
+  mesh.updateMorphTargets();
   mesh.name=side<0?'wing.left.membrane':'wing.right.membrane';
   mesh.frustumCulled=false; // Skeletal tip positions are outside bind-pose bounds.
   mesh.castShadow=true;mesh.receiveShadow=true;
@@ -179,6 +198,10 @@ export function createWingRig(side: -1 | 1): WingRig {
 export function poseWing(rig: WingRig, side: -1 | 1, pose: DragonPose): void {
   const phase = pose.flapPhase;
   const fold = Math.max(0, Math.min(1, pose.wingFold));
+  const pleat=fold*fold*(3-2*fold);
+  if (rig.mesh.morphTargetInfluences) {
+    rig.mesh.morphTargetInfluences[0]=pleat;
+  }
   const openShoulder = side * (0.11 + Math.sin(phase) * pose.flapAmount);
   const openElbow = side * (0.15 + Math.sin(phase - 0.55) * pose.flapAmount * 0.85);
   const openTip = side * (0.08 + Math.sin(phase - 1.0) * pose.flapAmount * 0.50);

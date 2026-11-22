@@ -48,4 +48,35 @@ describe('Onyx original shoulder tendons and arched finger-bone wings',()=>{
       }
     }
   });
+  it('morphs each painted sail into a ribbed narrow fold without tearing skinning',()=>{
+    for(const side of [-1,1] as const){
+      const rig=createWingRig(side);
+      try{
+        const geometry=rig.mesh.geometry;
+        const rest=geometry.getAttribute('position');
+        const folded=geometry.morphAttributes.position![0]!;
+        const foldedNormals=geometry.morphAttributes.normal![0]!;
+        expect(folded.count).toBe(rest.count);
+        expect(foldedNormals.count).toBe(rest.count);
+        const row=38*17, leading=row, trailing=row+16;
+        expect(Math.abs(folded.getZ(trailing)-folded.getZ(leading)))
+          .toBeLessThan(Math.abs(rest.getZ(trailing)-rest.getZ(leading))*.22);
+        for(let i=0;i<folded.count;i++){
+          expect([folded.getX(i),folded.getY(i),folded.getZ(i),
+            foldedNormals.getX(i),foldedNormals.getY(i),foldedNormals.getZ(i)]
+            .every(Number.isFinite)).toBe(true);
+        }
+        const state=newFlightState();
+        state.mode='ground';state.time=1.4;state.speed=0;
+        poseWing(rig,side,dragonPose(state));
+        expect(rig.mesh.morphTargetInfluences![0]).toBeCloseTo(1,6);
+        state.mode='air';
+        poseWing(rig,side,dragonPose(state));
+        expect(rig.mesh.morphTargetInfluences![0]).toBeCloseTo(0,6);
+        expect(rig.mesh.skeleton.bones).toHaveLength(3);
+      }finally{
+        rig.root.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose();});
+      }
+    }
+  });
 });

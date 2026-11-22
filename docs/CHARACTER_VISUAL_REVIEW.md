@@ -36,3 +36,25 @@ Screenshots compared: baseline [45072277223](https://github.com/DocDamage/Scaleb
 ## Next character tasks
 
 Review latest screenshots before modifying further: actual side mount, on-foot rider face, small/rideable/giant Onyx and chase distance. Fix visible overlap and silhouette defects first. Continue original procedural sculpt only as an interim character implementation; final authored, high-quality 3D meshes and multi-bone articulated rigs are still required. Preserve IDs, sockets, form logic and gameplay. Keep PR #15 draft.
+
+
+## Live rendering correction — saddle and membrane silhouette (continuation)
+
+At commit `f5296019`, side-on actual 1280×720 WebGL screenshots showed
+severe mounted shin occlusion (rider legs inside Onyx's rideable back, and
+the entire child lower body lost in giant form), plus outsized flat sail
+membranes hanging down while Onyx was grounded.
+
+The follow-on character batch adds:
+- A physically measured dorsal seat offset against Onyx's continuous upper
+  torso and 95 mm contact allowance; fixed child scale is retained.
+- Outward abducted thigh/knee posture for rideable Onyx; knees tucked
+  forward on giant Onyx, whose back is too wide for the child to straddle.
+- A dense absolute-position fold morph and folded normal field on both
+  original three-bone skinned wings. At rest the chord is pleated down to
+  ~18% without deleting geometry or modifying the aerodynamic simulation.
+- Deterministic rig and actual saddle-clearance regression tests.
+
+Do **not** call these rendered improvements verified until the new
+side-on screenshots are captured and inspected; the prior shots are
+proof of the defect, not proof of correction. Keep PR #15 DRAFT.
