@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { GRAND_LAKE } from './highlandLake';
+import { MIRRORFALL_IMPACT } from './waterDynamics';
 
 /**
  * Paired Kelvin-style wake shoulders, aft of the swimmer's heading. The
@@ -68,4 +70,75 @@ export function makeWakeCrestTexture(size=64):THREE.DataTexture {
   texture.wrapS=texture.wrapT=THREE.ClampToEdgeWrapping;
   texture.needsUpdate=true;
   return texture;
+}
+
+/** Per-event shader uniforms; the material's geometry stays shared. */
+export interface WakeWaveUniforms {
+  time: { value: number };
+  anchorWave: { value: number };
+  lake: { value: number };
+}
+
+/**
+ * Each individual point of the swimmer's V-shaped wake follows the same
+ * four wind waves and waterfall ripple as the lake/ocean surface. A single
+ * CPU wave sample at the wake origin previously left the 9-m-long trailing
+ * crests hovering above, or clipping through, independently moving waves.
+ *
+ * The origin's sampled height is subtracted in vertex space because the
+ * world-space mesh translation already follows that sample in SurfaceWake.
+ */
+export function installWakeWaveDeformation(
+  material: THREE.MeshBasicMaterial,
+  uniforms: WakeWaveUniforms,
+): void {
+  const prior = material.onBeforeCompile;
+  material.customProgramCacheKey = () => 'scaleborn-vertex-wave-wake-v1';
+  material.onBeforeCompile = (shader, renderer) => {
+    prior.call(material, shader, renderer);
+    shader.uniforms.uScWakeTime = uniforms.time;
+    shader.uniforms.uScWakeAnchorWave = uniforms.anchorWave;
+    shader.uniforms.uScWakeLake = uniforms.lake;
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <common>',
+      `#include <common>
+       uniform float uScWakeTime;
+       uniform float uScWakeAnchorWave;
+       uniform float uScWakeLake;
+       varying vec2 vScWakeWorldXZ;
+       float scWakeHeight(vec2 q) {
+         float w1 = dot(q, normalize(vec2(.87,.49)))*.16-uScWakeTime*.95;
+         float w2 = dot(q, normalize(vec2(-.23,.97)))*.37-uScWakeTime*1.47;
+         float w3 = dot(q, normalize(vec2(.64,-.76)))*.76-uScWakeTime*2.15;
+         float w4 = dot(q, normalize(vec2(.18,.98)))*.08-uScWakeTime*.62;
+         float d = length(q-vec2(${MIRRORFALL_IMPACT.x.toFixed(4)},${MIRRORFALL_IMPACT.z.toFixed(4)}));
+         float plunge = uScWakeLake*exp(-d*.038)*.72*sin(d*.225-uScWakeTime*1.63);
+         return .53*sin(w1)+.24*sin(w2)+.10*sin(w3)+.64*sin(w4)+plunge;
+       }`,
+    ).replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+       vec3 scWakeWorld = (modelMatrix * vec4(transformed,1.0)).xyz;
+       vScWakeWorldXZ = scWakeWorld.xz;
+       transformed.y += scWakeHeight(scWakeWorld.xz) - uScWakeAnchorWave;`,
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <common>',
+      `#include <common>
+       uniform float uScWakeLake;
+       varying vec2 vScWakeWorldXZ;`,
+    ).replace(
+      '#include <color_fragment>',
+      `#include <color_fragment>
+       // The open wake should not continue as a white V on dry lake bank.
+       if (uScWakeLake > .5) {
+         vec2 shore = (vScWakeWorldXZ-vec2(${GRAND_LAKE.x.toFixed(4)},${GRAND_LAKE.z.toFixed(4)}))
+           /vec2(${GRAND_LAKE.radiusX.toFixed(4)},${GRAND_LAKE.radiusZ.toFixed(4)});
+         float angle=atan(shore.y,shore.x);
+         float boundary=1.0+.067*sin(3.0*angle+1.10)
+           +.042*sin(7.0*angle-.72)+.023*sin(13.0*angle+2.0);
+         if (length(shore)/boundary > .982) discard;
+       }`,
+    );
+  };
 }
