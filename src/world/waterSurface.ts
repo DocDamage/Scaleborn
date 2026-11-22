@@ -52,6 +52,12 @@ const frag=`
   uniform vec2 uBathyOrigin;
   uniform vec2 uBathySpan;
   uniform float uDepthRange;
+  // The coarse 6 km ocean is not tessellated finely enough for the
+  // shortest wind waves. A camera-following detail patch replaces it nearby.
+  uniform float uNearRole;
+  uniform vec2 uNearCenter;
+  uniform float uNearHole;
+  uniform float uNearHalf;
   varying vec3 vScWorld;
   varying float vScWave;
   float h(vec2 p) {
@@ -64,6 +70,10 @@ const frag=`
   }
   void main() {
     vec2 q=vScWorld.xz;
+    float nearDist=max(abs(q.x-uNearCenter.x),abs(q.y-uNearCenter.y));
+    // Mask the far-water mesh under the detailed surface; otherwise its
+    // undersampled waves protrude through the transparent near-water pass.
+    if (uNearRole>.5 && uNearRole<1.5 && nearDist<uNearHole) discard;
     vec2 d=(q-vec2(${GRAND_LAKE.x.toFixed(1)},${GRAND_LAKE.z.toFixed(1)}))/
       vec2(${GRAND_LAKE.radiusX.toFixed(1)},${GRAND_LAKE.radiusZ.toFixed(1)});
     float angle=atan(d.y,d.x);
@@ -76,6 +86,10 @@ const frag=`
     float shallow=uLake*(1.0-smoothstep(0.4,11.0,waterDepth));
     // Remove the ocean below the isolated freshwater basin.
     if (uLake<0.5 && r<1.05) discard;
+    // Cross-fade over the coarse ocean rather than drawing a rectangular
+    // water tile outline. Patch remains opaque where the coarse mesh is cut.
+    float patchFade=uNearRole>1.5
+      ? 1.0-smoothstep(uNearHole-.5,uNearHalf,nearDist) : 1.0;
     float t=uTime;
     float p1=dot(q,normalize(vec2(.87,.49)))*.16-t*.95;
     float p2=dot(q,normalize(vec2(-.23,.97)))*.37-t*1.47;
@@ -136,7 +150,7 @@ const frag=`
     vec3 transmitted=uLake>.5 ? vec3(.065,.31,.355) : vec3(.065,.27,.32);
     color=mix(color,transmitted,underside*.47);
     alpha=mix(alpha,undersideAlpha,underside);
-    gl_FragColor=vec4(color,alpha);
+    gl_FragColor=vec4(color,alpha*patchFade);
     #include <fog_fragment>
   }
 `;
@@ -212,9 +226,11 @@ export function makeFoamShader(lakeStrip = false): THREE.ShaderMaterial {
 
 export class PainterlyWaterSurface {
   readonly mesh: THREE.Mesh;
+  readonly nearMesh: THREE.Mesh | null = null;
   private readonly material: THREE.ShaderMaterial;
+  private readonly nearMaterial: THREE.ShaderMaterial | null = null;
   private readonly bathymetry: THREE.DataTexture;
-  constructor(kind:'ocean'|'lake') {
+  constructor(kind:'ocean'|'lake', quality:'high'|'low'='high') {
     const isLake=kind==='lake';
     this.bathymetry = isLake
       ? makeLakeBathymetry()
@@ -232,12 +248,20 @@ export class PainterlyWaterSurface {
           GRAND_LAKE.x-LAKE_MAP_WIDTH*.5,GRAND_LAKE.z-LAKE_MAP_HEIGHT*.5)},
         uBathySpan:{value:new THREE.Vector2(LAKE_MAP_WIDTH,LAKE_MAP_HEIGHT)},
         uDepthRange:{value:BATHYMETRY_RANGE_METERS},
+        uNearRole:{value:isLake?0:1},
+        uNearCenter:{value:new THREE.Vector2(0,0)},
+        uNearHole:{value:116},
+        uNearHalf:{value:128},
       }]),
       vertexShader:vert,fragmentShader:frag,
       transparent:true,depthWrite:false,side:THREE.DoubleSide,fog:true,
     });
+    // The 8.3m shortest wave requires <4.1m vertex spacing to avoid
+    // Nyquist aliasing. Use ~2.4m on High; Low keeps ~4m lake spacing.
+    const lakeSteps=quality==='high'?[320,264]:[192,156];
     const geo=isLake?
-      new THREE.PlaneGeometry(GRAND_LAKE.radiusX*2.05,GRAND_LAKE.radiusZ*2.05,160,132):
+      new THREE.PlaneGeometry(GRAND_LAKE.radiusX*2.05,GRAND_LAKE.radiusZ*2.05,
+        lakeSteps[0]!,lakeSteps[1]!):
       new THREE.PlaneGeometry(WORLD_WIDTH_METERS+2600,WORLD_WIDTH_METERS+2600,110,110);
     geo.rotateX(-Math.PI/2);
     this.mesh=new THREE.Mesh(geo,this.material);
@@ -248,9 +272,44 @@ export class PainterlyWaterSurface {
     );
     this.mesh.name=isLake?'water.azure.mirrorfall-lake':'water.azure.ocean';
     this.mesh.renderOrder=isLake?2:1;
+    if (!isLake) {
+      const material=this.material.clone();
+      material.uniforms.uNearRole!.value=2;
+      const steps=quality==='high'?160:104;
+      const detailGeometry=new THREE.PlaneGeometry(256,256,steps,steps);
+      detailGeometry.rotateX(-Math.PI/2);
+      const detail=new THREE.Mesh(detailGeometry,material);
+      detail.name='water.azure.ocean-nearfield';
+      detail.position.y=SEA_LEVEL;
+      // The near patch renders after the distant sea, before the lake.
+      detail.renderOrder=1.5;
+      this.nearMaterial=material;
+      this.nearMesh=detail;
+      this.follow(0,0);
+    }
   }
-  update(time:number):void{this.material.uniforms.uTime!.value=time;}
-  dispose():void{this.mesh.geometry.dispose();this.material.dispose();this.bathymetry.dispose();}
+  /** Snap the detail patch near the camera without restarting wave phases. */
+  follow(x:number,z:number):void {
+    if (!this.nearMesh || !this.nearMaterial ||
+      !Number.isFinite(x) || !Number.isFinite(z)) return;
+    const cx=Math.round(x/16)*16,cz=Math.round(z/16)*16;
+    if(this.nearMesh.position.x===cx && this.nearMesh.position.z===cz)return;
+    this.nearMesh.position.set(cx,SEA_LEVEL,cz);
+    (this.material.uniforms.uNearCenter!.value as THREE.Vector2).set(cx,cz);
+    (this.nearMaterial.uniforms.uNearCenter!.value as THREE.Vector2).set(cx,cz);
+    (this.nearMaterial.uniforms.uWaveOrigin!.value as THREE.Vector2).set(cx,cz);
+  }
+  update(time:number):void {
+    this.material.uniforms.uTime!.value=time;
+    if(this.nearMaterial) this.nearMaterial.uniforms.uTime!.value=time;
+  }
+  dispose():void {
+    this.mesh.geometry.dispose();
+    this.material.dispose();
+    this.nearMesh?.geometry.dispose();
+    this.nearMaterial?.dispose();
+    this.bathymetry.dispose();
+  }
 }
 
 export class LakeShoreFoam {

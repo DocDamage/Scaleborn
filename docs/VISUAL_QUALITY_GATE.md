@@ -491,3 +491,21 @@ GPU benchmarks remain required before closing the visual quality gate.
   addresses abrupt patch-radius popping without transparency sorting or new
   draw calls. Quality screenshots at rider height and RTX 3060 profiling are
   still required; this change does not establish final foliage quality.
+
+### Adaptive near-field ocean and lake wave tessellation (visual pass 7)
+
+- The original 6.6 km ocean plane had ~60 m vertex spacing despite 8.3 m
+  short-wave wavelengths. It could not faithfully displace short crests near
+  a rider; broad polygons could visibly undercut the specular lighting.
+- The ocean now keeps its far-water mesh but masks a 232 m square under a
+  camera-following 256 m detail patch. A feathered 12 m overlap hides the
+  patch rectangle while preventing coarse transparent waves showing through.
+  The patch tracks a 16 m world grid; its GLSL wave origin updates in world
+  coordinates to avoid phase resets when the camera moves.
+- High uses a 160x160 detail patch and 320x264 lake tessellation; Low uses
+  a 104x104 patch and 192x156 lake tessellation. Both preserve the existing
+  four-band wave shader, lake/ocean masking, fragment fog and animated water
+  physics; they add no per-frame buffers and keep independent disposal.
+- **Still unverified visually:** actual waterline screenshots for patch-edge
+  blending, underwater alpha overlap, GPU vertex cost and ocean/horizon
+  transitions. No genuine FFT ocean or volumetric refraction is claimed.

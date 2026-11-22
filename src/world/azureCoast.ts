@@ -34,8 +34,8 @@ export class AzureCoast {
   private lastTileZ = Number.NaN;
   private readonly terrainMaterial: THREE.MeshStandardMaterial;
   private readonly foamMaterial = makeFoamShader();
-  private readonly water = new PainterlyWaterSurface('ocean');
-  private readonly lake = new PainterlyWaterSurface('lake');
+  private readonly water: PainterlyWaterSurface;
+  private readonly lake: PainterlyWaterSurface;
   private readonly lakeFoam = new LakeShoreFoam();
   private readonly caustics: LakeCaustics;
   private readonly lakebed: LakebedHabitat;
@@ -66,6 +66,8 @@ export class AzureCoast {
 
   constructor(scene: THREE.Scene, quality: 'high' | 'low' = 'high') {
     this.quality = quality;
+    this.water = new PainterlyWaterSurface('ocean',quality);
+    this.lake = new PainterlyWaterSurface('lake',quality);
     this.terrainMaterial = makeTerrainMaterial(quality);
     this.scene = scene;
     scene.background = this.airBackground;
@@ -97,6 +99,7 @@ export class AzureCoast {
     this.waterfall = new MirrorfallCascade(quality);
     scene.add(this.sky.mesh, this.ocean, this.caustics.mesh, this.shafts.mesh,
       this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group);
+    if (this.water.nearMesh) scene.add(this.water.nearMesh);
     this.nature = new PainterlyNature(scene, quality);
     this.nearGrass = new LocalGroundcover(scene, quality);
     this.reeds = new ShorelineReeds(scene, quality);
@@ -180,6 +183,7 @@ export class AzureCoast {
   }
 
   animate(time: number, x: number, y: number, z: number, state?: FlightState): void {
+    this.water.follow(x,z);
     this.water.update(time);
     this.lake.update(time);
     this.lakeFoam.update(time);
