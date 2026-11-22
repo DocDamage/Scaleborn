@@ -91,10 +91,19 @@ export function makeTerrainMaterial(quality: 'high' | 'low' = 'high'): THREE.Mes
     side: THREE.DoubleSide,
   });
   attachPaintedMaps(mat,'soil',quality);
+  // Terrain's steep faces need their own mineral albedo, normal and
+  // roughness response: using the soil texture everywhere left cliff walls
+  // resembling smooth painted dirt despite stone vertex colors.
+  const rockMaps = makePaintedSurfaceTextures('rock', quality === 'high' ? 256 : 128);
+  mat.addEventListener('dispose', () => {
+    rockMaps.color.dispose();
+    rockMaps.normal.dispose();
+    rockMaps.roughness.dispose();
+  });
   if (quality === 'high') installSurfaceDetail(mat, 'land');
-  // Apply after painterly microstructure so both high and low presets
-  // have seam-stable albedo, roughness and normal detail on cliff faces.
-  installTerrainTriplanar(mat);
+  // Use the same world-space projections for BOTH texture families, on
+  // every preset. Continuous slope weights eliminate material seams.
+  installTerrainTriplanar(mat, 13, rockMaps);
   return mat;
 }
 export function makeRockMaterial(quality: 'high' | 'low' = 'high'): THREE.MeshStandardMaterial {

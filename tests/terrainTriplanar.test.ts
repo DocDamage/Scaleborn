@@ -36,11 +36,19 @@ describe('terrain cliff triplanar PBR projection', () => {
         expect(shader.fragmentShader).toContain('scTriSample(roughnessMap)');
         expect(shader.fragmentShader).toContain('float roughnessFactor = roughness;');
         expect(shader.fragmentShader).toContain('scWorldNormal');
+        expect(shader.fragmentShader).toContain('scRockWeight()');
+        expect(shader.fragmentShader).toContain('scTriSample(uScRockColor)');
+        expect(shader.fragmentShader).toContain('scTriSample(uScRockRoughness)');
+        expect(shader.fragmentShader).toContain('texture2D(uScRockNormal, scQ.zy)');
+        expect(shader.fragmentShader).toContain('vec2 scNormalStrength = mix(normalScale');
+        expect(shader.uniforms.uScRockColor?.value).toBeInstanceOf(THREE.DataTexture);
+        expect(shader.uniforms.uScRockNormal?.value).toBeInstanceOf(THREE.DataTexture);
+        expect(shader.uniforms.uScRockRoughness?.value).toBeInstanceOf(THREE.DataTexture);
         // With a flat normal map, perturbation is zero and the original
         // geometry normal must survive the triplanar blend.
         expect(shader.fragmentShader).toContain('normalize(scFace + scPerturb)');
         expect(shader.fragmentShader).not.toContain('#include <map_fragment>');
-        expect(mat.customProgramCacheKey()).toContain('terrain-triplanar-v1');
+        expect(mat.customProgramCacheKey()).toContain('terrain-triplanar-v2');
         if (quality === 'high') {
           expect(shader.fragmentShader).toContain('scFbm');
           expect(shader.fragmentShader).toContain('roughnessFactor=mix');
@@ -53,6 +61,17 @@ describe('terrain cliff triplanar PBR projection', () => {
       } finally { mat.dispose(); }
     },
   );
+
+  it('supports a soil-only triplanar material without extra textures', () => {
+    const mat = new THREE.MeshStandardMaterial();
+    try {
+      installTerrainTriplanar(mat, 8);
+      const shader = compileSource(mat);
+      expect(shader.fragmentShader).not.toContain('uniform sampler2D uScRockColor');
+      expect(shader.fragmentShader).toContain('diffuseColor *= scTriSample(map)');
+      expect(mat.customProgramCacheKey()).toContain('soil-only');
+    } finally { mat.dispose(); }
+  });
 
   it('preserves rock and bark materials while rejecting invalid tile scales', () => {
     const rock = makeRockMaterial('high');
