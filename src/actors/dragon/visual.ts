@@ -20,11 +20,13 @@ import { mountedRiderSeat } from '../rider/mountSeat';
 
 const scaleTextures=makeDragonScaleTextures();
 const skin = applyDragonScales(
-  new THREE.MeshStandardMaterial({ color: 0x212738, roughness: 0.52, metalness: 0.12 }),
+  new THREE.MeshStandardMaterial({ color: 0x38425d, roughness: 0.79, metalness: 0.035 }),
   scaleTextures,
 );
 const bodySkin = skin.clone();
 bodySkin.vertexColors = true;
+// Lighter original navy paint keeps cheeks/scapulae visible in muted daylight.
+bodySkin.color.setHex(0x56627f);
 // Preserve the original shader's normals/roughness while applying actual
 // AI-assisted source-painting pigment to the torso and skull.
 bodySkin.map = makeOnyxPaintedScaleMap();
@@ -37,7 +39,7 @@ const ridges = applyDragonScales(
   scaleTextures,
 );
 const iris = new THREE.MeshStandardMaterial({
-  color: 0x8fe3c0, emissive: 0x2e5a50, emissiveIntensity: 0.30, roughness: 0.49,
+  color: 0x76b1a2, emissive: 0x1c433d, emissiveIntensity: 0.12, roughness: 0.64,
 });
 const pupil = new THREE.MeshStandardMaterial({ color: 0x102329, roughness: 0.35 });
 const glimmer = new THREE.MeshStandardMaterial({
@@ -155,13 +157,13 @@ export class DragonVisual {
     this.head.add(this.jawPivot);
     for (const side of [-1, 1]) {
       const irisMesh=ellipsoid(this.head,iris,
-        [side*.51,.20,-.35],[.165,.22,.10],18);
+        [side*.51,.20,-.35],[.110,.158,.075],18);
       irisMesh.name='creature.dragon.eye.iris.'+(side<0?'left':'right');
       const pupilMesh=ellipsoid(this.head,pupil,
-        [side*.57,.21,-.41],[.065,.16,.05],14);
+        [side*.575,.21,-.398],[.047,.115,.044],14);
       pupilMesh.name='creature.dragon.eye.pupil.'+(side<0?'left':'right');
       const glint=ellipsoid(this.head,glimmer,
-        [side*.60,.31,-.45],[.04,.047,.025],10);
+        [side*.606,.273,-.423],[.022,.029,.020],10);
       glint.name='creature.dragon.eye.glint.'+(side<0?'left':'right');
       // Painted brow and upper lid are independent, moveable anatomical
       // surfaces. A blink no longer makes just the dark pupil disappear.
@@ -198,9 +200,10 @@ export class DragonVisual {
       this.head.add(upperLip);
       // Distinctive backward-swept paired horn and cartilage fin-crests.
       const horn=new THREE.Mesh(taperedSpine([
-        [side*.37,.41,.33],[side*.46,.65,.44],
-        [side*.54,.88,.66],[side*.64,.93,.91],
-      ],.175,14),ridges);
+        [side*.36,.40,.27],[side*.445,.58,.40],
+        [side*.51,.72,.64],[side*.575,.785,.91],
+        [side*.61,.775,1.12],
+      ],.138,14),ridges);
       horn.name=side<0?'creature.dragon.horn.left':'creature.dragon.horn.right';
       this.head.add(horn);
       const crestPivot=new THREE.Group();
@@ -359,11 +362,11 @@ export class DragonVisual {
     const face=dragonExpression(state,pose);
     this.jawPivot.rotation.x=-face.jawAngle;
     for(const eye of this.eyes){
-      eye.iris.scale.y=.22*face.eyeOpen;
-      eye.pupil.scale.y=.16*face.eyeOpen;
-      eye.glint.scale.y=.047*face.eyeOpen;
-      eye.pupil.position.z=-.41+face.pupilShift*.09;
-      eye.glint.position.y=.31-(1-face.eyeOpen)*.038;
+      eye.iris.scale.y=.158*face.eyeOpen;
+      eye.pupil.scale.y=.115*face.eyeOpen;
+      eye.glint.scale.y=.029*face.eyeOpen;
+      eye.pupil.position.z=-.398+face.pupilShift*.060;
+      eye.glint.position.y=.273-(1-face.eyeOpen)*.029;
       eye.lid.position.y=-(1-face.eyeOpen)*.10;
       eye.brow.position.y=face.browLift;
       eye.brow.rotation.z=eye.side*face.browLift*.48;

@@ -5,6 +5,9 @@ on:
   pull_request:
     branches: [main, feat/visual-pass6-plunge-pool-spray]
   workflow_dispatch:
+concurrency:
+  group: original-character-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   characters:
     runs-on: ubuntu-latest
