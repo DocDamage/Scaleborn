@@ -79,4 +79,19 @@ describe('real-character close-up visual acceptance cameras', () => {
       expect(camera.fov).toBe(subject==='rider-side'?40:45);
     }
   });
+  it('stages a genuine open-wing rideable air pose in the normal game scene',()=>{
+    const state=newFlightState();
+    const camera=new THREE.PerspectiveCamera(71,16/9,.2,6500);
+    expect(stageCharacterPortrait(state,'flight-rideable',heightAt))
+      .toBe('dragon');
+    expect(state.form).toBe('rideable');
+    expect(state.mode).toBe('air');
+    expect(state.transition).toBeNull();
+    expect(state.y).toBeCloseTo(heightAt(state.x,state.z)+12,5);
+    expect(state.speed).toBe(FORMS.rideable.cruise);
+    poseCharacterPortraitCamera(camera,state,'dragon',heightAt);
+    expect(camera.position.y).toBeGreaterThan(state.y);
+    expect(camera.position.distanceTo(
+      new THREE.Vector3(state.x,state.y,state.z))).toBeLessThan(12);
+  });
 });

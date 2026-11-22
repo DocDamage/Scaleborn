@@ -38,6 +38,11 @@ try {
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('rideable'));
   await page.waitForTimeout(500);
   await captureQaScreenshot(page, {path:'artifacts/characters-onyx-rideable.png',timeout:120000});
+  // Same real Three.js actor + original three-bone skinned wing, staged
+  // airborne to verify the silhouette stays open when folding is inactive.
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('flight-rideable'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-onyx-flight.png',timeout:120000});
 
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('mounted-rideable'));
   await page.waitForTimeout(400);

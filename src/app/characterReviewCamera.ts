@@ -3,7 +3,7 @@ import type { FlightState } from '../actors/dragon/flight';
 import { FORMS, type DragonForm } from '../actors/dragon/forms';
 
 export type PortraitSubject = 'dragon' | 'rider' | 'mounted' | 'rider-side' | 'mounted-side';
-export type PortraitPose = DragonForm | 'rider' | 'rider-side'
+export type PortraitPose = DragonForm | 'rider' | 'rider-side' | 'flight-rideable'
   | 'mounted-rideable' | 'mounted-giant'
   | 'mounted-rideable-side' | 'mounted-giant-side';
 
@@ -17,20 +17,22 @@ export function stageCharacterPortrait(
   height: (x: number, z: number) => number,
 ): PortraitSubject {
   const x = -521, z = -104;
-  const form = pose === 'rider' || pose === 'rider-side' ? 'small'
+  const airborne=pose==='flight-rideable';
+  const form = airborne ? 'rideable'
+    : pose === 'rider' || pose === 'rider-side' ? 'small'
     : pose === 'mounted-rideable' || pose === 'mounted-rideable-side'
       ? 'rideable' : pose === 'mounted-giant' || pose === 'mounted-giant-side'
         ? 'giant' : pose;
   state.x = x;
   state.z = z;
   state.form = form;
-  state.y = height(x, z) + FORMS[form].standHeight;
-  state.mode = 'ground';
+  state.y = height(x, z) + (airborne?12:FORMS[form].standHeight);
+  state.mode = airborne?'air':'ground';
   state.transition = null;
   state.controlTarget = pose === 'rider' || pose === 'rider-side'
     ? 'rider' : 'dragon';
-  state.speed = 0;
-  state.pitch = 0;
+  state.speed = airborne?FORMS[form].cruise:0;
+  state.pitch = airborne?.035:0;
   state.roll = 0;
   state.yaw = 0;
   state.riderX = x + 2.8;

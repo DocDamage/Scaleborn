@@ -178,3 +178,13 @@ pigment, existing UV vein relief and the original three-bone fold morph.
 This is a *real in-game* PBR surface change, not an extra shader pass or
 generated concept art. Must compare actual daylight and in-flight captures
 before visual signoff; quality gate stays BLOCKING.
+
+### Original Onyx open wing real-flight QA camera
+The DEV/qa-only character capture script can now position the live rideable
+Onyx 12m above the meadow with actual flight pose and opened/skinned wings
+(plus the unscaled mounted child), saving
+`artifacts/characters-onyx-flight.png`. This adds an open-flight visual
+counterpart to the close-up and ground-fold screenshots, catching accidental
+wing material/normal/rig regressions that upright ground shots cannot reveal.
+No new runtime controls, collision or gameplay features; real WebGL rendering
+still must be inspected before visual signoff.
