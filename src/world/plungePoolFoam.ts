@@ -46,6 +46,7 @@ const fragment = `
   precision highp float;
   #include <fog_pars_fragment>
   uniform float uTime;
+  uniform vec2 uImpactWorld;
   varying vec2 vFoamUv;
   varying float vRing;
   varying vec3 vWorld;
@@ -61,15 +62,23 @@ const fragment = `
     if(cameraPosition.y < vWorld.y-.35) discard;
     vec2 q=vWorld.xz;
     float t=uTime;
-    float flow=noise(q*.16+vec2(t*.21,-t*.16));
-    float finer=noise(q*.57-vec2(t*.38,t*.20));
-    float fizz=noise(q*1.28+vec2(-t*.48,t*.32));
+    // Follow the waterfall's outward water-current direction rather than
+    // sliding a uniform screen-space noise field across stationary rings.
+    vec2 radial=q-uImpactWorld;
+    vec2 outflow=radial/max(length(radial),.001);
+    float strength=1.0-smoothstep(0.0,43.0,length(radial));
+    vec2 flowQ=q-outflow*t*(.65+strength*1.25);
+    float flow=noise(flowQ*.16+vec2(t*.09,-t*.06));
+    float finer=noise(flowQ*.57-vec2(t*.18,t*.10));
+    float fizz=noise(flowQ*1.28+vec2(-t*.36,t*.24));
     float irregularity=(flow-.5)*.38+(finer-.5)*.24;
-    float radial=sin(clamp(vFoamUv.y+irregularity,0.0,1.0)*3.14159265);
+    float across=sin(clamp(vFoamUv.y+irregularity,0.0,1.0)*3.14159265);
+    float tips=smoothstep(.0,.09,vFoamUv.x)
+      *(1.0-smoothstep(.76,1.0,vFoamUv.x));
     float breakUp=smoothstep(.38,.82,flow*.60+finer*.28+fizz*.12);
     float eddies=.5+.5*sin(vFoamUv.x*65.0-vRing*3.2+t*1.7);
     float band=1.0-smoothstep(.16,.96,abs(vRing-.15));
-    float alpha=pow(max(0.0,radial),1.35)*(.12+.37*breakUp)
+    float alpha=pow(max(0.0,across),1.35)*tips*(.12+.37*breakUp)
       *(.52+.48*eddies)*(.79+.21*band);
     alpha*=exp(-length(cameraPosition-vWorld)*.0045);
     // The inner sheet has some continuous water whitening. Outer patches
@@ -82,59 +91,97 @@ const fragment = `
   }
 `;
 
+
+/**
+ * A single, indexed foam draw made of separate narrow streamlines.
+ *
+ * Previous geometry was four concentric ring bands, so even transparent
+ * turbulence read as artificial circles in the live lake. These detached
+ * open-ended streaks radiate along the plunge pool's existing outward
+ * current and gently curve through its local swirl. They remain tied to
+ * the same impact coordinates and never submit faces over the dry bank.
+ *
+ * Only deterministic geometry is built here, once; animated wet foam
+ * breakup remains in the original fog-aware shader.
+ */
+export function makePlungeFoamTrails(quality:'high'|'low'='high'):THREE.BufferGeometry {
+  const trails=quality==='high'?48:30;
+  const steps=quality==='high'?28:18;
+  const positions:number[]=[], uvs:number[]=[], rings:number[]=[], indices:number[]=[];
+  const goldenAngle=2.399963229728653;
+
+  for(let i=0;i<trails;i++){
+    const azimuth=(i+.31)*goldenAngle;
+    const phase=Math.sin(i*13.73)*.5+.5;
+    const startRadius=2.6+phase*15.4;
+    const length=9.5+((i*17)%29)/29*23;
+    const width=.70+((i*11)%13)/13*1.25;
+    const swirl=(i%2===0?1:-1)*(.12+.13*phase);
+    const start=positions.length/3;
+
+    const center=(t:number):{x:number;z:number}=>{
+      const r=startRadius+t*length;
+      const bend=swirl*t*(1-.28*t)+.045*Math.sin(t*5.6+i*.71)*t;
+      const angle=azimuth+bend;
+      return {
+        x:MIRRORFALL_IMPACT.x+Math.cos(angle)*r,
+        z:MIRRORFALL_IMPACT.z+Math.sin(angle)*r,
+      };
+    };
+
+    for(let j=0;j<=steps;j++){
+      const t=j/steps;
+      const mid=center(t);
+      const back=center(Math.max(0,t-.002));
+      const ahead=center(Math.min(1,t+.002));
+      const tx=ahead.x-back.x,tz=ahead.z-back.z;
+      const inverse=1/Math.max(1e-5,Math.hypot(tx,tz));
+      const nx=-tz*inverse,nz=tx*inverse;
+      // Subtle taper at both ends prevents rectangular, closed ring pieces.
+      // Each strip has its own irregular width and no repeated center.
+      const tapered=.04+.96*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.65);
+      const halfWidth=width*tapered*
+        (.86+.14*Math.sin(t*11.2+i*.87));
+      for(let side=0;side<=2;side++){
+        const offset=side-1;
+        positions.push(
+          mid.x+nx*halfWidth*offset,
+          GRAND_LAKE.surfaceY+.20,
+          mid.z+nz*halfWidth*offset,
+        );
+        uvs.push(t,side/2);
+        rings.push(Math.min(1,(startRadius+length*t)/MIRRORFALL_IMPACT.turbulenceRadius));
+      }
+      if(j===steps)continue;
+      const a=start+j*3,b=a+3;
+      for(let strip=0;strip<2;strip++){
+        const v0=a+strip,v1=v0+1,v2=b+strip,v3=v2+1;
+        const inside=(index:number):boolean=>
+          lakeContains(positions[index*3]!,positions[index*3+2]!);
+        // No extrapolation onto the escarpment or through shore geometry.
+        if([v0,v1,v2,v3].every(inside)) {
+          indices.push(v0,v2,v1,v2,v3,v1);
+        }
+      }
+    }
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  geometry.setAttribute('aRing',new THREE.Float32BufferAttribute(rings,1));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  geometry.userData.trailCount=trails;
+  geometry.userData.stepsPerTrail=steps;
+  return geometry;
+}
+
 export class PlungePoolFoam {
   readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
 
   constructor(quality: 'high' | 'low' = 'high') {
-    const ringCount = 4;
-    const segments = quality === 'high' ? 160 : 88;
-    const positions: number[] = [];
-    const uvs: number[] = [];
-    const rings: number[] = [];
-    const indices: number[] = [];
-    const radii = [7.0, 12.6, 20.2, 30.5];
-
-    for (let band = 0; band < ringCount; band++) {
-      const radius = radii[band]!;
-      const halfWidth = 1.8 + band * .48;
-      const base = positions.length / 3;
-      for (let j = 0; j <= segments; j++) {
-        const arc = j / segments;
-        const angle = arc * Math.PI * 2;
-        // World-space noise varying only along the band creates a ragged
-        // edge while preserving a seamless wrap at 0/2π.
-        const warp = .38 * Math.sin(angle*5+band*1.4)
-          + .29 * Math.sin(angle*11-band*.65);
-        for (let edge = 0; edge <= 2; edge++) {
-          const widthFraction = edge / 2;
-          const r = radius + warp + (widthFraction-.5)*halfWidth*2;
-          const x = MIRRORFALL_IMPACT.x + Math.cos(angle) * r;
-          const z = MIRRORFALL_IMPACT.z + Math.sin(angle) * r;
-          positions.push(x, GRAND_LAKE.surfaceY+.20, z);
-          uvs.push(arc, widthFraction);
-          rings.push(band/(ringCount-1));
-        }
-      }
-
-      for (let j = 0; j < segments; j++) {
-        const offset=base+j*3, next=offset+3;
-        // Some impact rings intersect the dry bank. The shore is a real
-        // constraint, so no foam triangles overhang dry hillside polygons.
-        for (let strip=0; strip<2; strip++) {
-          const a=offset+strip,b=next+strip,c=a+1,d=b+1;
-          const inside=(i:number):boolean=>
-            lakeContains(positions[i*3]!,positions[i*3+2]!);
-          if (![a,b,c,d].every(inside)) continue;
-          indices.push(a,b,c,b,d,c);
-        }
-      }
-    }
-    const geometry=new THREE.BufferGeometry();
-    geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-    geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
-    geometry.setAttribute('aRing',new THREE.Float32BufferAttribute(rings,1));
-    geometry.setIndex(indices);
-    geometry.computeVertexNormals();
+    const geometry=makePlungeFoamTrails(quality);
     const material=new THREE.ShaderMaterial({
       uniforms:THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{
         uTime:{value:0},

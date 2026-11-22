@@ -1078,3 +1078,20 @@ This must be compared with new real screenshots before approval.
 ### Original rider cloth material and silhouette follow-up
 
 The live rider's travel cloak now has proper UV coordinates for its already-created woven albedo/normal/roughness maps (the missing UV previously left those maps ineffective), subtle pigment color variation, a sculpted folded mantle and a nonuniform hanging hem. Speed and dragon banking displace only the hem, with pinned shoulders, a persistent geometry buffer and a conservative bound. Actual game rig IDs and child proportions are unchanged; this is a procedural material/geometry improvement, **not** a final authored garment or proof of acceptable visual quality. Automated build/tests, real WebGL rider-height review and target-GPU profiling remain open.
+
+### Plunge-pool open foam streaks (current visual batch)
+
+The original foam shader still sat on four complete annular surface bands.
+Even with patchy alpha, these could read as repeated artificial torus rings
+in real Mirrorfall gameplay. The waterfall impact now generates separate,
+open-ended, tapered streamlines that curve outward from the same physically
+sampled plunge center. The high/low trails remain one indexed GPU draw and
+the existing four-wave-plus-impact surface deformation is retained. The
+fragment noise advects along the local outward direction, not across static
+concentric circles. Triangles whose corners leave the real freshwater lake
+mask are omitted; no particles or vertex buffers are created during update.
+
+This is a bounded, stylized foam approximation, not CFD or verified water
+transport. Compare the actual high-quality rider-height and plunge camera
+captures for foam scale, excess brightness, shoreline clipping and GPU
+overdraw before granting visual acceptance.
