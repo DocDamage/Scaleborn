@@ -78,6 +78,38 @@ describe('water-surface response to swimming',()=>{
         .toBeInstanceOf(THREE.DataTexture);
     }finally{wake.dispose();}
   });
+  it('deforms every crest vertex against the same lake waves as the swimmer',()=>{
+    const wake=new SurfaceWake(new THREE.Scene(),'low');
+    try {
+      const state=newFlightState();
+      state.x=GRAND_LAKE.x;state.z=GRAND_LAKE.z;
+      state.mode='surface';state.speed=6;
+      wake.update(state,1);
+      const trail=wake.group.children.find(c=>c.visible) as THREE.Mesh;
+      const mat=trail.material as THREE.MeshBasicMaterial;
+      type Shader=Parameters<THREE.MeshBasicMaterial['onBeforeCompile']>[0];
+      const shader={
+        uniforms:{},
+        vertexShader:'#include <common>\\n#include <begin_vertex>',
+        fragmentShader:'#include <common>\\n#include <color_fragment>',
+      } as Shader;
+      mat.onBeforeCompile(shader,{} as THREE.WebGLRenderer);
+      expect(shader.vertexShader).toContain('scWakeHeight(scWakeWorld.xz)');
+      expect(shader.vertexShader).toContain('uScWakeAnchorWave');
+      expect(shader.fragmentShader).toContain('length(shore)/boundary > .982');
+      const anchor=shader.uniforms.uScWakeAnchorWave as {value:number};
+      const time=shader.uniforms.uScWakeTime as {value:number};
+      expect(anchor.value).toBeCloseTo(waterWaveOffsetAt(state.x,state.z,1),6);
+      expect(time.value).toBe(1);
+      const prev=anchor.value;
+      wake.update(state,1.08);
+      expect(anchor.value).toBeCloseTo(waterWaveOffsetAt(state.x,state.z,1.08),6);
+      expect(anchor.value).not.toBeCloseTo(prev,6);
+      expect(time.value).toBe(1.08);
+      expect((shader.uniforms.uScWakeLake as {value:number}).value).toBe(1);
+    }finally{wake.dispose();}
+  });
+
   it('keeps airborne splashdown clear until the dragon contacts the water',()=>{
     const wake=new SurfaceWake(new THREE.Scene(),'low');
     try{
