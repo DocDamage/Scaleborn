@@ -1,4 +1,5 @@
-import { GRAND_LAKE, MIRRORFALL, lakeContains, waterSurfaceAt } from './highlandLake';
+import { GRAND_LAKE, MIRRORFALL, headwaterProfileAt,
+  headwaterContains, lakeContains, waterSurfaceAt } from './highlandLake';
 
 /**
  * Deterministic localized plunge-pool response. Reused by both simulation
@@ -96,6 +97,26 @@ export function plungeVelocityAt(x: number, y: number, z: number): WaterVelocity
   return { x: vx, y: vy, z: vz, magnitude: Math.hypot(vx, vy, vz) };
 }
 
+/**
+ * Water travels downstream from the feeder's elevated catchment toward its
+ * western waterfall lip. The vector follows the curved terrain-carved
+ * channel centerline, with still water at the margins and above the bank.
+ * This uses the same deterministic geography as rendering and swimming.
+ */
+export function headwaterCurrentAt(x:number,y:number,z:number):WaterVelocity3D {
+  const still={x:0,y:0,z:0,magnitude:0};
+  if (![x,y,z].every(Number.isFinite) || !headwaterContains(x,z))return still;
+  const p=headwaterProfileAt(x,z);
+  if(!p || y>p.surfaceY+.8 || y<p.bedY-2)return still;
+  const shoreline=1-smooth(clamp01((Math.abs(p.relativeWidth)-.58)/.28));
+  const submerged=smooth(clamp01((p.surfaceY-y+.12)/.68));
+  const speed=(2.2+(1-clamp01(p.along))*1.7)*shoreline*submerged;
+  const gradient=7*Math.PI/132*Math.cos(Math.PI*clamp01(p.along));
+  const vx=-speed/Math.sqrt(1+gradient*gradient);
+  const vz=vx*gradient;
+  return {x:vx,y:0,z:vz,magnitude:speed};
+}
+
 /** CFL-like cap to keep browser fixed-step current stable near shorelines. */
 export function plungeCurrentStep(
   x:number,z:number,dt:number,
@@ -103,7 +124,8 @@ export function plungeCurrentStep(
   y=waterSurfaceAt(x,z),
 ):{x:number;z:number} {
   if(!Number.isFinite(dt)||dt<=0||dt>0.1)return {x,z};
-  const current=plungeVelocityAt(x,y,z);
+  const current=lakeContains(x,z)
+    ? plungeVelocityAt(x,y,z) : headwaterCurrentAt(x,y,z);
   const nx=x+current.x*dt,nz=z+current.z*dt;
   return canMove(nx,nz)?{x:nx,z:nz}:{x,z};
 }

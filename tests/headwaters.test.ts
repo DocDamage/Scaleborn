@@ -3,6 +3,7 @@ import { GRAND_LAKE, MIRRORFALL, headwaterProfileAt,
   headwaterContains, headwaterWaveAt, lakeContains, waterSurfaceAt,
 } from '../src/world/highlandLake';
 import { waterWaveOffsetAt } from '../src/world/waterWaves';
+import { headwaterCurrentAt, plungeCurrentStep } from '../src/world/waterDynamics';
 import { heightAt } from '../src/world/terrain';
 
 describe('terrain-carved upper waterfall headwaters',()=>{
@@ -36,6 +37,27 @@ describe('terrain-carved upper waterfall headwaters',()=>{
     expect(waterSurfaceAt(MIRRORFALL.x+75,dryZ)).toBe(0);
     expect(heightAt(x,GRAND_LAKE.z)).toBe(
       heightAt(x,GRAND_LAKE.z));
+  });
+
+  it('adds a downhill current aligned with the curved channel, not the ocean',()=>{
+    const x=MIRRORFALL.x+53;
+    const p=headwaterProfileAt(x,GRAND_LAKE.z)!;
+    const y=p.surfaceY-.72;
+    const current=headwaterCurrentAt(x,y,p.centerZ);
+    expect(current.x).toBeLessThan(-2);
+    expect(current.y).toBe(0);
+    expect(Math.abs(current.z)).toBeLessThan(.6);
+    expect(current.magnitude).toBeLessThan(4.0);
+    const moved=plungeCurrentStep(x,p.centerZ,1/60,()=>true,y);
+    expect(moved.x).toBeLessThan(x);
+    expect(plungeCurrentStep(x,p.centerZ,1/60,()=>false,y))
+      .toEqual({x,z:p.centerZ});
+    expect(headwaterCurrentAt(x,y,p.centerZ+p.halfWidth*1.05).magnitude)
+      .toBe(0);
+    expect(headwaterCurrentAt(x,p.surfaceY+2,p.centerZ).magnitude).toBe(0);
+    expect(headwaterCurrentAt(Number.NaN,y,p.centerZ).magnitude).toBe(0);
+    expect(headwaterCurrentAt(GRAND_LAKE.x,GRAND_LAKE.surfaceY,GRAND_LAKE.z)
+      .magnitude).toBe(0);
   });
 
   it('shares gentle water motion with the rider/dragon physics sampler',()=>{

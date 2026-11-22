@@ -58,7 +58,9 @@ export function headwaterProfileAt(x: number, z: number): HeadwaterProfile | nul
 
 export function headwaterContains(x:number,z:number):boolean {
   const p=headwaterProfileAt(x,z);
-  return p!==null && p.along>=0 && p.along<=1
+  // The GPU stream mesh uses float32 world coordinates. Tolerate its
+  // sub-millimetre roundoff at the exact upstream endpoint.
+  return p!==null && p.along>=-.00001 && p.along<=1.00001
     && Math.abs(p.relativeWidth)<.86;
 }
 

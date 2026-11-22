@@ -749,3 +749,15 @@ shallow source stream.
 This is a *small river and a realistic-looking transition*, not a fully
 simulated 3D fluid volume. Aquatic flow/buoyancy and a more detailed headwater
 catchment remain visual and physics acceptance tasks.
+
+### Shallow upstream flow for waterborne characters
+
+`headwaterCurrentAt` introduces a bounded downhill velocity tangent to the
+carved creek's curving centerline (roughly 2.2–3.9 m/s at the center). The
+existing collision-gated swimmer current step now selects this creek field
+outside the lake, without changing Mirrorfall's deep-water plunge response.
+The flow dies off at the banks and above the stream's water surface. No river
+drag reaches dry land or the rest of the ocean. A tiny float32 rounding
+tolerance keeps the visual mesh endpoint within the same creek mask as the
+gameplay water sampler. This is shallow 2D downstream advection and remains
+a physically inspired approximation rather than true 3D hydrodynamics.
