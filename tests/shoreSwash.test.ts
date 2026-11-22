@@ -72,6 +72,17 @@ describe('wave-coupled Mirrorfall terrain swash',()=>{
         expect(shader.fragmentShader).toContain('float scPigSwash');
         expect(shader.fragmentShader).toContain('scPigCreekWet');
         expect(shader.fragmentShader).toContain('roughnessFactor=mix(roughnessFactor,0.29');
+        const roughBase=shader.fragmentShader.indexOf('float roughnessFactor = roughness;');
+        const swashRough=shader.fragmentShader.indexOf(
+          'roughnessFactor=mix(roughnessFactor,0.29');
+        expect(roughBase).toBeGreaterThan(0);
+        expect(swashRough).toBeGreaterThan(roughBase);
+        // High mode has an additional wetness layer. The wave contact
+        // response must run AFTER it rather than being overwritten.
+        if(quality==='high'){
+          expect(swashRough).toBeGreaterThan(shader.fragmentShader.indexOf(
+            'roughnessFactor=mix(roughnessFactor,0.39'));
+        }
         expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
       }finally{material.dispose();}
     }
