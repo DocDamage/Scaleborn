@@ -89,6 +89,9 @@ describe('Gloam combat scene adapter', () => {
       expect(sigil.visible).toBe(true);
       expect(bond.visible).toBe(true);
       expect(sigil.count).toBe(21);
+      expect(sigil.geometry.index?.count).toBe(18);
+      expect((sigil.material as THREE.MeshBasicMaterial).blending)
+        .toBe(THREE.NormalBlending);
       expect(bond.count).toBe(36);
       for (const pool of [sigil, bond]) {
         for (let i = 0; i < pool.count; i++) {

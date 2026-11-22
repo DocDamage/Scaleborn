@@ -5,6 +5,7 @@ import { makeBondSurgePatchGeometry, makeBondSurgePatchTexture } from './bondSur
 import { taperedSpine } from '../actors/dragon/organicSculpt';
 import { makeGloamHoundBody, makeGloamHoundLeg, makeGloamHoundPaw, makeGloamPeltNormal } from './gloamHoundSculpt';
 import { makeDragonFlameRibbonGeometry, makeDragonFlameRibbonTexture } from './flameRibbon';
+import { makeTidalSigilRibbonGeometry, makeTidalSigilRibbonTexture } from './tidalSigilFx';
 
 interface HoundRig {
   root: THREE.Group;
@@ -32,6 +33,7 @@ export class CombatVisual {
   private readonly flameLight: THREE.PointLight;
   private readonly sigil: THREE.InstancedMesh;
   private readonly sigilMaterial: THREE.MeshBasicMaterial;
+  private readonly sigilTexture: THREE.DataTexture;
   private readonly bond: THREE.InstancedMesh;
   private readonly bondMaterial: THREE.MeshBasicMaterial;
   private readonly bondTexture: THREE.DataTexture;
@@ -78,12 +80,17 @@ export class CombatVisual {
     if (this.plume.instanceColor) this.plume.instanceColor.needsUpdate = true;
     this.flameLight = new THREE.PointLight(0xff9b53, 0, 29, 2);
     this.flameLight.name = 'fx.dragon.fire-light';
+    // The Tidal Sigil is now painted as crossed, torn water ribbons instead
+    // of a trail of luminous opaque spheres. Hit math is unchanged.
+    this.sigilTexture = makeTidalSigilRibbonTexture();
     this.sigilMaterial = new THREE.MeshBasicMaterial({
-      color: 0x8ddcdd, transparent: true, opacity: 0.8,
-      depthWrite: false, blending: THREE.AdditiveBlending, fog: true,
+      color: 0x8ddcdd, map: this.sigilTexture,
+      side: THREE.DoubleSide, transparent: true, opacity: 0.66,
+      alphaTest: 0.02, depthWrite: false,
+      blending: THREE.NormalBlending, fog: true,
     });
     this.sigil = new THREE.InstancedMesh(
-      new THREE.SphereGeometry(1, 12, 10), this.sigilMaterial, SIGIL_COUNT,
+      makeTidalSigilRibbonGeometry(), this.sigilMaterial, SIGIL_COUNT,
     );
     this.sigil.name = 'fx.rider.tidal-sigil';
     this.sigil.visible = false;
@@ -316,7 +323,7 @@ export class CombatVisual {
     const progress = Math.min(1, (this.magicAge + 0.02) / 0.3);
     const distance = cast.range * progress;
     const fade = Math.max(0, 1 - this.magicAge / duration);
-    this.sigilMaterial.opacity = 0.80 * fade;
+    this.sigilMaterial.opacity = 0.66 * fade;
     for (let i = 0; i < SIGIL_COUNT; i++) {
       const t = i / SIGIL_COUNT;
       const trail = Math.max(0, distance - t * 6.8);
@@ -384,6 +391,7 @@ export class CombatVisual {
     this.bondTexture.dispose();
     this.houndNormal.dispose();
     this.flameTexture.dispose();
+    this.sigilTexture.dispose();
     this.root.removeFromParent();
     this.rigs.clear();
   }
