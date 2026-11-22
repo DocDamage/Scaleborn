@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { rng } from '../core/random';
 import { AZURE_SEED } from './terrain';
-import { GRAND_LAKE, MIRRORFALL } from './highlandLake';
+import { GRAND_LAKE, MIRRORFALL, lakeContains } from './highlandLake';
+import { sampleWaterWaves } from './waterWaves';
 import { MIRRORFALL_IMPACT } from './waterDynamics';
 import { PlungePoolFoam } from './plungePoolFoam';
 import { makeSprayStreakGeometry, makeSprayStreakTexture } from './sprayStreak';
@@ -11,13 +12,34 @@ const plungeX=MIRRORFALL_IMPACT.x;
 const down=MIRRORFALL.topY-GRAND_LAKE.surfaceY;
 const gravity=9.81;
 
+/** Match ballistic-spray contact with the rendered lake, not a static plane.
+ * Droplets outside the shoreline should still be retired at the lake rim.
+ */
+export function waterfallSpraySurfaceY(x:number,z:number,time:number):number {
+  if (![x,z,time].every(Number.isFinite) || !lakeContains(x,z))
+    return GRAND_LAKE.surfaceY;
+  return sampleWaterWaves(x,z,time).surfaceY;
+}
+
 const vertex=`
   #include <fog_pars_vertex>
+  uniform float uTime;
   varying vec2 vFlowUv;
   varying vec3 vFlowWorld;
+  varying float vSheetFold;
   void main(){
     vFlowUv=uv;
-    vFlowWorld=(modelMatrix*vec4(position,1.0)).xyz;
+    // An accelerating, wind-sheared fall. The crown remains attached
+    // to the rock; lower portions flex and separate into uneven veils.
+    float fallMix=smoothstep(.08,.92,uv.y);
+    float gust=uTime*.58 + position.z*.034;
+    float wave=sin(uv.y*23.0-gust*2.8+uv.x*12.0);
+    float filament=sin(uv.x*35.0+uv.y*48.0-uTime*3.7);
+    vec3 sheetFlutter=position;
+    sheetFlutter.z += fallMix*(1.45*wave+.43*filament);
+    sheetFlutter.x += fallMix*(.69*sin(uv.y*18.0-uTime*2.1+uv.x*22.0));
+    vSheetFold=.5+.5*wave;
+    vFlowWorld=(modelMatrix*vec4(sheetFlutter,1.0)).xyz;
     vec4 mvPosition=viewMatrix*vec4(vFlowWorld,1.0);
     gl_Position=projectionMatrix*mvPosition;
     #include <fog_vertex>
@@ -29,6 +51,7 @@ const fragment=`
   uniform float uTime;
   varying vec2 vFlowUv;
   varying vec3 vFlowWorld;
+  varying float vSheetFold;
   float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
   float noise(vec2 p){
     vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
@@ -40,10 +63,13 @@ const fragment=`
     float t=uTime;
     // Advected streaks vary in flow velocity and separate into finer
     // jets near the plunge pool. Edges are turbulent, not rectangular.
+    // Higher vertical sheet speed near the lake yields flowing streaks
+    // without moving the fixed waterfall crest.
+    float flowAccel=mix(7.4,16.5,sqrt(clamp(p.y,0.0,1.0)));
     float strip=noise(vec2(p.x*29.0+sin(p.y*10.0)*.24,
-      p.y*35.0-t*(7.4+p.x*1.1)));
+      p.y*35.0-t*(flowAccel+p.x*1.1)));
     float wash=noise(vec2(p.x*78.0+p.y*1.9,
-      p.y*95.0-t*17.1));
+      p.y*95.0-t*(flowAccel*1.8)));
     float longFlow=pow(.5+.5*sin(p.x*84.0+wash*3.1+
       sin(p.y*20.0-t*2.1)*1.4),3.3);
     float whiteJet=pow(.5+.5*sin(p.x*155.0+
@@ -54,9 +80,15 @@ const fragment=`
     float ragged=p.x+edgeNoise;
     float edge=smoothstep(.035,.18,ragged)
       *(1.0-smoothstep(.79,.965,ragged));
-    float baseAlpha=edge*(.18+.40*turbulence+.13*wash);
     float nearImpact=smoothstep(.66,.98,p.y);
-    baseAlpha+=nearImpact*edge*broken*.15;
+    // Break the lower curtain into intermittent voids and brighter jets,
+    // instead of a continuous semi-opaque rectangular water billboard.
+    float porosity=noise(vec2(p.x*58.0+vSheetFold*2.3,
+      p.y*66.0-t*flowAccel*.7));
+    float breakup=smoothstep(.31,.67,porosity+broken*.15);
+    float baseAlpha=edge*(.18+.40*turbulence+.13*wash);
+    baseAlpha*=mix(1.0,.38+.62*breakup,nearImpact*.85);
+    baseAlpha+=nearImpact*edge*broken*breakup*.15;
     vec3 base=vec3(.11,.29,.36);
     vec3 white=vec3(.91,.98,.96);
     vec3 color=mix(base,white,
@@ -191,8 +223,8 @@ export class MirrorfallCascade {
 
   private reset(d:Droplet,randomAge:boolean):void{
     d.x=plungeX+(this.random()-.5)*MIRRORFALL.width*.90;
-    d.y=GRAND_LAKE.surfaceY+.90;
     d.z=GRAND_LAKE.z+(this.random()-.5)*32;
+    d.y=waterfallSpraySurfaceY(d.x,d.z,this.previousTime)+.90;
     const phi=this.random()*Math.PI*2;
     const horizontal=2+this.random()*17;
     d.vx=Math.cos(phi)*horizontal;
@@ -200,7 +232,8 @@ export class MirrorfallCascade {
     d.vy=5+this.random()*20;
     d.life=randomAge?this.random()*3.7:0;
     if(randomAge){d.x+=d.vx*d.life*.55;d.z+=d.vz*d.life*.55;
-      d.y=Math.max(GRAND_LAKE.surfaceY+.9,d.y+d.vy*d.life-.5*gravity*d.life*d.life);}
+      d.y=Math.max(waterfallSpraySurfaceY(d.x,d.z,this.previousTime)+.9,
+        d.y+d.vy*d.life-.5*gravity*d.life*d.life);}
   }
 
   update(time:number):void{
@@ -211,7 +244,10 @@ export class MirrorfallCascade {
       d.vy-=gravity*dt;
       d.vx*=Math.exp(-.42*dt);d.vz*=Math.exp(-.42*dt);
       d.x+=d.vx*dt;d.z+=d.vz*dt;d.y+=d.vy*dt;d.life+=dt;
-      if(d.y<GRAND_LAKE.surfaceY+.15||d.life>4.8)this.reset(d,false);
+      // Recycle at the same crest/trough that swimmers and the surface
+      // shader use, avoiding droplets sinking into a raised wind wave.
+      if(d.y<waterfallSpraySurfaceY(d.x,d.z,time)+.15||d.life>4.8)
+        this.reset(d,false);
       const s=.10+(i%4)*.082;
       this.dummy.position.set(d.x,d.y,d.z);
       this.velocity.set(d.vx,d.vy,d.vz);

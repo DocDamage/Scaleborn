@@ -509,3 +509,19 @@ GPU benchmarks remain required before closing the visual quality gate.
 - **Still unverified visually:** actual waterline screenshots for patch-edge
   blending, underwater alpha overlap, GPU vertex cost and ocean/horizon
   transitions. No genuine FFT ocean or volumetric refraction is claimed.
+
+### Cascade sheet breakup and live splash collision (visual pass 7)
+
+The existing three irregular waterfall ribbons now shear in both horizontal
+axes under a time-varying gust, with displacement weighted from a fixed crest
+toward the plunge. Fragment streak advection accelerates with descent and
+lower-sheet porosity breaks rectangular translucent veils into intermittent
+water strands. The shared GLSL time uniform updates all curtains at once.
+
+Ballistic spray now samples the exact CPU wind-wave/plunge-ripple height at its
+position before recycling, including the active waterline after launching. It
+falls back to the static basin level beyond the lake boundary. This is still
+an artist-directed sheet shader and point-spray approximation, **not** an
+interacting volumetric water simulation. Verify water sheet breakup, splash
+placement, fogged underwater appearance and frame timing in real browser
+screenshots before accepting the visual gate.
