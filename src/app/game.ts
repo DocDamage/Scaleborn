@@ -86,6 +86,7 @@ export class Game {
   private fps = 0;
   private fpsAccum = 0;
   private hudAccum = 0;
+  private lastQaRenderTime = Number.NEGATIVE_INFINITY;
 
   constructor(canvas: HTMLCanvasElement) {
     assertManifestUnique();
@@ -555,6 +556,15 @@ export class Game {
   }
 
   private frame = (now: number): void => {
+    // CI uses SwiftShader (CPU WebGL). Rendering every RAF starves Playwright's
+    // main-thread DOM polling on large scenes. Keep the real world/shaders and
+    // deterministic QA simulation, but limit QA-only rendering to 8 FPS.
+    // Normal playable builds retain unrestricted requestAnimationFrame.
+    if (this.qaRender && now - this.lastQaRenderTime < 125) {
+      requestAnimationFrame(this.frame);
+      return;
+    }
+    this.lastQaRenderTime = now;
     if (!this.lastTime) this.lastTime = now;
     const elapsed = Math.min(0.10, Math.max(0, (now - this.lastTime) / 1000));
     this.lastTime = now;
