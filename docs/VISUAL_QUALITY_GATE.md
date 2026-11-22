@@ -828,3 +828,18 @@ are released during disposal; the per-frame update creates no new sprites.
 This is a visual particle approximation, not simulated aerosol transport.
 Actual rider-height browser screenshots and RTX 3060 profile remain open
 acceptance blockers.
+
+### Submerged waterfall air entrainment
+
+`PlungePoolBubbles` is a bounded, original GPU point-sprite field rooted to
+actual Mirrorfall impact bathymetry. Tiny air glints continuously rise inside
+the real freshwater depth with seeded phase/size variation; they fade at the
+bed and surface, respond to underwater optical transmission, and only render
+when the swimmer's camera is submerged near the plunge. One quality-scaled
+point draw pass is used, with no CPU per-frame particle allocations or extra
+image assets. The full 148m lake remains explorable; the impact is relatively
+shallow and bubbles never descend below its true terrain floor.
+
+This adds a recognizable underwater impact effect but is not true two-way
+air-water turbulence, fluid-pressure modeling or a volumetric CFD solver.
+Close-up gameplay screenshots and GPU fill-rate acceptance remain outstanding.

@@ -10,6 +10,7 @@ import { LakeCaustics } from './lakeCaustics';
 import { LakebedHabitat } from './lakebedHabitat';
 import { UnderwaterLightShafts } from './underwaterLightShafts';
 import { UnderwaterParticulates } from './underwaterParticulates';
+import { PlungePoolBubbles } from './plungePoolBubbles';
 import { underwaterOpticsAt } from './underwaterOptics';
 import { PainterlyNature } from './painterlyNature';
 import { LocalGroundcover } from './localGroundcover';
@@ -45,6 +46,7 @@ export class AzureCoast {
   private readonly lakebed: LakebedHabitat;
   private readonly shafts: UnderwaterLightShafts;
   private readonly particulates: UnderwaterParticulates;
+  private readonly bubbles: PlungePoolBubbles;
   private readonly waterfall: MirrorfallCascade;
   private readonly headwaters: MirrorfallHeadwaters;
   private readonly headwaterBanks: HeadwaterBanks;
@@ -104,6 +106,7 @@ export class AzureCoast {
     this.lakebed = new LakebedHabitat(scene,quality);
     this.shafts = new UnderwaterLightShafts(quality);
     this.particulates = new UnderwaterParticulates(scene, quality);
+    this.bubbles = new PlungePoolBubbles(scene, quality);
     this.waterfall = new MirrorfallCascade(quality);
     this.headwaters = new MirrorfallHeadwaters(quality);
     this.headwaterBanks = new HeadwaterBanks(scene,quality);
@@ -178,6 +181,7 @@ export class AzureCoast {
     );
     this.shafts.update(time, optics.shaftStrength);
     this.particulates.update(time, camera, optics);
+    this.bubbles.update(time, camera, optics);
     if (optics.immersion > 0) {
       this.seaFog.density = optics.fogDensity;
       this.seaFog.color.copy(this.airFog.color).lerp(optics.tint, optics.immersion);
@@ -248,6 +252,7 @@ export class AzureCoast {
     this.lakebed.dispose();
     this.shafts.dispose();
     this.particulates.dispose();
+    this.bubbles.dispose();
     this.waterfall.dispose();
     this.headwaters.dispose();
     this.headwaterBanks.dispose();
