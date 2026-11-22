@@ -73,6 +73,7 @@ export class DragonVisual {
   private readonly tailRig = createDragonTailRig(skin);
   private readonly tail = this.tailRig.root;
   private readonly head = new THREE.Group();
+  private readonly torso: THREE.Mesh;
   private readonly eyes: Array<{
     iris:THREE.Mesh; pupil:THREE.Mesh; glint:THREE.Mesh;
     lid:THREE.Mesh; brow:THREE.Group; side:number;
@@ -109,13 +110,14 @@ export class DragonVisual {
     this.body.name = 'creature.dragon.body';
     // One organic longitudinal torso/neck/tail silhouette; no stacked
     // stretched sphere- or cube-shaped body parts remain.
-    const core = new THREE.Mesh(loftDragon(ONYX_TORSO,124,40),bodySkin);
+    const core = new THREE.Mesh(loftDragon(ONYX_TORSO,124,40,'torso'),bodySkin);
+    this.torso = core;
     core.name='creature.dragon.onyx.anatomical-torso';
     core.castShadow=true;core.receiveShadow=true;
     this.body.add(core);
     this.head.name = 'head';
     this.head.position.set(0, 0.32, -1.54);
-    const skull=new THREE.Mesh(loftDragon(ONYX_HEAD,76,36),bodySkin);
+    const skull=new THREE.Mesh(loftDragon(ONYX_HEAD,76,36,'skull'),bodySkin);
     skull.name='creature.dragon.onyx.sculpted-skull';
     skull.castShadow=true;
     this.head.add(skull);
@@ -297,6 +299,12 @@ export class DragonVisual {
     this.root.rotation.order = 'YXZ';
     this.root.rotation.set(state.pitch, -state.yaw, state.roll);
     this.body.position.y = pose.bodyBob * this.displayedScale;
+    // Local morph breathes the chest under the neck/wing roots; the root
+    // transform, seat attachment and collision dimensions are untouched.
+    if (this.torso.morphTargetInfluences) {
+      this.torso.morphTargetInfluences[0] =
+        .42 + .32 * Math.sin(state.time * 1.45);
+    }
 
     poseWing(this.wingL, -1, pose);
     poseWing(this.wingR, 1, pose);

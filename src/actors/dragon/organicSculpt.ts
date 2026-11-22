@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { onyxSurfaceOffset, type OnyxSurfaceRegion } from './onyxSurfaceAnatomy';
 
 /**
  * Original Onyx sculpting primitives: organically lofted silhouettes, not
@@ -29,9 +30,11 @@ function sampleSection(sections: readonly SculptSection[], t: number): SculptSec
 
 /** Smooth anatomical surface with continuous texture UVs and subtle scales. */
 export function loftDragon(sections: readonly SculptSection[],
-  lengthSegments = 100, radialSegments = 32): THREE.BufferGeometry {
+  lengthSegments = 100, radialSegments = 32,
+  region: OnyxSurfaceRegion = 'plain'): THREE.BufferGeometry {
   if (sections.length < 2) throw new Error('At least two body sections required');
   const points: number[] = [], uvs: number[] = [], colors: number[] = [];
+  const breathing: number[] = [];
   const indices: number[] = [];
   for (let i = 0; i <= lengthSegments; i++) {
     const t = i / lengthSegments;
@@ -42,7 +45,16 @@ export function loftDragon(sections: readonly SculptSection[],
       const ridge = Math.pow(Math.max(0, y), 12) * .025 * (1 - t);
       const pattern = .007 * Math.sin(a*16 + z*19)
         * Math.sin(a*8 - z*31);
-      points.push(x * (rx + pattern), cy + y*(ry + pattern) + ridge, z);
+      const offset = onyxSurfaceOffset(region, z, x, y);
+      const px = x * (rx + pattern) + offset.x;
+      const py = cy + y * (ry + pattern) + ridge + offset.y;
+      points.push(px, py, z);
+      if (region === 'torso') {
+        // Inhalation gently broadens the ribcage under the shoulder and
+        // saddle, without scaling the physics body or rider.
+        const ribs = Math.exp(-Math.pow((z + .35) / .87, 2) * 2);
+        breathing.push(px + x * .025 * ribs, py + y * .018 * ribs, z);
+      }
       uvs.push(t*3.3, j/radialSegments*1.35);
       const violet = .5+.5*Math.sin(z*3.4+a*5);
       const dorsal = Math.max(0,y);
@@ -59,18 +71,23 @@ export function loftDragon(sections: readonly SculptSection[],
   geo.setAttribute('position', new THREE.Float32BufferAttribute(points,3));
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs,2));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(colors,3));
+  if (region === 'torso') {
+    geo.morphAttributes.position = [new THREE.Float32BufferAttribute(breathing, 3)];
+  }
   geo.computeVertexNormals();
   return geo;
 }
 
 export const ONYX_TORSO: readonly SculptSection[] = [
-  [-1.65,.19,.21,.24],
-  [-1.39,.26,.39,.40],
-  [-1.00,.17,.59,.54],
-  [-.58,.04,.78,.65],
-  [0,-.04,.86,.73],
-  [.48,-.08,.78,.66],
-  [.97,-.05,.60,.48],
+  [-1.65,.23,.24,.25],
+  [-1.46,.26,.34,.34],
+  [-1.23,.24,.47,.44],
+  [-.96,.15,.63,.55],
+  [-.69,.065,.75,.65],
+  [-.30,-.025,.84,.71],
+  [.15,-.045,.85,.72],
+  [.52,-.075,.76,.63],
+  [.98,-.065,.60,.48],
   [1.38,-.08,.43,.36],
   [1.78,-.15,.29,.26],
   [2.24,-.18,.17,.16],
@@ -79,14 +96,15 @@ export const ONYX_TORSO: readonly SculptSection[] = [
 ];
 
 export const ONYX_HEAD: readonly SculptSection[] = [
-  [-1.34,-.10,.12,.11],
-  [-1.08,-.13,.36,.20],
-  [-.78,-.08,.50,.28],
-  [-.46,.035,.60,.37],
-  [-.12,.075,.62,.43],
-  [.26,.09,.56,.37],
-  [.51,.11,.36,.24],
-  [.70,.08,.06,.055],
+  [-1.36,-.11,.14,.11],
+  [-1.19,-.13,.30,.18],
+  [-.95,-.13,.43,.23],
+  [-.71,-.075,.51,.28],
+  [-.46,.018,.60,.37],
+  [-.16,.085,.63,.43],
+  [.18,.10,.57,.38],
+  [.43,.12,.41,.26],
+  [.70,.08,.065,.055],
 ];
 
 /** Tapering tubular crests, curled horns, tail-fins, claws and tendrils. */
