@@ -199,7 +199,7 @@ export class AzureCoast {
     return optics.immersion;
   }
 
-  animate(time: number, x: number, y: number, z: number, state?: FlightState): void {
+  animate(time: number, x: number, y: number, z: number, state?: FlightState, camera?: THREE.Camera): void {
     this.water.follow(x,z);
     this.water.update(time);
     this.lake.update(time);
@@ -216,7 +216,7 @@ export class AzureCoast {
       this.wake.update(state,time);
       this.splash.update(state,time);
     }
-    this.nature.update(time,x,z);
+    this.nature.update(time,x,z,camera);
     this.nearGrass.update(x,z,time);
     this.reeds.update(x,z,time);
     this.clouds.update(time);
