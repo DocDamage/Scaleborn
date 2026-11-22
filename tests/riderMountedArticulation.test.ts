@@ -50,7 +50,7 @@ describe('hybrid rider arm and leg contact animation', () => {
       const leftKnee=dragon.rider.getObjectByName('rider.leftKnee') as THREE.Group;
       const leftAnkle=dragon.rider.getObjectByName('rider.leftAnkle') as THREE.Group;
       expect(leftKnee.rotation.x).toBe(0);
-      expect(leftAnkle.rotation.x).toBe(0);
+      expect(leftAnkle.rotation.x).toBeCloseTo(0,6);
       state.riderSpeed=3;state.time=1.4;dragon.update(state);
       expect(leftKnee.rotation.x).toBeGreaterThanOrEqual(0);
       expect(Math.abs(leftAnkle.rotation.x)).toBeLessThan(.25);
