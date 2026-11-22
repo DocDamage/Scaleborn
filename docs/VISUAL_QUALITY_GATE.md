@@ -785,3 +785,14 @@ dry creek bank facing the western waterfall lip and writes
 `artifacts/mirrorfall-headwaters-browser.png`. The hook is DEV+qa-only,
 not part of production gameplay. The image must be inspected before any
 art-acceptance claim for the new water source.
+
+### Damp feeder-river edges without added geometry
+
+The already installed world-space terrain pigment shader now follows the
+actual new headwaters centerline and small raised channel banks. A narrow,
+height-clamped wet mineral/moss wash blends the original terrain material
+toward dark muted blue-green at the stream margins, fading into natural dry
+soil over 5–6m and toward the upstream source. It shares the common
+`MIRRORFALL` crest coordinate and the stream's exact width/curve equations;
+no additional texture or draw calls, and the main 148m deep freshwater
+lake's separate shore wetness remains intact.

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GRAND_LAKE } from './highlandLake';
+import { GRAND_LAKE, MIRRORFALL } from './highlandLake';
 
 /**
  * Painterly landcover and geological bedding are blended in world-space
@@ -20,10 +20,14 @@ export function installTerrainPigment(material:THREE.MeshStandardMaterial):void 
     shader.uniforms.uScPigLakeRadii={
       value:new THREE.Vector2(GRAND_LAKE.radiusX,GRAND_LAKE.radiusZ)};
     shader.uniforms.uScPigLakeLevel={value:GRAND_LAKE.surfaceY};
+    shader.uniforms.uScPigFallLip={
+      value:new THREE.Vector2(MIRRORFALL.x-1,MIRRORFALL.topY),
+    };
     const functions=`
       uniform vec2 uScPigLakeCenter;
       uniform vec2 uScPigLakeRadii;
       uniform float uScPigLakeLevel;
+      uniform vec2 uScPigFallLip;
       float scPigHash(vec2 p){
         vec3 q=fract(vec3(p.xyx)*.1031);
         q+=dot(q,q.yzx+33.33);
@@ -36,6 +40,23 @@ export function installTerrainPigment(material:THREE.MeshStandardMaterial):void 
           mix(scPigHash(i),scPigHash(i+vec2(1.0,0.0)),f.x),
           mix(scPigHash(i+vec2(0.0,1.0)),
               scPigHash(i+vec2(1.0,1.0)),f.x),f.y);
+      }
+      float scPigCreekWet(vec2 point,float elevation){
+        float along=(point.x-uScPigFallLip.x)/132.0;
+        if(along<-.14 || along>1.13)return 0.0;
+        float t=clamp(along,0.0,1.0);
+        float center=uScPigLakeCenter.y+7.0*sin(t*3.14159265);
+        float halfWidth=37.0-21.0*t;
+        float lateral=abs(point.y-center)/halfWidth;
+        // Visible wetness is concentrated on the two gravel bank margins,
+        // not over the entire 132m valley or the middle of the stream.
+        float bank=smoothstep(.70,.94,lateral)
+          *(1.0-smoothstep(1.20,1.83,lateral));
+        float upstream=smoothstep(-.14,0.0,along)
+          *(1.0-smoothstep(.91,1.13,along));
+        float waterLevel=uScPigFallLip.y+1.75*t;
+        float moisture=1.0-smoothstep(1.0,6.5,abs(elevation-waterLevel));
+        return bank*upstream*moisture;
       }
       float scPigShoreDistance(vec2 point){
         vec2 d=(point-uScPigLakeCenter)/uScPigLakeRadii;
@@ -81,6 +102,10 @@ export function installTerrainPigment(material:THREE.MeshStandardMaterial):void 
           *(.55+.45*scPigNoise(worldPig*.22));
         diffuseColor.rgb=mix(diffuseColor.rgb,
           diffuseColor.rgb*vec3(.53,.69,.64),wetBank*.50);
+        float creekWet=scPigCreekWet(worldPig,vScTriPosition.y)
+          *(.74+.26*scPigNoise(worldPig*.24));
+        diffuseColor.rgb=mix(diffuseColor.rgb,
+          diffuseColor.rgb*vec3(.53,.68,.60),creekWet*.51);
       `);
   };
 }

@@ -30,6 +30,8 @@ describe('world-space soil, mineral and wet-bank pigment',()=>{
         expect(fragment).toContain('scStonePigment');
         expect(fragment).toContain('bankDistance');
         expect(fragment).toContain('scPigShoreDistance');
+        expect(fragment).toContain('scPigCreekWet');
+        expect(fragment).toContain('creekWet*.51');
         expect(fragment).toContain('scTriSample');
         expect(fragment).toContain('roughnessFactor');
         expect(mat.customProgramCacheKey()).toContain('terrain-pigment');
