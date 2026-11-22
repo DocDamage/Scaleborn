@@ -245,6 +245,9 @@ describe('G4 deterministic encounter and dragon breath', () => {
     s.mode = 'air'; s.y += 25;
     targetAhead(c, s, 13);
     const target = c.hounds[0]!;
+    // targetAhead raises test hounds for level-ground cone tests; for an
+    // aerial miss the enemy must be physically rooted on the terrain.
+    target.y = heightAt(target.x, target.z);
     expect(castMountedRiderSigil(c, s).ok).toBe(true);
     expect(target.hp).toBe(target.maxHp);
     expect(c.lastSigil?.groundFollowing).toBe(false);
