@@ -11,7 +11,7 @@ import { GRAND_LAKE, MIRRORFALL } from './highlandLake';
  * The tiny initial-time smoothing keeps the first mesh rows well-spaced
  * without changing either endpoint or adding a costly fluid solver.
  */
-const EJECTION_SMOOTHING = 0.012;
+const EJECTION_SMOOTHING = 0.001;
 const ROOT_START = Math.sqrt(EJECTION_SMOOTHING);
 const ROOT_DISTANCE = Math.sqrt(1 + EJECTION_SMOOTHING) - ROOT_START;
 
