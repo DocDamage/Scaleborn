@@ -136,8 +136,8 @@ export class LocalGroundcover {
 
   update(x:number,z:number,time:number):void {
     this.time.value=time;
-    this.actorPosition.value.set(x,z);
     if(!Number.isFinite(x)||!Number.isFinite(z))return;
+    this.actorPosition.value.set(x,z);
     const centerX=Math.floor(x/(this.spacing*4));
     const centerZ=Math.floor(z/(this.spacing*4));
     if(centerX===this.lastX&&centerZ===this.lastZ)return;
