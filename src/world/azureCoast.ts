@@ -5,6 +5,7 @@ import { addCoastalDressing } from './dressing';
 import { PainterlyWaterSurface, LakeShoreFoam, makeFoamShader } from './waterSurface';
 import { MirrorfallCascade } from './mirrorfallCascade';
 import { MirrorfallHeadwaters } from './mirrorfallHeadwaters';
+import { HeadwaterBanks } from './headwaterBanks';
 import { LakeCaustics } from './lakeCaustics';
 import { LakebedHabitat } from './lakebedHabitat';
 import { UnderwaterLightShafts } from './underwaterLightShafts';
@@ -46,6 +47,7 @@ export class AzureCoast {
   private readonly particulates: UnderwaterParticulates;
   private readonly waterfall: MirrorfallCascade;
   private readonly headwaters: MirrorfallHeadwaters;
+  private readonly headwaterBanks: HeadwaterBanks;
   private readonly nature: PainterlyNature;
   private readonly nearGrass: LocalGroundcover;
   private readonly reeds: ShorelineReeds;
@@ -104,6 +106,7 @@ export class AzureCoast {
     this.particulates = new UnderwaterParticulates(scene, quality);
     this.waterfall = new MirrorfallCascade(quality);
     this.headwaters = new MirrorfallHeadwaters(quality);
+    this.headwaterBanks = new HeadwaterBanks(scene,quality);
     scene.add(this.sky.mesh, this.ocean, this.caustics.mesh, this.shafts.mesh,
       this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group, this.headwaters.mesh);
     if (this.water.midMesh) scene.add(this.water.midMesh);
@@ -201,6 +204,7 @@ export class AzureCoast {
     this.lakebed.update(time,x,z);
     this.waterfall.update(time);
     this.headwaters.update(time);
+    this.headwaterBanks.update(x,z);
     this.cliffs.update(time);
     this.outcrops.update(x,z);
     this.sediment.update(x,z);
@@ -246,6 +250,7 @@ export class AzureCoast {
     this.particulates.dispose();
     this.waterfall.dispose();
     this.headwaters.dispose();
+    this.headwaterBanks.dispose();
     this.nature.dispose();
     this.nearGrass.dispose();
     this.reeds.dispose();

@@ -761,3 +761,14 @@ drag reaches dry land or the rest of the ocean. A tiny float32 rounding
 tolerance keeps the visual mesh endpoint within the same creek mask as the
 gameplay water sampler. This is shallow 2D downstream advection and remains
 a physically inspired approximation rather than true 3D hydrodynamics.
+
+### Collision-matched stony feeder-river banks
+
+`HeadwaterBanks` dresses both edges of the upper source stream using the
+existing original waterworn-stone mesh and PBR rock material. Seed-stable
+bank sites follow `heightAt`, exclude the shallow water volume, avoid steep
+slope collisions and honor the same curved stream centerline and channel
+width as the visible feeder surface. Low and High use separate population
+budgets, and 48m-cell CPU instance culling keeps just one nearby rock batch.
+These are small decorative stones, not a replacement for production
+photogrammetry or physically collidable river boulders.
