@@ -48,6 +48,7 @@ export class Game {
   private saveAvailable = false;
   private readonly echoTitle = requireElement<HTMLElement>('#echo-title');
   private readonly echoStage = requireElement<HTMLElement>('#echo-stage');
+  private readonly echoPanel = requireElement<HTMLElement>('#echo-panel');
   private readonly echoHintText = requireElement<HTMLElement>('#echo-hint');
   private readonly echoDistance = requireElement<HTMLElement>('#echo-distance');
   private readonly echoSaveStatus = requireElement<HTMLElement>('#echo-save-status');
@@ -497,8 +498,16 @@ export class Game {
       : phase === 'seek-shrine' ? 'SEEK THE SHRINE' : 'LOCKED';
     this.echoTitle.textContent = objective.title;
     this.echoHintText.textContent = objective.instruction;
+    const goalDistance=Math.hypot(current.x-objective.x,current.z-objective.z);
     this.echoDistance.textContent = phase === 'complete' ? 'Trial completed'
-      : Math.round(Math.hypot(current.x - objective.x, current.z - objective.z)) + ' m to objective';
+      : Math.round(goalDistance) + ' m to objective';
+    // Dark-fantasy minimal HUD: present the quest during the opening,
+    // near interactions, or while the M menu is open. Otherwise let the
+    // environment own the screen rather than pinning a constant quest card.
+    const questContext=goalDistance < 105 || tidegateNearby(this.flight)
+      || echoShrineNearby(this.flight) || this.menuOpen;
+    const questAmbient=this.flight.time>13 && !questContext;
+    this.echoPanel.classList.toggle('quest-ambient',questAmbient);
     this.echoSaveStatus.textContent = this.saveAvailable ? 'Local checkpoints enabled' : 'Session progress only';
     this.echoAction.hidden = !echoShrineNearby(this.flight) &&
       !(tidegateNearby(this.flight) && this.tidegate.solved && this.echo.collected);

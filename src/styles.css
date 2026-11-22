@@ -359,3 +359,16 @@ button:focus-visible { outline: 3px solid white; outline-offset:3px; }
     left:10px;
   }
 }
+
+/* Objective appears contextually and fades away during open exploration. */
+.game-started #echo-panel.quest-ambient {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+.game-started.hud-menu-open #echo-panel.quest-ambient {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+#echo-panel { transition: opacity 380ms ease, transform 380ms ease; }
