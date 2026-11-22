@@ -989,3 +989,20 @@ the user's intended authored dragon/rider design. Art acceptance still requires
 real browser close-ups from flight/ground, especially membrane appearance under
 dynamic light, aliasing, GPU cost and rig deformation. The overall visual gate
 remains blocking.
+
+### Sculpted, grounded dragon leg silhouettes
+
+The live code-built dragon now replaces all four sphere-and-cone prototype
+legs with separate continuous, cambered fore/hind limb lofts and wide,
+tapered paws. Three curved, progressively narrowing keratin talons follow
+each paw instead of rigid cone spikes. The fore and hind hock centerlines
+are intentionally different; the old named hip sockets, body scale and
+terrain collision rules are preserved. Foot groups pitch during the active
+diagonal land gait and gently flex while swimming, without allocating
+geometry during animation. These are **renderer-visible replacements**,
+not a production creature model or proof of anatomy/art-direction approval.
+
+Acceptance remains blocked on actual rider-height and close-up WebGL frames:
+verify ground contact in all three dragon forms, toe deformation during
+walking and swimming, shadow fidelity, and silhouette agreement with the
+user's intended creature design. Hardware draw-call cost also remains open.

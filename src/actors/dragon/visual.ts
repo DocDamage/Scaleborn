@@ -3,6 +3,7 @@ import type { FlightState } from './flight';
 import { FORMS } from './forms';
 import { createWingRig, poseWing } from './wingRig';
 import { makeOrganicLoft } from './organicLoft';
+import { createDragonLegSculpt } from './limbSculpt';
 import { dragonPose } from './animationPose';
 import { riderPose } from '../rider/pose';
 import { RiderVisual } from '../rider/visual';
@@ -74,7 +75,7 @@ export class DragonVisual {
     leftLeg: this.rider.getObjectByName('rider.leftLeg') as THREE.Group,
     rightLeg: this.rider.getObjectByName('rider.rightLeg') as THREE.Group,
   };
-  private readonly legs: Array<{ group: THREE.Group; diagonal: boolean }> = [];
+  private readonly legs: Array<{ group: THREE.Group; foot: THREE.Group; diagonal: boolean }> = [];
   private displayedScale = FORMS.rideable.visualScale;
   private previousTime = 0;
 
@@ -129,20 +130,13 @@ export class DragonVisual {
     // Hinged procedural legs: diagonal pairs step in opposition on land.
     for (const side of [-1, 1]) {
       for (const front of [true, false]) {
-        const leg = new THREE.Group();
+        const sculpt = createDragonLegSculpt(front, skin, ridges, highlight);
+        const leg = sculpt.group;
         const z = front ? -1.05 : 1.03;
         leg.name = 'leg.' + (front ? 'front' : 'hind') + (side < 0 ? 'Left' : 'Right');
         leg.position.set(side * 0.55, -0.45, z);
-        ellipsoid(leg, skin, [0, -0.18, 0], [0.27, 0.47, 0.30]);
-        ellipsoid(leg, ridges, [0, -0.68, -0.12], [0.31, 0.16, 0.39]);
-        for (const toe of [-0.14, 0.14]) {
-          const claw = new THREE.Mesh(new THREE.ConeGeometry(0.078, 0.30, 6), highlight);
-          claw.rotation.x = -Math.PI / 2;
-          claw.position.set(toe, -0.71, -0.40);
-          leg.add(claw);
-        }
         this.body.add(leg);
-        this.legs.push({ group: leg, diagonal: (side < 0) === front });
+        this.legs.push({ group: leg, foot: sculpt.foot, diagonal: (side < 0) === front });
       }
     }
     this.body.add(this.wingL.root, this.wingR.root);
@@ -197,6 +191,11 @@ export class DragonVisual {
           : state.mode === 'air' ? -0.19 : 0;
       leg.group.position.y = -0.45 + (pose.name === 'walk'
         ? Math.max(0, Math.sin(phase)) * pose.gaitAmount * 0.08 : 0);
+      // Toes pitch up with the lifting diagonal, but remain planted at rest.
+      leg.foot.rotation.x = pose.name === 'walk'
+        ? -Math.max(0, Math.sin(phase)) * pose.gaitAmount * 0.22
+        : state.mode === 'underwater' || state.mode === 'surface'
+          ? Math.sin(state.time * 4.4 + (leg.diagonal ? 0 : Math.PI)) * 0.09 : 0;
     }
     this.tail.rotation.y = pose.tailAngle;
     this.tail.rotation.x = Math.sin(state.time * 1.65) * 0.07;
