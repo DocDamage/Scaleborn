@@ -43,7 +43,7 @@ async function main() {
     page.on('console',message=>{
       if(message.type()==='error')errors.push('console: '+message.text());
     });
-    const url=new URL(process.env.SCALEBORN_URL??'http://127.0.0.1:5173');
+    const url=new globalThis.URL(process.env.SCALEBORN_URL??'http://127.0.0.1:5173');
     url.searchParams.set('start','lake');
     url.searchParams.set('quality','high');
     url.searchParams.delete('qa');
@@ -74,7 +74,7 @@ async function main() {
     await page.waitForTimeout(2000);
     const samples=await page.evaluate(({durationMs})=>new Promise(resolve=>{
       const frames=[];
-      const started=performance.now();
+      const started=globalThis.performance.now();
       let last=0;
       const tick=now=>{
         if(last)frames.push(Math.max(0,now-last));
@@ -82,10 +82,10 @@ async function main() {
         if(now-started>=durationMs){
           resolve({frames,durationMs:now-started});
         }else {
-          requestAnimationFrame(tick);
+          globalThis.requestAnimationFrame(tick);
         }
       };
-      requestAnimationFrame(tick);
+      globalThis.requestAnimationFrame(tick);
     }),{durationMs:durationSeconds*1000});
 
     const frameTimes=samples.frames.filter(t=>Number.isFinite(t)&&t>0)
