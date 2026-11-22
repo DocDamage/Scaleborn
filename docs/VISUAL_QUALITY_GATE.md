@@ -1006,3 +1006,22 @@ Acceptance remains blocked on actual rider-height and close-up WebGL frames:
 verify ground contact in all three dragon forms, toe deformation during
 walking and swimming, shadow fidelity, and silhouette agreement with the
 user's intended creature design. Hardware draw-call cost also remains open.
+
+
+### Waterfall mist GPU batching (real gameplay, follow-up)
+
+The original advection-inspired waterfall mist used 16/36 independent Three.js
+Sprites, with one transparent material/draw per wisp. The real MirrorfallCascade
+now submits the same deterministic seed positions, age fades and soft atlas as
+**one dynamic instanced quad draw** in both quality presets. Instance opacity
+is supplied as a GPU attribute, not emulated by changing shared material
+opacity, and all quads align with the live gameplay camera each frame. Fog
+uniforms and explicit geometry, shader and atlas disposal are retained.
+The camera/cascade update path and regression tests cover stable transforms,
+fade variation, true camera billboarding and the low/high instance budgets.
+
+This is a bounded **draw-call and fidelity-preservation** improvement, not
+simulated aerosol dynamics or final visual acceptance. Transparency blending
+within a single instance batch is not individually depth sorted; inspect
+actual near/far mist overlap in WebGL and measure the effect on the target
+RTX 3060 before claiming performance or quality improvements as verified.

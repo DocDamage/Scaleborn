@@ -212,7 +212,7 @@ export class AzureCoast {
     this.caustics.update(time);
     this.lakebed.update(time,x,z,camera);
     this.marine.update(time,x,z,camera);
-    this.waterfall.update(time);
+    this.waterfall.update(time,camera);
     this.headwaters.update(time);
     this.headwaterBanks.update(x,z);
     this.cliffs.update(time);
