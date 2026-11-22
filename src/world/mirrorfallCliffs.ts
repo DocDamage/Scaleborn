@@ -16,6 +16,7 @@ export class MirrorfallCliffs {
   constructor(quality:'high'|'low'='high'){
     this.group.name='terrain.azure.mirrorfall-cliff';
     this.material=makeRockMaterial(quality);
+    this.material.side=THREE.DoubleSide;
     const segmentZ=quality==='low'?52:100;
     const segmentY=quality==='low'?35:66;
     const positions:number[]=[];
@@ -55,25 +56,8 @@ export class MirrorfallCliffs {
     this.wall.castShadow=quality==='high';
     this.group.add(this.wall);
 
-    // Disjoint ledges are rounded, differently scaled stone lenses, not blocks.
-    // They add a torn cliff silhouette and places where spray wets the wall.
-    const stone=new THREE.IcosahedronGeometry(1,2);
-    const ledges=new THREE.InstancedMesh(stone,this.material,62);
-    const proxy=new THREE.Object3D();
-    for(let i=0;i<62;i++){
-      const z=middle+Math.sin(i*2.39996)*202;
-      const y=GRAND_LAKE.surfaceY+14+(i%9)*12.4;
-      const x=MIRRORFALL.x-74
-        +((y-GRAND_LAKE.surfaceY)/(MIRRORFALL.topY-GRAND_LAKE.surfaceY))*78
-        +Math.sin(i*3.87)*5;
-      proxy.position.set(x,y,z);
-      proxy.rotation.set(i*.22,i*.75,i*.1);
-      proxy.scale.set(4.5+(i%4)*2.3,1.7+(i%3)*1.8,7.4+(i%5)*2.3);
-      proxy.updateMatrix();
-      ledges.setMatrixAt(i,proxy.matrix);
-    }
-    ledges.name='terrain.azure.mirrorfall-rounded-ledges';
-    this.group.add(ledges);
+    // Cliff silhouette comes from the continuous triangulated rock face.
+    // Never scatter detached white ovals as a substitute for exposed rock.
   }
   dispose():void{
     this.group.traverse(node=>{

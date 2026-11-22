@@ -120,6 +120,22 @@ export function makeTerrainTile(
   }
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geometry.computeVertexNormals();
+  // Alpine escarpments must remain stone even on the inexpensive renderer.
+  // Shader-based slope blending covers high mode, vertex color acts as a
+  // cheaper but physically grounded fallback for low / software WebGL.
+  const normals=geometry.getAttribute('normal');
+  const colorsAttr=geometry.getAttribute('color');
+  const slate=new THREE.Color(0x65787b);
+  for(let i=0;i<normals.count;i++){
+    const steep=1-Math.abs(normals.getY(i));
+    const weather=Math.max(0,Math.min(1,(steep-.20)/.54));
+    if(weather<.01)continue;
+    temp.setRGB(colorsAttr.getX(i),colorsAttr.getY(i),colorsAttr.getZ(i));
+    const variation=0.04*Math.sin(i*7.13);
+    temp.lerp(slate,Math.min(.96,weather*.89+variation));
+    colorsAttr.setXYZ(i,temp.r,temp.g,temp.b);
+  }
+  colorsAttr.needsUpdate=true;
   const group = new THREE.Group();
   group.position.set((tx + 0.5) * TILE_METERS, 0, (tz + 0.5) * TILE_METERS);
   group.name = 'terrain.azure.tile.' + tx + '.' + tz;

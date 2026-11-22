@@ -74,7 +74,7 @@ export function makeTerrainMaterial(quality: 'high' | 'low' = 'high'): THREE.Mes
   return mat;
 }
 export function makeRockMaterial(quality: 'high' | 'low' = 'high'): THREE.MeshStandardMaterial {
-  const mat = new THREE.MeshStandardMaterial({ color: 0xa6a6a3, roughness: 0.87, metalness: 0 });
+  const mat = new THREE.MeshStandardMaterial({ color: 0x8b9d9c, roughness: 0.87, metalness: 0 });
   if (quality === 'high') installSurfaceDetail(mat, 'rock');
   return mat;
 }

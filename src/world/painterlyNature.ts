@@ -252,7 +252,7 @@ export class PainterlyNature {
 
     const rock=new THREE.InstancedMesh(irregularRock(),rockMat,rocks.length);
     rocks.forEach((p,i)=>{
-      dummy.position.set(p.x,p.y+p.scale*.20,p.z);
+      dummy.position.set(p.x,p.y+p.scale*.12,p.z);
       dummy.rotation.set(rand()*2,rand()*6.28,rand()*.8);
       dummy.scale.set(p.scale,p.scale*(.33+rand()*.35),p.scale*(.65+rand()*.45));
       dummy.updateMatrix();rock.setMatrixAt(i,dummy.matrix);
