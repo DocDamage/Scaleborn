@@ -107,6 +107,33 @@ export const ONYX_HEAD: readonly SculptSection[] = [
   [.70,.08,.065,.055],
 ];
 
+/**
+ * Exact upper meridian of the SAME interpolated torso used in loftDragon.
+ * Inverting its monotonic sculpt-z mapping prevents fins/ridges floating
+ * above the tapered hips and tail base. Sampled only when constructing
+ * geometry, never in the per-frame animation loop.
+ */
+export function onyxDorsalY(z: number): number {
+  const first=ONYX_TORSO[0]![0];
+  const last=ONYX_TORSO[ONYX_TORSO.length-1]![0];
+  if(!Number.isFinite(z)||z<first||z>last){
+    throw new Error('Onyx dorsal sample outside finite torso bounds');
+  }
+  let low=0,high=1;
+  for(let i=0;i<28;i++){
+    const t=(low+high)*.5;
+    if(sampleSection(ONYX_TORSO,t)[0]<z)low=t;
+    else high=t;
+  }
+  const t=(low+high)*.5;
+  const [sampleZ,cy,,ry]=sampleSection(ONYX_TORSO,t);
+  const a=Math.PI*.5;
+  const pattern=.007*Math.sin(a*16+sampleZ*19)
+    *Math.sin(a*8-sampleZ*31);
+  const ridge=.025*(1-t);
+  return cy+ry+pattern+ridge+onyxSurfaceOffset('torso',sampleZ,0,1).y;
+}
+
 /** Tapering tubular crests, curled horns, tail-fins, claws and tendrils. */
 export function taperedSpine(
   points: readonly (readonly [number,number,number])[],

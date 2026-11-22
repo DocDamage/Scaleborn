@@ -10,7 +10,7 @@ import { applyDragonScales, makeDragonScaleTextures } from './skinSurface';
 import { makeOnyxPaintedScaleMap } from './onyxPaintedScales';
 import { CHARACTER_MODEL_SOURCES, loadCharacterModel } from './characterSources';
 import { ImportedCharacterRig, type CharacterKind, type CharacterModelFile } from '../rider/importedCharacterRig';
-import { loftDragon, ONYX_TORSO, ONYX_HEAD, taperedSpine, sculptFin } from './organicSculpt';
+import { loftDragon, ONYX_TORSO, ONYX_HEAD, onyxDorsalY, taperedSpine, sculptFin } from './organicSculpt';
 import { makeScalebornRider } from '../rider/heroSculpt';
 import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
 import { dragonExpression } from './dragonExpression';
@@ -227,10 +227,18 @@ export class DragonVisual {
     // without adding a low-resolution box-like plate mesh.
     for (let i=0;i<9;i++) {
       const z=-1.13+i*.37;
-      const height=.55-.05*(i/9);
-      this.body.add(sculptFin([0,height,z-.11],
-        [0,height+.29+Math.sin(i*.47)*.12,z+.22],
-        .20,ridges,'creature.dragon.dorsal-ridge.'+i,16));
+      const rootZ=z-.11;
+      const height=onyxDorsalY(rootZ)-.045;
+      // Low-profile cartilage in the rider's saddle corridor: the old
+      // fixed-height plates speared the rider and hovered above the hips.
+      const saddleGap=Math.exp(-Math.pow((z+.20)/.42,2)*2);
+      const length=(.23-.09*i/9)*(1-.67*saddleGap);
+      const ridgeMesh=sculptFin([0,height,rootZ],
+        [0,height+length,z+.18],
+        .16,ridges,'creature.dragon.dorsal-ridge.'+i,18);
+      ridgeMesh.castShadow=true;
+      ridgeMesh.receiveShadow=true;
+      this.body.add(ridgeMesh);
     }
     // Hinged procedural legs: diagonal pairs step in opposition on land.
     for (const side of [-1, 1] as const) {

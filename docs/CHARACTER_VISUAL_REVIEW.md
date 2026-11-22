@@ -58,3 +58,12 @@ The follow-on character batch adds:
 Do **not** call these rendered improvements verified until the new
 side-on screenshots are captured and inspected; the prior shots are
 proof of the defect, not proof of correction. Keep PR #15 DRAFT.
+
+### Spine mesh correction against real giant-form screenshots
+Baseline side captures show rear dorsal spines hovering above Onyx as his
+continuous torso tapers. `onyxDorsalY` now inverts the existing loft-section
+curve and samples its exact upper meridian. Each original nine named cartilage
+fins embeds 45 mm into that surface, becomes shorter over the rider's mounting
+lane, and tapers naturally toward the tail. Material and names are retained.
+Unit tests compare the dorsal sampler to real mesh vertices at all nine fin
+positions; a fresh side-view WebGL capture is required before visual signoff.
