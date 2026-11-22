@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GRAND_LAKE, lakeRadius } from './highlandLake';
+import { GRAND_LAKE } from './highlandLake';
 import { SEA_LEVEL, WORLD_WIDTH_METERS } from './terrain';
 
 /**

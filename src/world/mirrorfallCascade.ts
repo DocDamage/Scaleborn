@@ -7,7 +7,6 @@ const crestX=MIRRORFALL.x+48;
 const plungeX=MIRRORFALL.x-58;
 const down=MIRRORFALL.topY-GRAND_LAKE.surfaceY;
 const gravity=9.81;
-const fallTime=Math.sqrt(2*down/gravity);
 
 const vertex=`
   varying vec2 vFlowUv;
