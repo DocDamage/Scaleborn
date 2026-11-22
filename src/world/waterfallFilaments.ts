@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GRAND_LAKE, MIRRORFALL } from './highlandLake';
-import { MIRRORFALL_IMPACT } from './waterDynamics';
+import { waterfallCenterXAt } from './waterfallTrajectory';
 
 type Quality='high'|'low';
 
@@ -13,8 +13,6 @@ type Quality='high'|'low';
 export function createCascadeFilaments(quality:Quality='high'):THREE.BufferGeometry {
   const ropes=quality==='high'?26:14;
   const steps=quality==='high'?112:70;
-  const crestX=MIRRORFALL.x-1;
-  const impactX=MIRRORFALL_IMPACT.x;
   const drop=MIRRORFALL.topY-GRAND_LAKE.surfaceY;
   const points:number[]=[],uvs:number[]=[],indices:number[]=[];
   const push=(x:number,y:number,z:number,u:number,v:number):void=>{
@@ -30,10 +28,10 @@ export function createCascadeFilaments(quality:Quality='high'):THREE.BufferGeome
       const start=points.length/3;
       for(let row=0;row<=steps;row++){
         const t=row/steps;
-        const arc=t*t*.91+t*.09;
-        const down=1+t*1.20;
+        // Smooth ballistic trajectory is shared with the broad curtain.
+        // The former unused down variable is intentionally omitted.
         const shift=Math.sin(t*18+phase)*(.18+t*.90);
-        const x=crestX+(impactX-crestX)*arc
+        const x=waterfallCenterXAt(t)
           +Math.sin(t*9+phase)*(.15+t*.58);
         const y=MIRRORFALL.topY-drop*t;
         const z=zStart + relative*MIRRORFALL.width*t*.16

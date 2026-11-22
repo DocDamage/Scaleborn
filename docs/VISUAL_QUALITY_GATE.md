@@ -796,3 +796,20 @@ soil over 5–6m and toward the upstream source. It shares the common
 `MIRRORFALL` crest coordinate and the stream's exact width/curve equations;
 no additional texture or draw calls, and the main 148m deep freshwater
 lake's separate shore wetness remains intact.
+
+### Ballistic waterfall path shared by visuals and collision
+
+The previous waterfall curtain, its narrow filaments and airborne contact
+field duplicated the same quadratic horizontal displacement. That path
+moved almost nowhere near the lip but rapidly moved sideways late in the
+drop, so the upper curtain could disappear *inside* the steep escarpment.
+`src/world/waterfallTrajectory.ts` now gives all three systems a single,
+bounded, smoothly ejected ballistic centerline: horizontal displacement
+grows approximately with square-root fall distance, as expected for
+horizontal momentum under vertical gravity. The crest still joins the
+132m headwater source and the base stays pinned to the same freshwater
+impact location. No lake depth, terrain collision mesh, quests, shader
+material or extra draw calls are changed. New tests trace the entire
+waterfall against the actual terrain heightfield and the same airborne
+dragon contact field. This is a gravity-inspired ballistic approximation,
+not a fluid-trajectory solver; inspect actual browser views.

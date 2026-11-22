@@ -7,8 +7,8 @@ import { MIRRORFALL_IMPACT } from './waterDynamics';
 import { PlungePoolFoam } from './plungePoolFoam';
 import { makeSprayStreakGeometry, makeSprayStreakTexture } from './sprayStreak';
 import { createCascadeFilaments } from './waterfallFilaments';
+import { waterfallCenterXAt } from './waterfallTrajectory';
 
-const crestX=MIRRORFALL.x-1;
 const plungeX=MIRRORFALL_IMPACT.x;
 const down=MIRRORFALL.topY-GRAND_LAKE.surfaceY;
 const gravity=9.81;
@@ -107,8 +107,7 @@ function ribbon(width:number,zOffset:number,phase:number,material:THREE.ShaderMa
   const points:number[]=[],uv:number[]=[],faces:number[]=[];
   for(let i=0;i<=ny;i++){
     const t=i/ny;
-    const arc=t*t*(.91)+t*.09;
-    const x=crestX+(plungeX-crestX)*arc;
+    const x=waterfallCenterXAt(t);
     const y=MIRRORFALL.topY - down*t;
     for(let j=0;j<=nx;j++){
       const u=j/nx;

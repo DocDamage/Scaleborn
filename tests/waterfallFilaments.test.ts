@@ -4,6 +4,7 @@ import { createCascadeFilaments } from '../src/world/waterfallFilaments';
 import { MirrorfallCascade } from '../src/world/mirrorfallCascade';
 import { GRAND_LAKE, MIRRORFALL } from '../src/world/highlandLake';
 import { MIRRORFALL_IMPACT } from '../src/world/waterDynamics';
+import { waterfallCenterXAt } from '../src/world/waterfallTrajectory';
 
 describe('layered, flow-advected waterfall rope geometry',()=>{
   it('batches crossed non-rectangular ribbons into one geometry per quality',()=>{
@@ -25,6 +26,7 @@ describe('layered, flow-advected waterfall rope geometry',()=>{
       }
       const x=Array.from({length:p.count},(_,i)=>p.getX(i));
       expect(Math.min(...x)).toBeLessThan(MIRRORFALL.x-60);
+      expect(waterfallCenterXAt(.25)).toBeLessThan(MIRRORFALL.x-22);
       expect(Math.max(...x)).toBeGreaterThan(MIRRORFALL_IMPACT.x-4);
     }finally{low.dispose();high.dispose();}
   });

@@ -4,6 +4,7 @@ import { MIRRORFALL_IMPACT, plungeCurrentAt, plungeWaveAt,
   waterfallCurtainDragAt } from '../src/world/waterDynamics';
 import { GRAND_LAKE, MIRRORFALL, lakeContains } from '../src/world/highlandLake';
 import { newFlightState, stepFlight } from '../src/actors/dragon/flight';
+import { waterfallCenterXAt } from '../src/world/waterfallTrajectory';
 
 describe('Mirrorfall waterfall-to-lake coupling', () => {
   it('pushes swimmers from the impact with bounded finite velocity', () => {
@@ -76,9 +77,7 @@ describe('Mirrorfall waterfall-to-lake coupling', () => {
   it('localizes airborne waterfall drag to the rendered curved falling sheet',()=>{
     const t=.70, y=MIRRORFALL.topY-
       (MIRRORFALL.topY-GRAND_LAKE.surfaceY)*t;
-    const crest=MIRRORFALL.x-1;
-    const arc=t*t*.91+t*.09;
-    const x=crest+(MIRRORFALL_IMPACT.x-crest)*arc;
+    const x=waterfallCenterXAt(t);
     const flow=waterfallCurtainDragAt(x,y,MIRRORFALL.z,3.3);
     expect(flow.strength).toBeGreaterThan(.8);
     expect(flow.x).toBeLessThan(-4);

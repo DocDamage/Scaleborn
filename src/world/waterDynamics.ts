@@ -1,5 +1,6 @@
 import { GRAND_LAKE, MIRRORFALL, headwaterProfileAt,
   headwaterContains, lakeContains, waterSurfaceAt } from './highlandLake';
+import { WATERFALL_POOL_X, waterfallCenterXAt } from './waterfallTrajectory';
 
 /**
  * Deterministic localized plunge-pool response. Reused by both simulation
@@ -9,7 +10,7 @@ import { GRAND_LAKE, MIRRORFALL, headwaterProfileAt,
  * and friction (NOT volumetric CFD/Navier-Stokes).
  */
 export const MIRRORFALL_IMPACT = Object.freeze({
-  x: MIRRORFALL.x - 82,
+  x: WATERFALL_POOL_X,
   z: MIRRORFALL.z,
   radius: 112,
   turbulenceRadius: 43,
@@ -148,9 +149,7 @@ export function waterfallCurtainDragAt(
   const drop=MIRRORFALL.topY-GRAND_LAKE.surfaceY;
   if(y>MIRRORFALL.topY+3||y<GRAND_LAKE.surfaceY+4)return still;
   const t=Math.max(0,Math.min(1,(MIRRORFALL.topY-y)/drop));
-  const arc=t*t*.91+t*.09;
-  const crestX=MIRRORFALL.x-1;
-  const fallX=crestX+(MIRRORFALL_IMPACT.x-crestX)*arc;
+  const fallX=waterfallCenterXAt(t);
   const depthX=Math.abs(x-fallX);
   const depthZ=Math.abs(z-MIRRORFALL.z);
   const xBand=3.6+radius*.45;
