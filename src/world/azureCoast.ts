@@ -25,7 +25,7 @@ import type { FlightState } from '../actors/dragon/flight';
 import { makeTerrainMaterial } from './materials';
 import { updateTerrainPigmentTime } from './terrainPigment';
 import { PainterlySky } from './sky';
-import { addMarineDressing } from './marineDressing';
+import { addMarineDressing, type MarineDressing } from './marineDressing';
 import { TidegateVisual } from './tidegateVisual';
 import { TidalEchoVisual } from './tidalEchoVisual';
 import type { EchoPhase } from './tidalEcho';
@@ -45,6 +45,7 @@ export class AzureCoast {
   private readonly lakeFoam = new LakeShoreFoam();
   private readonly caustics: LakeCaustics;
   private readonly lakebed: LakebedHabitat;
+  private readonly marine: MarineDressing;
   private readonly shafts: UnderwaterLightShafts;
   private readonly particulates: UnderwaterParticulates;
   private readonly bubbles: PlungePoolBubbles;
@@ -126,7 +127,7 @@ export class AzureCoast {
     this.splash = new CreatureSplash(scene,quality);
     scene.add(this.cliffs.group);
     addCoastalDressing(scene, false);
-    addMarineDressing(scene);
+    this.marine = addMarineDressing(scene, quality);
     scene.add(this.tidegate.root, this.echoVisual.root);
   }
 
@@ -210,6 +211,7 @@ export class AzureCoast {
     this.lakeFoam.update(time);
     this.caustics.update(time);
     this.lakebed.update(time,x,z,camera);
+    this.marine.update(time,x,z,camera);
     this.waterfall.update(time);
     this.headwaters.update(time);
     this.headwaterBanks.update(x,z);
@@ -254,6 +256,7 @@ export class AzureCoast {
     this.lakeFoam.dispose();
     this.caustics.dispose();
     this.lakebed.dispose();
+    this.marine.dispose();
     this.shafts.dispose();
     this.particulates.dispose();
     this.bubbles.dispose();

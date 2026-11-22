@@ -951,3 +951,23 @@ These are procedural approximations, not scanned natural assets, physical
 plant dynamics or accepted final art. Inspect the actual underwater browser
 capture for leaf silhouette/overdraw, distant cull transitions and sunlight
 transmission before closing the visual-quality gate.
+
+
+### Offshore kelp and coral silhouette replacement
+
+The ocean still used a stretched six-sided cone for every kelp stalk and an
+icosahedron for every coral head, even after Mirrorfall's freshwater plants
+were remodeled. The marine scene now creates original, curved, tapered
+multiple-blade kelp geometry with painted root-to-tip vertex color and a
+seeded, rooted current sway. Stony coral has true tapered, branching tubes
+and colored growth tips, not floating polygon balls. Each species remains
+one instanced draw group with high/low mesh and population budgets.
+
+Offshore populations stay rooted to the collision heightfield, exclude the
+freshwater Mirrorfall basin, and use the same deterministic camera/actor
+instance visibility mechanism as the land forest. The sunken-shrine group
+and all offshore geometries/materials now have explicit lifecycle disposal.
+This is procedural asset quality improvement, **not** photogrammetric marine
+art, real underwater hydrodynamics or proof of acceptable GPU performance.
+The actual submerged-ocean screenshot and target-hardware benchmark remain
+open quality-gate checks.
