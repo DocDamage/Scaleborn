@@ -23,7 +23,7 @@ async function main() {
     });
     const url = process.env.SCALEBORN_URL ?? 'http://127.0.0.1:5173';
     // SwiftShader CPU rendering must not be mistaken for a dedicated GPU.
-    const lowUrl = url + '?quality=low';
+    const lowUrl = url + '?start=lake&quality=low&qa=1';
     let connected = false;
     for (let attempt = 0; attempt < 12; attempt++) {
       try {
