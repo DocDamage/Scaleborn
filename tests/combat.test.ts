@@ -295,4 +295,33 @@ describe('G4 deterministic encounter and dragon breath', () => {
     expect(c.maxEmber).toBe(115);
   });
 
+
+  it('hits a real Gloam hound uphill with the rendered curving fire arc', () => {
+    const c = newCombatState();
+    const h = c.hounds[0]!;
+    const s = groundDragon(h.x - 13, h.z);
+    expect(h.y).toBeGreaterThan(heightAt(s.x, s.z));
+    const before = h.hp;
+    expect(castDragonFire(c, s).ok).toBe(true);
+    expect(h.hp).toBeLessThan(before);
+    expect(c.lastFire?.arcHeight).toBeCloseTo(1 + FORMS.rideable.standHeight, 4);
+  });
+
+  it('raises the rider sigil over gentle ground while retaining a forward-only hitbox', () => {
+    const c = newCombatState();
+    const h = c.hounds[0]!;
+    const s = groundDragon(h.x - 11, h.z);
+    s.form = 'small';
+    s.y = heightAt(s.x, s.z) + FORMS.small.standHeight;
+    s.controlTarget = 'rider';
+    s.riderX = s.x + 1;
+    s.riderZ = s.z;
+    s.riderY = heightAt(s.riderX, s.riderZ) + 0.05;
+    s.riderYaw = Math.PI / 2;
+    s.riderMode = 'ground';
+    expect(castRiderSigil(c, s).ok).toBe(true);
+    expect(h.hp).toBeLessThan(h.maxHp);
+    expect(c.lastSigil?.arcHeight).toBeGreaterThan(1);
+  });
+
 });

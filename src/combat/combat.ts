@@ -33,12 +33,14 @@ export interface FireCast {
   direction: { x: number; y: number; z: number };
   range: number;
   form: DragonForm;
+  arcHeight: number;
 }
 export interface SigilCast {
   id: number;
   origin: { x: number; y: number; z: number };
   direction: { x: number; y: number; z: number };
   range: number;
+  arcHeight: number;
 }
 export interface BondCast {
   id: number; x: number; y: number; z: number; radius: number;
@@ -123,12 +125,16 @@ function actorPosition(s: FlightState): { x: number; y: number; z: number } {
 /** Check the physical terrain along the breath, not the renderer's visual polygons. */
 function fireLineClear(
   origin: FireCast['origin'], target: { x: number; y: number; z: number },
+  arcHeight = 0,
 ): boolean {
+  // Curved magical flames/sigils lift above gentle terrain rises, while
+  // actual large ridges still block the projectile. The same arc is
+  // rendered by CombatVisual; hits remain governed by real world heights.
   for (let i = 1; i < 8; i++) {
     const t = i / 8;
     const x = origin.x + (target.x - origin.x) * t;
     const z = origin.z + (target.z - origin.z) * t;
-    const y = origin.y + (target.y - origin.y) * t;
+    const y = origin.y + (target.y - origin.y) * t + Math.sin(Math.PI * t) * arcHeight;
     if (heightAt(x, z) > y - 0.65) return false;
   }
   return true;
@@ -158,7 +164,8 @@ export function castDragonFire(c: CombatState, s: FlightState): InteractionResul
     y: s.y + 0.25 * scale + direction.y * muzzle,
     z: s.z + direction.z * muzzle,
   };
-  c.lastFire = { id: ++c.fireSequence, origin, direction, range: spec.range, form: s.form };
+  const arcHeight = 1 + FORMS[s.form].standHeight;
+  c.lastFire = { id: ++c.fireSequence, origin, direction, range: spec.range, form: s.form, arcHeight };
 
   let landed = 0;
   for (const hound of c.hounds) {
@@ -169,7 +176,7 @@ export function castDragonFire(c: CombatState, s: FlightState): InteractionResul
     if (projected < 0 || projected > spec.range) continue;
     const radial = Math.sqrt(Math.max(0, dx * dx + dy * dy + dz * dz - projected * projected));
     if (radial > 1.05 + projected * spec.width) continue;
-    if (!fireLineClear(origin, target)) continue;
+    if (!fireLineClear(origin, target, arcHeight)) continue;
     const damage = Math.max(1, Math.round(spec.damage * (1 - projected / spec.range * 0.16)));
     hound.hp = Math.max(0, hound.hp - damage);
     hound.flash = 0.24;
@@ -203,7 +210,8 @@ export function castRiderSigil(c: CombatState, s: FlightState): InteractionResul
     y: s.riderY + 1.28,
     z: s.riderZ + direction.z * 0.4,
   };
-  c.lastSigil = { id: ++c.sigilSequence, origin, direction, range: 29 };
+  const arcHeight = 1.15;
+  c.lastSigil = { id: ++c.sigilSequence, origin, direction, range: 29, arcHeight };
   let hits = 0;
   for (const h of c.hounds) {
     if (h.hp <= 0) continue;
@@ -212,7 +220,7 @@ export function castRiderSigil(c: CombatState, s: FlightState): InteractionResul
     const projected = dx * direction.x + dy * direction.y + dz * direction.z;
     if (projected < 0 || projected > 29) continue;
     const radial = Math.sqrt(Math.max(0, dx * dx + dy * dy + dz * dz - projected * projected));
-    if (radial > 1.1 + projected * 0.065 || !fireLineClear(origin, target)) continue;
+    if (radial > 1.1 + projected * 0.065 || !fireLineClear(origin, target, arcHeight)) continue;
     h.hp = Math.max(0, h.hp - 31);
     h.flash = 0.28; h.stagger = 0.53; h.windup = 0; h.alert = true;
     hits++;

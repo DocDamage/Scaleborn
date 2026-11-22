@@ -59,6 +59,9 @@ try {
   null, { timeout: 40000 });
   const dragon = await snapshot();
   assert.ok(dragon.ember < first.ember, 'Fire must consume real Ember');
+  if (alive(dragon) >= alive(first)) {
+    console.error('Real terrain fire diagnostic:', JSON.stringify({ before: first, after: dragon }));
+  }
   assert.ok(alive(dragon) < alive(first), 'Dragon fire must hit an enemy ahead');
   await page.screenshot({ path: 'artifacts/combat-dragon-fire.png', timeout: 120000 });
 

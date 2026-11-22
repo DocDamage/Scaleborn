@@ -252,7 +252,8 @@ export class CombatVisual {
       const spread = (0.18 + distance * 0.11) * Math.sqrt(t);
       this.position.set(
         cast.origin.x + this.forward.x * distance,
-        cast.origin.y + this.forward.y * distance,
+        cast.origin.y + this.forward.y * distance
+          + cast.arcHeight * Math.sin(Math.PI * t) * progress,
         cast.origin.z + this.forward.z * distance,
       ).addScaledVector(this.side, Math.cos(phase) * spread)
         .addScaledVector(this.vertical, Math.sin(phase) * spread);
@@ -290,7 +291,8 @@ export class CombatVisual {
       const spread = (0.13 + t * 0.35) * fade;
       this.position.set(
         cast.origin.x + this.forward.x * trail,
-        cast.origin.y + this.forward.y * trail,
+        cast.origin.y + this.forward.y * trail
+          + cast.arcHeight * Math.sin(Math.PI * trail / cast.range),
         cast.origin.z + this.forward.z * trail,
       ).addScaledVector(this.side, Math.cos(spiral) * spread)
         .addScaledVector(this.vertical, Math.sin(spiral) * spread);
