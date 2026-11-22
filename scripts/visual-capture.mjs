@@ -17,15 +17,30 @@ async function main() {
     const page = await browser.newPage({
       viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1,
     });
-    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('pageerror', (e) => {
+      errors.push(e.message);
+      console.error('BROWSER PAGE ERROR:', e.message);
+    });
     page.on('console', (m) => {
-      if (m.type() === 'error') errors.push(m.text());
+      if (m.type() === 'error') {
+        errors.push(m.text());
+        console.error('BROWSER CONSOLE ERROR:', m.text());
+      }
     });
     const url = (process.env.SCALEBORN_URL ?? 'http://127.0.0.1:5173')
       + '?start=lake&quality=low&qa=1';
     const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
     assert.equal(response?.status(), 200, 'The game must load successfully');
     await page.locator('#start').click();
+    // Software-WebGL may take several seconds to finish its first frame.
+    // A development-only fixed step updates the real HUD deterministically;
+    // the screenshots still exercise actual WebGL rendering and errors.
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaAdvance !== 'function') {
+        throw new Error('Deterministic visual QA hook missing');
+      }
+      window.__scalebornQaAdvance(1);
+    });
     await page.waitForFunction(() => Number(document.querySelector('#speed')?.textContent) >= 0,
       null, { timeout: 30000 });
     await mkdir('artifacts', { recursive: true });

@@ -17,9 +17,16 @@ async function main() {
   const errors = [];
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-    page.on('pageerror', (error) => errors.push('page: ' + error.message));
+    page.on('pageerror', (error) => {
+      const message = 'page: ' + error.message;
+      errors.push(message);
+      console.error('BROWSER PAGE ERROR:', message);
+    });
     page.on('console', (message) => {
-      if (message.type() === 'error') errors.push('console: ' + message.text());
+      if (message.type() === 'error') {
+        errors.push('console: ' + message.text());
+        console.error('BROWSER CONSOLE ERROR:', message.text());
+      }
     });
     const url = process.env.SCALEBORN_URL ?? 'http://127.0.0.1:5173';
     // SwiftShader CPU rendering must not be mistaken for a dedicated GPU.
