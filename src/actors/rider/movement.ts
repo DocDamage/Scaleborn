@@ -2,6 +2,7 @@ import type { FlightControls, FlightState, InteractionResult } from '../dragon/f
 import { canStand, OBSTACLES } from '../../world/collision';
 import { heightAt } from '../../world/terrain';
 import { waterSurfaceAt } from '../../world/highlandLake';
+import { plungeCurrentStep } from '../../world/waterDynamics';
 import { approach, riderSurfaceY, riderDiveY, riderCanSwim, riderFloorY } from '../../world/waterPhysics';
 
 const clamp = (value: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, value));
@@ -43,8 +44,13 @@ export function stepRider(state: FlightState, controls: FlightControls, dt: numb
   const goal = direction * maxSpeed * (direction < 0 ? 0.55 : 1);
   state.riderSpeed += (goal - state.riderSpeed) * Math.min(1, dt * 7.5);
   state.riderYaw += clamp(controls.turn, -1, 1) * dt * (water ? 1.9 : 2.4);
-  const nx = state.riderX + Math.sin(state.riderYaw) * state.riderSpeed * dt;
-  const nz = state.riderZ - Math.cos(state.riderYaw) * state.riderSpeed * dt;
+  let nx = state.riderX + Math.sin(state.riderYaw) * state.riderSpeed * dt;
+  let nz = state.riderZ - Math.cos(state.riderYaw) * state.riderSpeed * dt;
+  if (water) {
+    const flow=plungeCurrentStep(nx,nz,dt,(x,z)=>
+      riderCanSwim(x,z) && riderFloorY(x,z)<state.riderY-.1);
+    nx=flow.x; nz=flow.z;
+  }
   const nextHeight = heightAt(nx, nz);
   const nextWaterLevel = waterSurfaceAt(nx, nz);
   const aboveWater = nextHeight >= nextWaterLevel + 2;

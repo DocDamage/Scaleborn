@@ -134,3 +134,7 @@ The existing asset-independent design remains unchanged. All new effects use gen
 ### Graphics quality
 
 The game runs **high** painterly PBR shaders by default. Add `?quality=low` to reduce foliage density, internal pixel ratio and shader cost on integrated GPUs or software renderers. The lake shape, collision, traversal and quest data are identical. `?start=lake&quality=high` is the dedicated visual acceptance view. CI tests lower-resolution software WebGL; high-mode screenshots require real-GPU review.
+
+### Waterfall flow coupling
+
+The lake waterfall now drives a shared, fixed-step local current field in `src/world/waterDynamics.ts` and an accompanying ripple/foam distortion in the lake shader. Swimming dragons and independently swimming riders are nudged away from the plunge point, with a collision-safety check. Impact current fades with distance and does not affect the ocean. This is not a fully coupled 3D fluid or water-pressure solver and will require additional work before being labeled realistic water physics.

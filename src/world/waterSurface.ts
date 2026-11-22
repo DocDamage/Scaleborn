@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { GRAND_LAKE } from './highlandLake';
+import { GRAND_LAKE, lakeBoundaryScale } from './highlandLake';
+import { MIRRORFALL_IMPACT } from './waterDynamics';
 import { SEA_LEVEL, WORLD_WIDTH_METERS } from './terrain';
 
 /**
@@ -11,6 +12,8 @@ const vert=`
   varying vec3 vScWorld;
   varying float vScWave;
   uniform float uTime;
+  uniform float uLake;
+  uniform vec2 uImpactLocal;
   vec3 wavePos(vec3 p) {
     float t=uTime;
     float w1=dot(p.xz,normalize(vec2(.87,.49)))*.16-t*.95;
@@ -18,6 +21,9 @@ const vert=`
     float w3=dot(p.xz,normalize(vec2(.64,-.76)))*.76-t*2.15;
     float w4=dot(p.xz,normalize(vec2(.18,.98)))*.08-t*.62;
     p.y+=.53*sin(w1)+.24*sin(w2)+.10*sin(w3)+.64*sin(w4);
+    float plungeD=length(p.xz-uImpactLocal);
+    float plungeDecay=exp(-plungeD*.038);
+    p.y += uLake*plungeDecay*.72*sin(plungeD*.225-t*1.63);
     p.x+=.16*cos(w1)+.05*cos(w2);
     p.z+=.12*cos(w1)+.07*cos(w4);
     vScWave=.5+.5*sin(w1);
@@ -34,6 +40,7 @@ const frag=`
   precision highp float;
   uniform float uTime;
   uniform float uLake;
+  uniform vec2 uImpactWorld;
   varying vec3 vScWorld;
   varying float vScWave;
   float h(vec2 p) {
@@ -46,8 +53,12 @@ const frag=`
   }
   void main() {
     vec2 q=vScWorld.xz;
-    float r=length((q-vec2(${GRAND_LAKE.x.toFixed(1)},${GRAND_LAKE.z.toFixed(1)}))/
-      vec2(${GRAND_LAKE.radiusX.toFixed(1)},${GRAND_LAKE.radiusZ.toFixed(1)}));
+    vec2 d=(q-vec2(${GRAND_LAKE.x.toFixed(1)},${GRAND_LAKE.z.toFixed(1)}))/
+      vec2(${GRAND_LAKE.radiusX.toFixed(1)},${GRAND_LAKE.radiusZ.toFixed(1)});
+    float angle=atan(d.y,d.x);
+    float shoreShape=1.0+.067*sin(3.0*angle+1.10)
+       +.042*sin(7.0*angle-.72)+.023*sin(13.0*angle+2.0);
+    float r=length(d)/shoreShape;
     if (uLake>0.5 && r>.981) discard;
     // Remove the ocean below the isolated freshwater basin.
     if (uLake<0.5 && r<1.05) discard;
@@ -60,6 +71,11 @@ const frag=`
                .24*.37*cos(p2)*normalize(vec2(-.23,.97)) +
                .10*.76*cos(p3)*normalize(vec2(.64,-.76)) +
                .64*.08*cos(p4)*normalize(vec2(.18,.98));
+    vec2 impact=q-uImpactWorld;
+    float plungeDist=length(impact);
+    float plungeDecay=uLake*exp(-plungeDist*.038);
+    vec2 plungeNormal=impact/max(.001,plungeDist);
+    slope+=plungeNormal*plungeDecay*.27*cos(plungeDist*.225-t*1.63);
     vec3 N=normalize(vec3(-slope.x,1.0,-slope.y));
     vec3 V=normalize(cameraPosition-vScWorld);
     vec3 L=normalize(vec3(-.56,.78,-.35));
@@ -74,6 +90,8 @@ const frag=`
     float foam=uLake>0.5?
        nearShore*(.30+.52*smoothstep(.18,.86,surge+micro*.31)):
        waveFoam;
+    float turbulence=0.55+0.45*sin(plungeDist*.225-t*1.63);
+    foam=clamp(foam+plungeDecay*(0.38+0.34*turbulence),0.0,0.93);
     vec3 deep=uLake>0.5?vec3(.025,.19,.245):vec3(.027,.155,.19);
     vec3 turquoise=uLake>0.5?vec3(.105,.39,.415):vec3(.10,.34,.39);
     vec3 base=mix(deep,turquoise,.20+.36*ripples+.12*sin(p1));
@@ -124,7 +142,13 @@ export class PainterlyWaterSurface {
   constructor(kind:'ocean'|'lake') {
     const isLake=kind==='lake';
     this.material=new THREE.ShaderMaterial({
-      uniforms:{uTime:{value:0},uLake:{value:isLake?1:0}},
+      uniforms:{
+        uTime:{value:0},
+        uLake:{value:isLake?1:0},
+        uImpactLocal:{value:new THREE.Vector2(
+          MIRRORFALL_IMPACT.x-GRAND_LAKE.x,MIRRORFALL_IMPACT.z-GRAND_LAKE.z)},
+        uImpactWorld:{value:new THREE.Vector2(MIRRORFALL_IMPACT.x,MIRRORFALL_IMPACT.z)},
+      },
       vertexShader:vert,fragmentShader:frag,
       transparent:true,depthWrite:false,side:THREE.DoubleSide,
     });
@@ -154,9 +178,9 @@ export class LakeShoreFoam {
     for(let i=0;i<n;i++){
       const a=(i/n)*Math.PI*2,b=((i+1)/n)*Math.PI*2;
       const point=(angle:number, inward:number):[number,number,number]=>[
-        GRAND_LAKE.x+Math.cos(angle)*GRAND_LAKE.radiusX*(ring-inward),
+        GRAND_LAKE.x+Math.cos(angle)*GRAND_LAKE.radiusX*(ring-inward)*lakeBoundaryScale(angle),
         GRAND_LAKE.surfaceY+0.82,
-        GRAND_LAKE.z+Math.sin(angle)*GRAND_LAKE.radiusZ*(ring-inward),
+        GRAND_LAKE.z+Math.sin(angle)*GRAND_LAKE.radiusZ*(ring-inward)*lakeBoundaryScale(angle),
       ];
       const p0=point(a,0.0),p1=point(a,0.011),p2=point(b,0),p3=point(b,0.011);
       positions.push(...p0,...p1,...p2,...p1,...p3,...p2);

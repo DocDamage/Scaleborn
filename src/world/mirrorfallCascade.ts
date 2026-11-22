@@ -2,9 +2,10 @@ import * as THREE from 'three';
 import { rng } from '../core/random';
 import { AZURE_SEED } from './terrain';
 import { GRAND_LAKE, MIRRORFALL } from './highlandLake';
+import { MIRRORFALL_IMPACT } from './waterDynamics';
 
 const crestX=MIRRORFALL.x-1;
-const plungeX=MIRRORFALL.x-82;
+const plungeX=MIRRORFALL_IMPACT.x;
 const down=MIRRORFALL.topY-GRAND_LAKE.surfaceY;
 const gravity=9.81;
 

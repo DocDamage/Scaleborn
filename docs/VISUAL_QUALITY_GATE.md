@@ -35,7 +35,7 @@ not a target to copy assets, layout pixels or copyrighted UI artwork.
 ## Boundaries of this first visual overhaul
 
 This is **not** a Navier–Stokes fluid solver or offline cinematic renderer.
-Gerstner waves and ballistic spray are physically inspired real-time
+Gerstner waves, a bounded shared waterfall impact-current field and ballistic spray are physically inspired real-time
 approximations, not coupled two-way CFD. No fluid-pressure or buoyancy solver,
 waterfall volume continuity simulation, screen-space reflections, real-time
 global illumination, full shadow cascades, or photogrammetric art assets
@@ -69,6 +69,17 @@ content and Unreal replacements remain possible.
    integrated GPU; scaling/LOD decisions must follow measured evidence.
 6. Never describe a screenshot as AAA quality or an actual fluid simulation
    merely because a shader or particle effect exists.
+
+### Waterfall impact coupling (G3 visual-physics adapter)
+- `src/world/waterDynamics.ts` provides one bounded current/wave/foam
+  field centered at the rendered Cascade plunge point. Both swimmer
+  controllers integrate the same current through collision-safe
+  fixed-step updates. The freshwater shader receives the same
+  impact coordinates and displaces waves, normals and foam.
+- This improves movement response and visual continuity at the base of the
+  waterfall, but still does **not** model mass conservation, water
+  pressure, turbulence transport, dynamically changing depth or true
+  interacting fluids. Keep full hydrodynamics on the visual blocker list.
 
 ## Milestones after this branch
 
