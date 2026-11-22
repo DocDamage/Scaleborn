@@ -152,7 +152,10 @@ export function makePlungeFoamTrails(quality:'high'|'low'='high'):THREE.BufferGe
         uvs.push(t,side/2);
         rings.push(Math.min(1,(startRadius+length*t)/MIRRORFALL_IMPACT.turbulenceRadius));
       }
-      if(j===steps)continue;
+    }
+    // Index *after* both edge rows exist. Checking a future vertex while
+    // streaming row j silently rejected every quad as outside the lake.
+    for(let j=0;j<steps;j++){
       const a=start+j*3,b=a+3;
       for(let strip=0;strip<2;strip++){
         const v0=a+strip,v1=v0+1,v2=b+strip,v3=v2+1;
