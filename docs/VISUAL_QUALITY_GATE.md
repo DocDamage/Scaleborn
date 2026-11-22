@@ -897,3 +897,38 @@ seven hardware-GPU WebGL views, including the real feeder-river crest and
 underwater impact plume. It is still a QA-throttled screenshot path, not an
 FPS benchmark. **No GPU acceptance, final creature appearance, physically
 coupled fluid simulation or art-direction approval is claimed.**
+
+
+### Wave-coupled shore swash, wet-bank PBR response, and hardware evidence
+
+The terrain pigment now samples all four Mirrorfall water waves and the
+waterfall-impact phase, following the same absolute simulation time that
+updates the lake shader. The real dry-bank surface darkens and becomes
+smoother as moving water approaches it. Both high and low terrain shaders
+contain this response; no extra terrain meshes, decal passes or global
+allocation are added. The feeder creek's bank wetness follows the existing
+shallow freshwater riffles separately, not ocean-scale waves.
+
+A renderer-independent `lakeSwashAt` function supplies numerical boundary
+checks. Tests exercise animated wetness over time, shoreline containment,
+cliff-height masking, invalid input, continuity between the interior lake
+and bank-side waterfall ripple, and both quality presets' triplanar PBR
+shader ordering. The earlier shader insertion point was wrong because the
+triplanar material had already expanded the stock roughness chunk; the
+final code now explicitly inserts the swash roughness *after* the existing
+material-specific sampling and high-quality static wetness pass.
+
+`npm run benchmark:gpu` is an opt-in real-game, unthrottled high-mode
+Chromium profile. Unlike the QA-only screenshots, it runs without `qa=1`,
+refuses recognizable software WebGL adapters and records the adapter,
+presentation FPS, median/p95/worst RAF intervals, draw calls, triangle
+submission count and adaptive internal DPR into an artifact. It also captures
+a real game screenshot. This is **not direct GPU timestamp-query profiling**
+and cannot prove 60 FPS or final art on the author's RTX 3060 until the
+command is executed on that machine. Compare gameplay at actual rider,
+dragon and submerged viewpoints and visually inspect the dynamic wetline.
+
+**Still blocked:** verified WebGL shader compile after these commits,
+high-PBR browser captures, target-hardware performance data, actual
+character-art acceptance, physically coupled volumetric water and
+final camera/shoreline polish.
