@@ -38,6 +38,10 @@ describe('Onyx PBR painted wing membranes',()=>{
       expect(mat.iridescence).toBeGreaterThan(0);
       expect(mat.iridescence).toBeLessThan(.5);
       expect(mat.sheen).toBeGreaterThan(0);
+      expect(mat.sheen).toBeLessThan(.20);
+      expect(mat.roughness).toBeGreaterThan(.75);
+      expect(mat.metalness).toBeLessThan(.025);
+      expect(mat.clearcoat).toBeLessThan(.1);
       expect(mat.map).toBe(maps.color);
       expect(mat.normalMap).toBe(maps.normal);
       expect(mat.roughnessMap).toBe(maps.roughness);

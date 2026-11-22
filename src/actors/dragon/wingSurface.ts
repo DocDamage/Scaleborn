@@ -91,17 +91,17 @@ export function makeWingMembraneMaterial(
     map:maps.color,
     normalMap:maps.normal,
     roughnessMap:maps.roughness,
-    metalness:.045,
-    roughness:.72,
-    clearcoat:.14,
-    clearcoatRoughness:.62,
-    sheen:.30,
-    sheenColor:new THREE.Color(0x5d609a),
-    sheenRoughness:.77,
-    iridescence:.28,
-    iridescenceIOR:1.23,
-    iridescenceThicknessRange:[110,430],
+    metalness:.018,
+    roughness:.80,
+    clearcoat:.065,
+    clearcoatRoughness:.82,
+    sheen:.15,
+    sheenColor:new THREE.Color(0x343b60),
+    sheenRoughness:.88,
+    iridescence:.15,
+    iridescenceIOR:1.19,
+    iridescenceThicknessRange:[110,245],
   });
-  mat.normalScale.set(.34,.34);
+  mat.normalScale.set(.26,.26);
   return mat;
 }

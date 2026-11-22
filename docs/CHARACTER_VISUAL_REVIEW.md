@@ -168,3 +168,13 @@ views. Compared against the prior giant and rideable side shots
 The next high-detail original source painting sample and revised cranial loft
 were authored as real code; actual subsequent WebGL snapshots, hardware
 performance and user sign-off remain necessary. **PR #15 stays draft.**
+
+### Matte indigo wing-membrane tuning from real folded-wing screenshot
+Real full-form WebGL side captures show the fully folded painted membranes as
+pale silver strips against Onyx's dark navy hide. The original MeshPhysical
+material now uses higher roughness, lower clearcoat/metallic glints, a deeper
+blue sheen and half-strength iridescence, retaining deterministic per-vertex
+pigment, existing UV vein relief and the original three-bone fold morph.
+This is a *real in-game* PBR surface change, not an extra shader pass or
+generated concept art. Must compare actual daylight and in-flight captures
+before visual signoff; quality gate stays BLOCKING.
