@@ -3,6 +3,13 @@ import { CoastDiscovery, DISCOVERY_RADIUS_METERS } from '../src/world/discoverie
 import { LANDMARKS } from '../src/world/terrain';
 
 describe('Azure Coast landmark discovery', () => {
+  it('restores only known landmark IDs without duplicating discoveries', () => {
+    const coast = new CoastDiscovery();
+    coast.restore(['azure.sunken-shrine', 'azure.sunken-shrine', 'invalid', 'azure.tidegate']);
+    expect(coast.visitedIds()).toEqual(['azure.sunken-shrine', 'azure.tidegate']);
+    expect(coast.update(1560, 1440).some((entry) => entry.id === 'azure.sunken-shrine'))
+      .toBe(false);
+  });
   it('discovers landmarks once and tracks unique locations', () => {
     const c = new CoastDiscovery();
     const harbor = LANDMARKS[0]!;

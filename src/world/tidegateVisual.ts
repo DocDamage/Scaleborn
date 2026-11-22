@@ -66,7 +66,7 @@ export class TidegateVisual {
     this.root.add(this.beacon);
   }
 
-  update(puzzle: TidegateState, time: number): void {
+  update(puzzle: TidegateState, time: number, attuned = false): void {
     const dMat = this.dragonGlyph.material as THREE.MeshStandardMaterial;
     const rMat = this.riderGlyph.material as THREE.MeshStandardMaterial;
     for (const m of [dMat, rMat]) m.emissiveIntensity = 0.13;
@@ -77,6 +77,10 @@ export class TidegateVisual {
     rMat.emissive.copy(puzzle.solved ? active.emissive : dormant.emissive);
     rMat.emissiveIntensity = puzzle.solved ? 1.25 : 0.13;
     this.halo.visible = puzzle.solved;
+    const material = this.halo.material as THREE.MeshStandardMaterial;
+    material.color.setHex(attuned ? 0xffe5a6 : 0xe6d4ad);
+    material.emissive.setHex(attuned ? 0xe5ac60 : 0x8cb6a6);
+    material.emissiveIntensity = attuned ? 2.3 : 1.1;
     if (puzzle.solved) {
       this.halo.rotation.y = time * 0.55;
       this.halo.position.y = 4.4 + Math.sin(time * 2.4) * 0.19;

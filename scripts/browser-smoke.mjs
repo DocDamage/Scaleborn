@@ -130,8 +130,32 @@ async function main() {
       window.__scalebornQaAdvance(100);
     });
     await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'SWIMMING', null, { timeout: 12000 });
+
+    // The real G interaction must collect the underwater heart, then allow
+    // a separate rider-only attunement back at the already solved Tidegate.
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaStageShrine !== 'function') throw new Error('Shrine QA hook missing');
+      window.__scalebornQaStageShrine();
+    });
+    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'DIVING', null, { timeout: 12000 });
+    await page.keyboard.press('g');
+    await page.waitForFunction(() => document.querySelector('#echo-stage')?.textContent === 'ECHO COLLECTED', null, { timeout: 12000 });
+    await page.screenshot({ path: 'artifacts/azure-coast-tidal-echo.png', timeout: 60000 });
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaStageEchoReturn !== 'function') throw new Error('Echo return QA hook missing');
+      window.__scalebornQaStageEchoReturn();
+    });
+    await page.keyboard.press('g');
+    await page.waitForFunction(() => document.querySelector('#echo-stage')?.textContent === 'COMPLETE', null, { timeout: 12000 });
+    const stored = await page.evaluate(() => {
+      const raw = localStorage.getItem('scaleborn.azure-progress.v1');
+      return raw ? JSON.parse(raw) : null;
+    });
+    assert.equal(stored?.tidegateSolved, true);
+    assert.equal(stored?.echo?.collected, true);
+    assert.equal(stored?.echo?.attuned, true);
     assert.deepEqual(errors, [], 'Browser reported runtime or shader errors');
-    console.log('PASS: WebGL2, multiple cameras, giant and small forms, full landing/takeoff phases, and screenshots.');
+    console.log('PASS: WebGL2, dragon/rider controls, ocean diving, Tidegate, Tidal Echo shrine and saved quest progress.');
   } finally {
     await browser.close();
   }

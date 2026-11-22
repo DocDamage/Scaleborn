@@ -50,6 +50,11 @@ export class CoastDiscovery {
     return result;
   }
 
+  restore(ids: readonly string[]): void {
+    const valid = new Set(LANDMARKS.map((anchor) => anchor.id));
+    this.visited = new Set(ids.filter((id) => valid.has(id)));
+  }
+
   count(): number {
     return this.visited.size;
   }

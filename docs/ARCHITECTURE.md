@@ -94,3 +94,12 @@ animation-root-motion are intentionally deferred.
 - `src/actors/rider/pose.ts` evaluates deterministic rider locomotion/swimming pose channels. The generated rider now has named shoulder and hip pivot groups so new authored assets can replace procedural geometry without altering gameplay state.
 - G is the rune interaction key, avoiding conflict with E's existing bank/depth assignment. The on-screen panel reports nearby puzzle progress, including locked, anchored and awakened states.
 - `azure.tidegate` is a stable discovery/asset ID. This first puzzle is purposely in a dry meadow; complex underwater cooperation, shoulder perching and cross-region gating remain pending. No quest or inventory persistence is claimed.
+
+### G3.2 — portable three-stage Tidal Echo progression
+
+- `src/world/tidalEcho.ts` is a renderer-neutral state machine linked to the existing `TidegateState`. It validates actor focus, underwater dragon state, actual XYZ shrine proximity, and rider/dragon dry-ground conditions at the final Tidegate rune. It carries two stable monotonic flags: `collected`, then `attuned`.
+- `src/world/tidalEchoVisual.ts` is an original generated shader-independent scene adapter for animated echo rings, motes and a small light; `AzureCoast` composes the visual and calls its update each frame. When attuned, the Tidegate beacon changes color and emissive intensity.
+- `src/data/azureProgress.ts` is a storage-adapter-based, schema-versioned checkpoint module. Only the fixed seed, Tidegate solved flag, Echo collected/attuned flags and whitelisted discovered landmark IDs persist. Temporary anchors, actor positions, dialog flags and inventory remain outside this contract. Invalid state/seed/version or denied storage must fail safely. A G5 migration must retain these old flags when save slots are introduced.
+- `Game.interactWithRune` routes the same G input by grounded geographic proximity: it delegates to Tidal Echo at the underwater shrine, to Tidegate when unsolved, or to the post-Echo rider-only attunement at the already-awakened gate. No quest state belongs to the renderer or input module.
+- All generated meshes use stable `structure.azure.sunken-shrine.echo` ownership and are replaceable with future assets. The procedural ocean and current swimming physics are not a fully authored submerged interior.
+- The quest HUD is a short navigation aid, not an all-purpose journal. Completion is recorded only when both regions' physical interaction requirements are met, not merely by crossing a discovery trigger.

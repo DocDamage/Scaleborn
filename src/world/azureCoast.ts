@@ -6,6 +6,8 @@ import { PainterlyOcean } from './ocean';
 import { PainterlySky } from './sky';
 import { addMarineDressing } from './marineDressing';
 import { TidegateVisual } from './tidegateVisual';
+import { TidalEchoVisual } from './tidalEchoVisual';
+import type { EchoPhase } from './tidalEcho';
 import type { TidegateState } from './tidegate';
 
 type TerrainTile = { group: THREE.Group; signature: string };
@@ -25,6 +27,7 @@ export class AzureCoast {
   private readonly water = new PainterlyOcean();
   private readonly sky = new PainterlySky();
   private readonly tidegate = new TidegateVisual();
+  private readonly echoVisual = new TidalEchoVisual();
   private readonly airFog = new THREE.FogExp2(0xb6cbd4, 0.00055);
   private readonly seaFog = new THREE.FogExp2(0x1b5866, 0.012);
   private readonly airBackground = new THREE.Color(0xc4d9df);
@@ -45,7 +48,7 @@ export class AzureCoast {
     scene.add(this.sky.mesh, this.ocean);
     addCoastalDressing(scene);
     addMarineDressing(scene);
-    scene.add(this.tidegate.root);
+    scene.add(this.tidegate.root, this.echoVisual.root);
   }
 
   update(x: number, z: number): void {
@@ -77,8 +80,12 @@ export class AzureCoast {
     }
   }
 
-  updateTidegate(state: TidegateState, time: number): void {
-    this.tidegate.update(state, time);
+  updateTidegate(state: TidegateState, time: number, echoAttuned = false): void {
+    this.tidegate.update(state, time, echoAttuned);
+  }
+
+  updateEcho(phase: EchoPhase, time: number): void {
+    this.echoVisual.update(phase, time);
   }
 
   setUnderwater(active: boolean): void {
@@ -110,5 +117,6 @@ export class AzureCoast {
     this.foamMaterial.dispose();
     this.water.dispose();
     this.sky.dispose();
+    this.echoVisual.dispose();
   }
 }
