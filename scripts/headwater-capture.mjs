@@ -42,8 +42,22 @@ async function main(){
     await page.screenshot({
       path:'artifacts/mirrorfall-headwaters-browser.png',timeout:120000,
     });
+    // A separate on-demand dive showcases the waterfall's actual
+    // submerged plume, not just the fog at the empty lake center.
+    await page.evaluate(()=>{
+      if(typeof window.__scalebornQaImpactDive!=='function')
+        throw new Error('Underwater impact QA staging hook missing');
+      window.__scalebornQaImpactDive();
+    });
+    await page.waitForFunction(()=>
+      document.querySelector('#mode-name')?.textContent==='DIVING',
+      null,{timeout:30000});
+    await page.waitForTimeout(650);
+    await page.screenshot({
+      path:'artifacts/mirrorfall-impact-underwater-browser.png',timeout:120000,
+    });
     assert.deepEqual(errors,[],'No WebGL/JavaScript errors');
-    console.log('PASS: real in-game feeder stream and waterfall-crest screenshot captured');
+    console.log('PASS: real in-game headwater and underwater impact screenshots captured');
   }finally{await browser.close();}
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

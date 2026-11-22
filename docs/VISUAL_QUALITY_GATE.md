@@ -855,3 +855,13 @@ uphill lake/ocean exits and level ground movement remain unchanged. River
 flow cannot silently push the rider into a physics-mode teleport. This is a
 safety constraint pending a future full airborne-rider/falling controller,
 not a claim that waterfall descent is already fully simulated.
+
+### Real underwater plunge capture (on demand)
+
+The existing `npm run test:headwaters` capture now stages two *actual game*
+viewpoints: first a bank-level feeder stream and waterfall lip, then a
+near-impact 8m-deep freshwater dive with the waterfall's rising bubbles
+and terrain-grounded bathymetry in view. The second screenshot is written
+to `artifacts/mirrorfall-impact-underwater-browser.png`. This remains
+an opt-in dev-only WebGL visual acceptance tool; it does not lengthen the
+ordinary browser smoke check or replace high-quality GPU measurements.

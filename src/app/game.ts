@@ -11,6 +11,7 @@ import { toggleDragonDive } from '../actors/dragon/swimming';
 import { toggleRiderControl, toggleRiderDive } from '../actors/rider/movement';
 import { LANDMARKS } from '../world/terrain';
 import { GRAND_LAKE, MIRRORFALL, headwaterProfileAt, waterSurfaceAt } from '../world/highlandLake';
+import { MIRRORFALL_IMPACT } from '../world/waterDynamics';
 import { AdaptiveResolution } from './adaptiveResolution';
 import { resolveCameraOcclusion } from './cameraOcclusion';
 import { OBSTACLES } from '../world/collision';
@@ -166,6 +167,7 @@ export class Game {
         __scalebornQaLakeDive?: () => void;
         __scalebornQaLakebed?: () => void;
         __scalebornQaHeadwaters?: () => void;
+        __scalebornQaImpactDive?: () => void;
         __scalebornQaShore?: () => void;
         __scalebornQaForest?: () => void;
       };
@@ -443,6 +445,36 @@ export class Game {
         this.cameraIndex=1;
         this.coast.update(x,z);
         this.coast.setUnderwater(false);
+        this.dragon.update(this.flight);
+        this.updateCamera(1,true);
+        this.coast.updateAtmosphere(this.flight.time,this.camera.position);
+        this.updateHud(.2);
+      };
+      host.__scalebornQaImpactDive = (): void => {
+        // Inspect the *real* below-surface waterfall entrainment bubbles,
+        // wave underside and lakebed in the same gameplay WebGL scene.
+        const x=MIRRORFALL_IMPACT.x-18;
+        const z=MIRRORFALL_IMPACT.z+5;
+        const water=waterSurfaceAt(x,z);
+        const floor=heightAt(x,z);
+        if(Math.abs(water-GRAND_LAKE.surfaceY)>.001 || water-floor<12){
+          throw new Error('Plunge bubble QA camera is not safely underwater');
+        }
+        this.flight.x=x;
+        this.flight.z=z;
+        this.flight.y=water-8;
+        this.flight.waterTargetY=this.flight.y;
+        this.flight.yaw=Math.PI/2;
+        this.flight.pitch=0;
+        this.flight.roll=0;
+        this.flight.speed=0;
+        this.flight.form='rideable';
+        this.flight.mode='underwater';
+        this.flight.controlTarget='dragon';
+        this.flight.transition=null;
+        this.cameraIndex=0;
+        this.coast.update(x,z);
+        this.coast.setUnderwater(true);
         this.dragon.update(this.flight);
         this.updateCamera(1,true);
         this.coast.updateAtmosphere(this.flight.time,this.camera.position);
