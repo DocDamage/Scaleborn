@@ -5,6 +5,7 @@ import { createWingRig, poseWing } from './wingRig';
 import { makeOrganicLoft } from './organicLoft';
 import { dragonPose } from './animationPose';
 import { riderPose } from '../rider/pose';
+import { RiderVisual } from '../rider/visual';
 import { applyDragonScales, makeDragonScaleTextures } from './skinSurface';
 
 const scaleTextures=makeDragonScaleTextures();
@@ -37,41 +38,6 @@ function ellipsoid(parent: THREE.Group, material: THREE.Material,
   return mesh;
 }
 
-function makeRider(): THREE.Group {
-  const group = new THREE.Group();
-  group.name = 'character.rider.hero';
-  const coat = new THREE.MeshStandardMaterial({ color: 0x9c705a, roughness: 0.93 });
-  const cloth = new THREE.MeshStandardMaterial({ color: 0x4c7f89, roughness: 0.9 });
-  const skinMaterial = new THREE.MeshStandardMaterial({ color: 0xcba68b, roughness: 0.94 });
-  const hair = new THREE.MeshStandardMaterial({ color: 0x322d32, roughness: 0.93 });
-  ellipsoid(group, cloth, [0, 0.80, 0.1], [0.25, 0.40, 0.20]);
-  ellipsoid(group, skinMaterial, [0, 1.38, -0.02], [0.23, 0.27, 0.22]);
-  ellipsoid(group, hair, [0, 1.56, 0.01], [0.23, 0.14, 0.24]);
-  for (const side of [-1, 1]) {
-    const name = side < 0 ? 'left' : 'right';
-    const arm = new THREE.Group();
-    arm.name = 'rider.' + name + 'Arm';
-    arm.position.set(side * 0.29, 1.07, -0.01);
-    ellipsoid(arm, coat, [0, -0.30, -0.17], [0.11, 0.38, 0.12]);
-    ellipsoid(arm, skinMaterial, [side * -0.04, -0.67, -0.35], [0.12, 0.12, 0.12]);
-    group.add(arm);
-    const leg = new THREE.Group();
-    leg.name = 'rider.' + name + 'Leg';
-    leg.position.set(side * 0.22, 0.54, 0.14);
-    ellipsoid(leg, cloth, [0, -0.27, 0.12], [0.15, 0.30, 0.16]);
-    group.add(leg);
-    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.29, 7), skinMaterial);
-    horn.position.set(side * 0.14, 1.77, -0.05);
-    horn.rotation.z = side * -0.3;
-    group.add(horn);
-  }
-  const cloak = new THREE.Mesh(new THREE.ConeGeometry(0.34, 0.84, 6, 1, true), coat);
-  cloak.rotation.x = -0.12;
-  cloak.position.set(0, 0.58, 0.23);
-  group.add(cloak);
-  return group;
-}
-
 function tailFin(parent: THREE.Group): void {
   const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.36, 1.4, 6), highlight);
   leaf.rotation.x = Math.PI / 2;
@@ -93,7 +59,8 @@ function tailFin(parent: THREE.Group): void {
  */
 export class DragonVisual {
   readonly root = new THREE.Group();
-  readonly rider = makeRider();
+  private readonly riderVisual = new RiderVisual();
+  readonly rider = this.riderVisual.group;
   readonly body = new THREE.Group();
   private scene: THREE.Scene | null = null;
   private readonly wingL = createWingRig(-1);
@@ -239,6 +206,8 @@ export class DragonVisual {
     for (const eye of this.eyes) eye.scale.y = blinking ? 0.025 : 0.16;
 
     const riderMotion = riderPose(state);
+    this.riderVisual.updateCape(state.time,
+      state.form === 'small' ? state.riderSpeed : state.speed);
     this.riderLimbs.leftArm.rotation.x = riderMotion.leftArm;
     this.riderLimbs.rightArm.rotation.x = riderMotion.rightArm;
     this.riderLimbs.leftLeg.rotation.x = riderMotion.leftLeg;

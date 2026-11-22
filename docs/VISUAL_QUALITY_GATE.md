@@ -421,3 +421,21 @@ that evidence and dedicated-GPU profiling exist.
   final creature art, final rider art or production-ready animation quality.
 - Acceptance still requires an actual high-quality gameplay screenshot and
   in-game motion review, followed by authored creature/rider assets and rigs.
+
+
+### Rider silhouette and simulated travel cloak (visual pass 7 continuation)
+
+The rider now uses UV-unwrapped elliptical anatomical/garment contours for the
+torso, overcoat, arms, trousers and swept dragon-hybrid horns rather than
+intersecting oval torso/limb primitives or a six-sided cone cape. Existing
+rider limb-pivot names, world-space dismount and unscaled mounted placement
+remain unchanged. A tessellated double-sided cloth cape has anchored shoulder
+vertices, animated curved fabric folds and bounded speed-responsive billow;
+it updates in one persistent buffer without per-frame geometry allocation.
+A generated repeatable weave texture provides modest material detail.
+
+The rider is still **an original procedural stand-in**, not a fully authored,
+rigged production character or evidence of the user's exact character design.
+Replace with approved art and skeletal GLB/Unreal assets before final visual
+acceptance. Validate close-range rider-height screenshots, face readability,
+cape clipping during mounts, transparent fabric overdraw and frame cost.
