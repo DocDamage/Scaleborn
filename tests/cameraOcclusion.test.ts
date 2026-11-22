@@ -33,6 +33,39 @@ describe('third-person camera collision and view preservation',()=>{
     expect(clear.toArray()).toEqual(desired.toArray());
   });
 
+  it('catches a thin structure between the old camera samples',()=>{
+    // At twelve metres the old eight-sample ray hopped from -4.5 to -6.
+    // Even with the proxy safety margin, a pillar at -5.25 was missed.
+    const camera=resolveCameraOcclusion(origin,desired,()=>0,[
+      {x:-5.25,z:0,radius:.03,top:12},
+    ]);
+    expect(camera.x).toBeGreaterThan(-4.8);
+    expect(camera.x).toBeLessThan(0);
+  });
+
+  it('crosses over low roofs but stops if the camera descends into them',()=>{
+    const column=[{x:-6,z:0,radius:1.2,top:5}];
+    const above=resolveCameraOcclusion(
+      new THREE.Vector3(0,20,0),new THREE.Vector3(-12,20,0),
+      ()=>0,column);
+    expect(above.toArray()).toEqual([-12,20,0]);
+    const dipping=resolveCameraOcclusion(
+      new THREE.Vector3(0,11,0),new THREE.Vector3(-12,0,0),
+      ()=>-20,column);
+    expect(dipping.x).toBeGreaterThan(-7.9);
+    expect(dipping.x).toBeLessThan(-4);
+    expect(dipping.y).toBeGreaterThan(0);
+  });
+
+  it('does not mistake structures off the camera segment for occlusion',()=>{
+    const camera=resolveCameraOcclusion(origin,desired,()=>0,[
+      {x:-5.25,z:1.8,radius:.03,top:40},
+      {x:4,z:0,radius:.8,top:30},
+      {x:-30,z:0,radius:2,top:30},
+    ]);
+    expect(camera.toArray()).toEqual(desired.toArray());
+  });
+
   it('returns finite near-camera fallback when focus overlaps a hillside',()=>{
     const a=new THREE.Vector3(0,1,0);
     const b=new THREE.Vector3(0,5,10);
