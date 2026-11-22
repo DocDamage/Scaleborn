@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GRAND_LAKE } from './highlandLake';
 import { makePaintedSurfaceTextures, type SurfaceKind } from './surfaceTextures';
+import { installTerrainTriplanar } from './terrainTriplanar';
 
 function attachPaintedMaps(
   material: THREE.MeshStandardMaterial, kind: SurfaceKind,
@@ -91,6 +92,9 @@ export function makeTerrainMaterial(quality: 'high' | 'low' = 'high'): THREE.Mes
   });
   attachPaintedMaps(mat,'soil',quality);
   if (quality === 'high') installSurfaceDetail(mat, 'land');
+  // Apply after painterly microstructure so both high and low presets
+  // have seam-stable albedo, roughness and normal detail on cliff faces.
+  installTerrainTriplanar(mat);
   return mat;
 }
 export function makeRockMaterial(quality: 'high' | 'low' = 'high'): THREE.MeshStandardMaterial {
