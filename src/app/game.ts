@@ -564,7 +564,7 @@ export class Game {
     const focus = this.focusPosition();
     this.coast.setUnderwater(this.isUnderwater());
     this.waterTint.hidden = !this.isUnderwater();
-    this.coast.animate(this.flight.time, focus.x, focus.y, focus.z);
+    this.coast.animate(this.flight.time, focus.x, focus.y, focus.z, this.flight);
     this.coast.updateTidegate(this.tidegate, this.flight.time, this.echo.attuned);
     this.coast.updateEcho(echoPhase(this.echo, this.tidegate), this.flight.time);
     this.dragon.update(this.flight);

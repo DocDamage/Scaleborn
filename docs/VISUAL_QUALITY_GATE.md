@@ -111,3 +111,9 @@ The waterfall curtain now has noisy, feathered break-up edges and a progressivel
 ### All-graphics-presets surface quality
 
 Color-only terrain polygons failed the user's visual test. `surfaceTextures.ts` therefore generates tileable albedo, tangent-space normal and roughness maps for soil, rock and bark, with UVs generated for the cliff wall. Low quality gets map detail while High adds triplanar-style world-space material variation. These generated maps are **a substantial stepping stone** and must not be described as equivalent to high-resolution scan-based PBR assets. The screenshot review must verify visible grain at typical gameplay distances without conspicuous repetitive tiling. GPU/memory benchmarking on the real desktop remains required.
+
+### Close-range foliage and movement visibility
+
+A procedural tree may look full from above but skeletal at rider height if all leaves lie horizontally. The visual pass reorients leaf planes in three dimensions and increases woodland density around Mirrorfall while rejecting roots on extreme slopes. Acceptance requires inspection from low third-person camera positions, not exclusively aerial panoramas.
+
+Swimming wakes are now generated around the controlled dragon and independent rider with a bounded pool of rings. The ring centers follow the same wave surface as physics and graphics. These are generated wake effects, not pressure-coupled volumetric water simulation.

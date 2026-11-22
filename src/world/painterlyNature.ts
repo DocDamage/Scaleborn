@@ -49,7 +49,13 @@ function addLeaf(vertices: number[], uv: number[],
   pos: THREE.Vector3, angle: number, length: number, width: number): void {
   const axis = new THREE.Vector3(
     Math.cos(angle), 0.24 + Math.sin(angle * 1.7) * 0.15, Math.sin(angle)).normalize();
-  const side = new THREE.Vector3(-Math.sin(angle), 0, Math.cos(angle));
+  // Lean the leaf plane upright. Earlier horizontal-only leaf cards were
+  // almost edge-on in third-person views, making canopies look skeletal.
+  const side = new THREE.Vector3(
+    -Math.sin(angle)*.68,
+    .57+.23*Math.sin(angle*2.7),
+    Math.cos(angle)*.68,
+  ).normalize();
   const root = pos;
   const tip = root.clone().addScaledVector(axis, length);
   const left = root.clone().addScaledVector(axis, length * 0.50).addScaledVector(side, width);
@@ -78,7 +84,7 @@ function treePrototypes(seed: number): {wood: THREE.BufferGeometry; foliage: THR
     const end = new THREE.Vector3(Math.cos(a) * distance, y + 1.7 + rand() * 1.6,
       Math.sin(a) * distance);
     wood.push(taperBranch(start, end, 0.18 + rand() * .11, 0.035));
-    for (let k = 0; k < 16; k++) {
+    for (let k = 0; k < 19; k++) {
       const t = 0.33 + rand() * 0.83;
       const p = start.clone().lerp(end,t);
       p.x += (rand()-.5) * 1.75; p.y += (rand()-.5) * 2.5;
@@ -167,7 +173,7 @@ export class PainterlyNature {
     // Dedicated shoreline forest: natural density where lake banks, falls,
     // inlets and sunlit cliffs dominate the player's field of view.
     // Still instanced by tree archetype; avoids global high-cost grass floods.
-    const bankSamples = quality === 'low' ? 1150 : 4900;
+    const bankSamples = quality === 'low' ? 1950 : 6900;
     for (let i = 0; i < bankSamples; i++) {
       const theta=rand()*Math.PI*2;
       const radius=1.07+rand()*0.46;
@@ -177,9 +183,15 @@ export class PainterlyNature {
       if(y<waterSurfaceAt(x,z)+2.5 || y>196)continue;
       if(Math.hypot(x-(GRAND_LAKE.x+GRAND_LAKE.radiusX*1.13),z-GRAND_LAKE.z)<42)continue;
       const pick=rand();
-      if(pick<.34){
+      if(pick<.41){
         const species=Math.floor(rand()*4);
-        trees[species]!.push({x,y,z,scale:1.10+rand()*1.15,hue:rand()});
+        const step=5;
+        const slope=(Math.abs(heightAt(x+step,z)-heightAt(x-step,z))+
+          Math.abs(heightAt(x,z+step)-heightAt(x,z-step)))/(2*step);
+        // Root trees on actual stable slopes, not the sheer waterfall face.
+        if(slope<1.05) {
+          trees[species]!.push({x,y,z,scale:1.10+rand()*1.15,hue:rand()});
+        }
       }else if(pick<.57){
         grasses.push({x,y:y+.06,z,scale:.65+rand()*.82,hue:rand()});
       }else if(pick<.65){

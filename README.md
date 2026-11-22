@@ -142,3 +142,7 @@ The lake waterfall now drives a shared, fixed-step local current field in `src/w
 ### Surface texture generation
 
 Rock, bark and terrain now have deterministic tileable original **albedo, normal and roughness maps** generated in memory. Both Low and High settings receive texture detail; High also uses the world-space procedural shader. The rock escarpment's UVs match its geometry, so procedural striations are visible rather than a smooth colored slab. There are still no third-party or temporary image assets. Textures are disposed when their materials are disposed.
+
+### Shoreline foliage and interaction wake
+
+Procedural broadleaf branches now carry leaf planes that remain visible from low third-person camera angles, and the wooded shores receive denser rooted tree stands with slope checks. Swimming riders and dragons create fading, spreading rings at the **moving water-surface elevation** using a bounded pool of generated geometry. These are local interactions, distinct from the waterfall's shared plunge current. Full fluid displacement and high-fidelity vegetation wind/bone simulation still require further work.
