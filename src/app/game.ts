@@ -392,7 +392,7 @@ export class Game {
         }
         this.flight.x=x;
         this.flight.z=z;
-        this.flight.y=bed+4.0;
+        this.flight.y=bed+5.5;
         this.flight.waterTargetY=this.flight.y;
         this.flight.yaw=-Math.PI/2;
         this.flight.pitch=-.16;

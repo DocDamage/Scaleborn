@@ -12,7 +12,7 @@ describe('actual shallow lakebed browser visual acceptance site',()=>{
     expect(lakeContains(x,z)).toBe(true);
     expect(depth).toBeGreaterThan(8);
     expect(depth).toBeLessThan(25);
-    const eye=bed+4.0;
+    const eye=bed+5.5;
     expect(eye).toBeGreaterThan(dragonBottomY(x,z,'rideable'));
     expect(eye).toBeLessThan(GRAND_LAKE.surfaceY-5);
     // Face west toward the shallow shelf, with chase camera inside lake.
