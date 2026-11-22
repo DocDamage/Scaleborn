@@ -88,6 +88,12 @@ export class DragonVisual {
     rightArm: this.rider.getObjectByName('rider.rightArm') as THREE.Group,
     leftLeg: this.rider.getObjectByName('rider.leftLeg') as THREE.Group,
     rightLeg: this.rider.getObjectByName('rider.rightLeg') as THREE.Group,
+    leftElbow: this.rider.getObjectByName('rider.leftElbow') as THREE.Group,
+    rightElbow: this.rider.getObjectByName('rider.rightElbow') as THREE.Group,
+    leftKnee: this.rider.getObjectByName('rider.leftKnee') as THREE.Group,
+    rightKnee: this.rider.getObjectByName('rider.rightKnee') as THREE.Group,
+    leftAnkle: this.rider.getObjectByName('rider.leftAnkle') as THREE.Group,
+    rightAnkle: this.rider.getObjectByName('rider.rightAnkle') as THREE.Group,
   };
   private readonly legs: Array<{
     group: THREE.Group; foot: THREE.Group; diagonal: boolean;
@@ -362,6 +368,12 @@ export class DragonVisual {
     this.riderLimbs.rightArm.rotation.x = riderMotion.rightArm;
     this.riderLimbs.leftLeg.rotation.x = riderMotion.leftLeg;
     this.riderLimbs.rightLeg.rotation.x = riderMotion.rightLeg;
+    this.riderLimbs.leftElbow.rotation.x = riderMotion.leftElbow;
+    this.riderLimbs.rightElbow.rotation.x = riderMotion.rightElbow;
+    this.riderLimbs.leftKnee.rotation.x = riderMotion.leftKnee;
+    this.riderLimbs.rightKnee.rotation.x = riderMotion.rightKnee;
+    this.riderLimbs.leftAnkle.rotation.x = riderMotion.leftAnkle;
+    this.riderLimbs.rightAnkle.rotation.x = riderMotion.rightAnkle;
     this.riderTail.rotation.y=Math.sin(state.time*2.15)*.12
       +(state.form==='small' ? Math.sin(state.time*.66)*.08 : state.roll*.16);
     this.riderTail.rotation.x=state.riderMode==='underwater'

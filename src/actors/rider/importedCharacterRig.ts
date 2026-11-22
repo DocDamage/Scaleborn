@@ -189,6 +189,12 @@ export class ImportedCharacterRig {
       [['RightArm', 'UpperArm_R', 'RightUpperArm'], pose.rightArm],
       [['LeftUpLeg', 'Thigh_L', 'LeftUpperLeg'], pose.leftLeg],
       [['RightUpLeg', 'Thigh_R', 'RightUpperLeg'], pose.rightLeg],
+      [['LeftForeArm', 'LeftLowerArm', 'Forearm_L'], pose.leftElbow],
+      [['RightForeArm', 'RightLowerArm', 'Forearm_R'], pose.rightElbow],
+      [['LeftLeg', 'LeftCalf', 'Shin_L'], pose.leftKnee],
+      [['RightLeg', 'RightCalf', 'Shin_R'], pose.rightKnee],
+      [['LeftFoot', 'Foot_L'], pose.leftAnkle],
+      [['RightFoot', 'Foot_R'], pose.rightAnkle],
     ];
     for (const [names, angle] of channels) {
       const bone = this.findBone(names);

@@ -172,7 +172,7 @@ function createRiderLeg(
   ],cloth,'rider.shin',26));
   const ankle=new THREE.Group();
   ankle.name=side<0?'rider.leftAnkle':'rider.rightAnkle';
-  ankle.position.set(0,-.205,-.018);
+  ankle.position.set(0,-.175,-.018);
   ankle.add(shapedTorso([
     [.01,.071,.077,0],[-.06,.076,.085,-.014],
     [-.12,.077,.105,-.058],[-.152,.054,.080,-.074],
