@@ -12,6 +12,15 @@ const vertexShader = `
 const fragmentShader = `
   precision highp float;
   varying vec3 vDirection;
+  uniform float uTime;
+  float skyHash(vec2 p) {
+    return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);
+  }
+  float skyNoise(vec2 p) {
+    vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+    return mix(mix(skyHash(i),skyHash(i+vec2(1,0)),f.x),
+               mix(skyHash(i+vec2(0,1)),skyHash(i+vec2(1,1)),f.x),f.y);
+  }
   void main() {
     vec3 dir = normalize(vDirection);
     float height = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);
@@ -29,6 +38,16 @@ const fragmentShader = `
     float disc = smoothstep(0.9992, 0.99975, solarDot);
     sky = mix(sky, vec3(1.0, 0.80, 0.55), glow * 0.43);
     sky = mix(sky, vec3(1.0, 0.96, 0.76), disc);
+    // Broad, slow-moving vapor banks in the sky dome. At low settings
+    // this replaces distant cloud sprites that look like floating stones.
+    vec2 uv = dir.xz / max(0.39, 0.65 + dir.y) * 3.2
+      + vec2(uTime * 0.0018, -uTime * 0.0008);
+    float banks = skyNoise(uv * 1.7) * 0.62
+      + skyNoise(uv * 3.8) * 0.27
+      + skyNoise(uv * 7.2) * 0.11;
+    float coverage = smoothstep(0.48,0.70,banks)
+      * smoothstep(-0.02,0.21,dir.y);
+    sky = mix(sky,vec3(0.80,0.83,0.82),coverage * 0.43);
     // Subtle broad-brush modulation; avoid high-frequency horizon banding.
     sky += sin(dir.x * 11.0 + dir.z * 7.0) * sin(dir.y * 9.0 - dir.z * 8.0) * 0.002;
     gl_FragColor = vec4(sky, 1.0);
@@ -42,12 +61,17 @@ export class PainterlySky {
   constructor() {
     this.material = new THREE.ShaderMaterial({
       vertexShader, fragmentShader,
+      uniforms: { uTime: { value: 0 } },
       side: THREE.BackSide, depthTest: false, depthWrite: false, fog: false,
     });
     this.mesh = new THREE.Mesh(new THREE.SphereGeometry(3200, 32, 20), this.material);
     this.mesh.name = 'sky.azure.paint-dome';
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = -10;
+  }
+
+  update(time: number): void {
+    this.material.uniforms.uTime!.value = time;
   }
 
   moveWithCamera(x: number, y: number, z: number): void {

@@ -21,9 +21,9 @@ export const MIRRORFALL = Object.freeze({
   name: 'Mirrorfall Cascade',
   x: GRAND_LAKE.x + GRAND_LAKE.radiusX * 1.08,
   z: GRAND_LAKE.z,
-  topY: 166,
+  topY: 192,
   bottomY: GRAND_LAKE.surfaceY,
-  width: 46,
+  width: 78,
 });
 
 const smoothstep = (a: number, b: number, x: number): number => {
@@ -83,7 +83,15 @@ export function sculptMirrorfallTerrain(
   const crest = 84 * Math.exp(-dx * dx - dz * dz)
     * smoothstep(1.02, 1.16, r);
   if (r <= 1) return floor;
-  const highBank = shore + crest;
+  // A genuine lake-facing escarpment, not a rounded hill. A narrow
+  // 20-25m shoreline gradient rises over 110m on the waterfall-facing bank.
+  // Terrain collision, streamed mesh and rock shading all use this face.
+  const easternFace = smoothstep(0.36, 0.88, (x - GRAND_LAKE.x) / GRAND_LAKE.radiusX);
+  const canyonBand = Math.exp(-Math.pow((z - GRAND_LAKE.z) / 205, 4));
+  const cliffStep = smoothstep(1.008, 1.063, r);
+  const escarpment = GRAND_LAKE.surfaceY
+    + (111 + lap * 14) * cliffStep * easternFace * canyonBand;
+  const highBank = Math.max(shore + crest, escarpment);
   if (r < 1.43) return highBank;
   const transition = smoothstep(1.43, 1.72, r);
   return highBank * (1 - transition) + originalHeight * transition;

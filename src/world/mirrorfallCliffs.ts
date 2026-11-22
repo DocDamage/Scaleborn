@@ -33,8 +33,11 @@ export class MirrorfallCliffs {
         const y=GRAND_LAKE.surfaceY-1+(top-(GRAND_LAKE.surfaceY-1))*t;
         const stratum=2.3*Math.sin(t*76+u*14)*Math.sin(u*22+t*5);
         const ridge=8*Math.sin(u*10.5+noise*2.4)+5*Math.sin(u*24.6+t*6.3);
-        const x=MIRRORFALL.x+49 + t*38
-          + ridge*0.73+noise*10+stratum;
+        // The face follows the actual falling sheet a few meters behind it.
+        // This keeps rock visible alongside water instead of hiding it
+        // behind the preexisting raised terrain.
+        const waterfallX=MIRRORFALL.x-82 + 81*t;
+        const x=waterfallX+7 + ridge*0.20+noise*3.4+stratum*.23;
         positions.push(x,y,z);
         if(row<segmentY&&col<segmentZ){
           const a=row*(segmentZ+1)+col,b=a+segmentZ+1;
@@ -60,8 +63,9 @@ export class MirrorfallCliffs {
     for(let i=0;i<62;i++){
       const z=middle+Math.sin(i*2.39996)*202;
       const y=GRAND_LAKE.surfaceY+14+(i%9)*12.4;
-      const x=MIRRORFALL.x+49+(y-GRAND_LAKE.surfaceY)*.33
-        +Math.sin(i*3.87)*11;
+      const x=MIRRORFALL.x-74
+        +((y-GRAND_LAKE.surfaceY)/(MIRRORFALL.topY-GRAND_LAKE.surfaceY))*78
+        +Math.sin(i*3.87)*5;
       proxy.position.set(x,y,z);
       proxy.rotation.set(i*.22,i*.75,i*.1);
       proxy.scale.set(4.5+(i%4)*2.3,1.7+(i%3)*1.8,7.4+(i%5)*2.3);

@@ -3,8 +3,8 @@ import { rng } from '../core/random';
 import { AZURE_SEED } from './terrain';
 import { GRAND_LAKE, MIRRORFALL } from './highlandLake';
 
-const crestX=MIRRORFALL.x+48;
-const plungeX=MIRRORFALL.x-58;
+const crestX=MIRRORFALL.x-1;
+const plungeX=MIRRORFALL.x-82;
 const down=MIRRORFALL.topY-GRAND_LAKE.surfaceY;
 const gravity=9.81;
 
@@ -104,7 +104,7 @@ export class MirrorfallCascade {
       uniforms:{uTime:{value:0}},vertexShader:vertex,fragmentShader:fragment,
       side:THREE.DoubleSide,transparent:true,depthWrite:false,
     });
-    for(const [i,width,offset] of [[0,46,0],[1,24,-9],[2,18,11]] as const){
+    for(const [i,width,offset] of [[0,78,0],[1,42,-21],[2,32,24]] as const){
       this.group.add(ribbon(width,offset,i*2.3,this.waterMat));
     }
     const material=new THREE.MeshBasicMaterial({

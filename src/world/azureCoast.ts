@@ -115,6 +115,7 @@ export class AzureCoast {
     this.nature.update(time);
     this.clouds.update(time);
     this.foamMaterial.uniforms.uTime!.value=time;
+    this.sky.update(time);
     this.sky.moveWithCamera(x, y, z);
   }
 

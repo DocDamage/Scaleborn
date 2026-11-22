@@ -45,7 +45,7 @@ export class PainterlyClouds {
     this.root.name='sky.azure.painterly-clouds';
     scene.add(this.root);
     const r=rng(AZURE_SEED+818);
-    const n=quality==='low'?25:66;
+    const n=quality==='low'?0:16;
     for(let i=0;i<n;i++){
       const material=new THREE.SpriteMaterial({
         map:this.texture,transparent:true,depthWrite:false,
