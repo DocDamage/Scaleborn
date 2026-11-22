@@ -394,10 +394,16 @@ export class DragonVisual {
     this.riderLimbs.rightArm.rotation.x = riderMotion.rightArm;
     this.riderLimbs.leftLeg.rotation.x = riderMotion.leftLeg;
     this.riderLimbs.rightLeg.rotation.x = riderMotion.rightLeg;
+    // Onyx's rider must drape around his rideable flanks, but kneel on
+    // the giant dorsal shelf. Leave these rotations zero on foot/swimming.
+    this.riderLimbs.leftLeg.rotation.z = -riderMotion.legSpread;
+    this.riderLimbs.rightLeg.rotation.z = riderMotion.legSpread;
     this.riderLimbs.leftElbow.rotation.x = riderMotion.leftElbow;
     this.riderLimbs.rightElbow.rotation.x = riderMotion.rightElbow;
     this.riderLimbs.leftKnee.rotation.x = riderMotion.leftKnee;
     this.riderLimbs.rightKnee.rotation.x = riderMotion.rightKnee;
+    this.riderLimbs.leftKnee.rotation.z = -riderMotion.kneeSpread;
+    this.riderLimbs.rightKnee.rotation.z = riderMotion.kneeSpread;
     this.riderLimbs.leftAnkle.rotation.x = riderMotion.leftAnkle;
     this.riderLimbs.rightAnkle.rotation.x = riderMotion.rightAnkle;
     this.riderTail.rotation.y=Math.sin(state.time*2.15)*.12

@@ -14,6 +14,10 @@ export interface RiderPose {
   rightKnee: number;
   leftAnkle: number;
   rightAnkle: number;
+  /** Abduction of each thigh away from the dragon centerline (radians). */
+  legSpread: number;
+  /** Counter-rotation at the knees, opposing thigh abduction. */
+  kneeSpread: number;
   torsoLean: number;
   breathing: number;
 }
@@ -42,6 +46,10 @@ export function riderPose(state: FlightState): RiderPose {
       ? .13 : 0;
     const launchBrace = transition === 'takingOff' || transition === 'waterLaunch'
       ? .10 : 0;
+    // Onyx's giant back is broader than this 1.52 m child. There is no
+    // anatomically possible full straddle: fold the shins forward onto his
+    // back in giant form; rideable form drapes the shins outside the flank.
+    const giant = state.form === 'giant';
     return {
       motion: 'mounted',
       // Shoulders reach toward Onyx's shoulder/mane; elbows bend the
@@ -52,12 +60,14 @@ export function riderPose(state: FlightState): RiderPose {
       rightElbow: .31 + .06 * air + .09 * bank + launchBrace,
       // True knees turn the lower legs down the flank, retaining a planted
       // pelvis and avoiding a straight-legged 'standing on dragon' silhouette.
-      leftLeg: .58 + .04 * air - .045 * bank + .028 * stride,
-      rightLeg: .58 + .04 * air + .045 * bank - .028 * stride,
-      leftKnee: -.96 - .05 * air + .08 * bank - .045 * stride,
-      rightKnee: -.96 - .05 * air - .08 * bank + .045 * stride,
-      leftAnkle: .27 + .035 * stride - .035 * bank,
-      rightAnkle: .27 - .035 * stride + .035 * bank,
+      leftLeg: (giant ? 1.35 : .78) + .035 * air - .028 * bank + .02 * stride,
+      rightLeg: (giant ? 1.35 : .78) + .035 * air + .028 * bank - .02 * stride,
+      leftKnee: (giant ? .36 : -1.02) + .045 * bank - .03 * stride,
+      rightKnee: (giant ? .36 : -1.02) - .045 * bank + .03 * stride,
+      leftAnkle: (giant ? -.28 : .27) + .025 * stride - .02 * bank,
+      rightAnkle: (giant ? -.28 : .27) - .025 * stride + .02 * bank,
+      legSpread: giant ? .20 : .90,
+      kneeSpread: giant ? -.04 : -.13,
       torsoLean: Math.max(-.24, Math.min(.24,
         -pitch * .12 - .045 * air + .025 * ground)),
       breathing: Math.sin(t * 1.45) * .006,
@@ -84,6 +94,8 @@ export function riderPose(state: FlightState): RiderPose {
     rightKnee: swimming ? .12 : Math.max(0, rightStep) * .54,
     leftAnkle: swimming ? -.12 : -Math.max(0, leftStep) * .20,
     rightAnkle: swimming ? -.12 : -Math.max(0, rightStep) * .20,
+    legSpread: 0,
+    kneeSpread: 0,
     torsoLean: diving ? -0.31 : swimming ? -0.13 : walking ? 0.035 : 0,
     breathing: Math.sin(state.time * 1.45) * (swimming ? 0.018 : 0.009),
   };

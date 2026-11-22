@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { mountedRiderSeat } from '../src/actors/rider/mountSeat';
+import {
+  mountedRiderSeat, ONYX_SADDLE_DORSAL_Y, RIDER_PELVIS_Y,
+  SADDLE_CONTACT_CLEARANCE,
+} from '../src/actors/rider/mountSeat';
 import { DragonVisual } from '../src/actors/dragon/visual';
 import { FORMS } from '../src/actors/dragon/forms';
 import { newFlightState } from '../src/actors/dragon/flight';
@@ -11,7 +14,8 @@ describe('rider contact with Onyx in all three forms',()=>{
     for(const form of ['rideable','giant'] as const){
       const scale=FORMS[form].visualScale;
       const seat=mountedRiderSeat(scale);
-      expect(seat.y+.66).toBeCloseTo(.63*scale-.055,6);
+      expect(seat.y+RIDER_PELVIS_Y)
+        .toBeCloseTo(ONYX_SADDLE_DORSAL_Y*scale+SADDLE_CONTACT_CLEARANCE,6);
       expect(seat.z).toBeLessThan(0);
       expect(Math.abs(seat.y)).toBeLessThan(.75);
     }
@@ -20,6 +24,27 @@ describe('rider contact with Onyx in all three forms',()=>{
     }
   });
 
+  it('measures the seat against the actual continuous dorsal geometry',()=>{
+    const visual=new DragonVisual();
+    try{
+      const torso=visual.root.getObjectByName('creature.dragon.onyx.anatomical-torso') as THREE.Mesh;
+      const p=torso.geometry.getAttribute('position');
+      let dorsal=-Infinity;
+      for(let i=0;i<p.count;i++){
+        if(Math.abs(p.getZ(i)+.23)<.07 && Math.abs(p.getX(i))<.04) {
+          dorsal=Math.max(dorsal,p.getY(i));
+        }
+      }
+      expect(dorsal).toBeGreaterThan(.64);
+      expect(dorsal).toBeLessThan(.79);
+      for(const scale of [FORMS.rideable.visualScale,FORMS.giant.visualScale]){
+        const seat=mountedRiderSeat(scale);
+        const pelvis=seat.y+RIDER_PELVIS_Y;
+        expect(pelvis-dorsal*scale).toBeGreaterThan(.02);
+        expect(pelvis-dorsal*scale).toBeLessThan(.2);
+      }
+    }finally{visual.dispose();}
+  });
   it('keeps the real heroine unscaled and mounted to the same Onyx root',()=>{
     const scene=new THREE.Scene(), dragon=new DragonVisual();
     dragon.attach(scene);

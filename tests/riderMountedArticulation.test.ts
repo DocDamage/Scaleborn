@@ -24,12 +24,22 @@ describe('hybrid rider arm and leg contact animation', () => {
         const rightKnee = dragon.rider.getObjectByName('rider.rightKnee') as THREE.Group;
         expect(pose.leftArm).toBeGreaterThan(.4);
         expect(pose.leftElbow).toBeGreaterThan(.2);
-        expect(pose.leftKnee).toBeLessThan(-.8);
+        if(form==='giant'){
+          expect(pose.leftKnee).toBeGreaterThan(.25);
+          expect(pose.legSpread).toBeLessThan(.3);
+        }else{
+          expect(pose.leftKnee).toBeLessThan(-.8);
+          expect(pose.legSpread).toBeGreaterThan(.85);
+        }
         expect(pose.leftKnee).not.toBe(pose.rightKnee);
         expect(leftArm.rotation.x).toBeCloseTo(pose.leftArm, 6);
         expect(leftElbow.rotation.x).toBeCloseTo(pose.leftElbow, 6);
         expect(leftKnee.rotation.x).toBeCloseTo(pose.leftKnee, 6);
         expect(rightKnee.rotation.x).toBeCloseTo(pose.rightKnee, 6);
+        expect(leftArm).toBeInstanceOf(THREE.Group);
+        expect(dragon.rider.getObjectByName('rider.leftLeg')!.rotation.z)
+          .toBeCloseTo(-pose.legSpread,6);
+        expect(leftKnee.rotation.z).toBeCloseTo(-pose.kneeSpread,6);
         expect(dragon.rider.scale.x).toBe(1);
         const seat=mountedRiderSeat(dragon.body.scale.x);
         expect(dragon.rider.position.y).toBeCloseTo(seat.y, 6);
@@ -51,6 +61,7 @@ describe('hybrid rider arm and leg contact animation', () => {
       const leftAnkle=dragon.rider.getObjectByName('rider.leftAnkle') as THREE.Group;
       expect(leftKnee.rotation.x).toBe(0);
       expect(leftAnkle.rotation.x).toBeCloseTo(0,6);
+      expect(dragon.rider.getObjectByName('rider.leftLeg')!.rotation.z).toBeCloseTo(0,6);
       state.riderSpeed=3;state.time=1.4;dragon.update(state);
       expect(leftKnee.rotation.x).toBeGreaterThanOrEqual(0);
       expect(Math.abs(leftAnkle.rotation.x)).toBeLessThan(.25);
