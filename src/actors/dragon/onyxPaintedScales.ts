@@ -26,9 +26,16 @@ export function paintedScalePixels(): Uint8Array {
     const base=i*4;
     // The sample supplies pigment transitions; brighten to a PBR modulation
     // map so Onyx's original navy/charcoal shader remains the material owner.
-    pixels[base]=176+((color >> 16) & 255);
-    pixels[base+1]=178+((color >> 8) & 255);
-    pixels[base+2]=176+(color & 255);
+    // Keep the original sampled image's individual scale layout, but
+    // compress pigment contrast at gameplay distance. The first full 64px
+    // render showed large olive/greenish spots against midnight-navy hide.
+    // A neutral dark-indigo tint keeps authored hide/vertex PBR in charge.
+    const red=(color >> 16) & 255;
+    const green=(color >> 8) & 255;
+    const blue=color & 255;
+    pixels[base]=208+Math.round((red-32)*.35);
+    pixels[base+1]=210+Math.round((green-28)*.15);
+    pixels[base+2]=218+Math.round((blue-49)*.32);
     pixels[base+3]=255;
   }
   return pixels;

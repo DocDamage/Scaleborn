@@ -188,3 +188,6 @@ counterpart to the close-up and ground-fold screenshots, catching accidental
 wing material/normal/rig regressions that upright ground shots cannot reveal.
 No new runtime controls, collision or gameplay features; real WebGL rendering
 still must be inspected before visual signoff.
+
+### Original 64px Onyx pigment saturation correction
+The first actual 64² source-painting WebGL image at [run 45081399370](https://github.com/DocDamage/Scaleborn/actions/runs/45081399370) revealed strong olive/green speckling on Onyx's midnight-navy hide. Instead of deleting the AI-assisted original artwork, the existing 64x64 index map now compresses the source-palette albedo modulation into a narrow dark indigo/violet band. The original scale pattern/UVs and PBR surface normals, roughness and identity are preserved. Requires fresh actual-game side/head and flight screenshots to verify; **quality gate remains blocking**.

@@ -11,9 +11,19 @@ describe('original AI-assisted Onyx scale paint is bound to real gameplay',()=>{
     expect(paintedScalePixels()).toEqual(pixels);
     // First index and pigment are preserved from the actual original
     // 64x64 sampled painting, not an unrelated 32x32 quantizer palette.
-    expect(Array.from(pixels.slice(0,3))).toEqual([202,203,221]);
+    expect(Array.from(pixels.slice(0,3))).toEqual([206,210,217]);
     expect(new Set(Array.from(pixels.filter((_,i)=>i%4===0))).size).toBeGreaterThan(6);
     expect(new Set(Array.from(pixels.filter((_,i)=>i%4===2))).size).toBeGreaterThan(6);
+    // The original sampled pattern remains non-uniform, but no full-bright
+    // green dots should overpower the navy/violet hide at gameplay distance.
+    for(let i=0;i<pixels.length;i+=4){
+      expect(pixels[i]!).toBeGreaterThanOrEqual(200);
+      expect(pixels[i]!).toBeLessThanOrEqual(230);
+      expect(pixels[i+1]!).toBeGreaterThanOrEqual(204);
+      expect(pixels[i+1]!).toBeLessThanOrEqual(222);
+      expect(pixels[i+2]!).toBeGreaterThanOrEqual(210);
+      expect(pixels[i+2]!).toBeLessThanOrEqual(241);
+    }
     for(let i=3;i<pixels.length;i+=4)expect(pixels[i]).toBe(255);
   });
   it('applies source painting to continuous torso and skull without losing relief',()=>{
