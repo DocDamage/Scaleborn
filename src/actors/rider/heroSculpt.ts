@@ -16,6 +16,7 @@ function shapedTorso(
   samples=36, radial=24,
 ):THREE.Mesh {
   const positions:number[]=[], uvs:number[]=[], index:number[]=[];
+  const rising=profile[profile.length-1]![0]>=profile[0]![0];
   for(let i=0;i<=samples;i++){
     const t=i/samples;
     const f=t*(profile.length-1), k=Math.min(profile.length-2,Math.floor(f));
@@ -30,7 +31,8 @@ function shapedTorso(
       uvs.push(j/radial,t);
       if(i<samples&&j<radial) {
         const base=i*(radial+1)+j,next=base+radial+1;
-        index.push(base,base+1,next,base+1,next+1,next);
+        if (rising) index.push(base,next,base+1,base+1,next,next+1);
+        else index.push(base,base+1,next,base+1,next+1,next);
       }
     }
   }
