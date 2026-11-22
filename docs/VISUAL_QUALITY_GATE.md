@@ -222,3 +222,13 @@ Meshes remain instanced by species/geometry with high/low detail budgets.
 Art and performance acceptance remains **open** until the actual rider-height
 captures are reviewed for canopy silhouette, groundcover coverage and
 triangle/overdraw cost on an RTX 3060.
+
+### Rider-height forest visual acceptance
+
+The visual-capture script now stages an independently controlled rider on
+real terrain twenty meters from an actual instanced lakeside oak. It saves
+`artifacts/mirrorfall-forest-browser.png` in addition to the aerial,
+shoreline and underwater renders. The scene uses normal game assets,
+physics geography and camera framing, not stock or fabricated artwork.
+Review canopy fullness, branch visibility, fern coverage and alpha cutouts
+at this viewpoint before describing the new forest as visually adequate.

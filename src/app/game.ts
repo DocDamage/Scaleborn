@@ -163,6 +163,7 @@ export class Game {
         __scalebornQaLake?: () => void;
         __scalebornQaLakeDive?: () => void;
         __scalebornQaShore?: () => void;
+        __scalebornQaForest?: () => void;
       };
       host.__scalebornQaLand = (): void => {
         // Stage and trigger atomically: no frame-rate-dependent input race.
@@ -279,6 +280,57 @@ export class Game {
         this.dragon.update(this.flight);
         this.updateCamera(1,true);
         this.updateHud(0.2);
+      };
+      host.__scalebornQaForest = (): void => {
+        // Ground-level visual acceptance, staged next to a real seeded oak.
+        // This uses an actual instanced tree from the world, not a test prop.
+        const grove=this.scene.getObjectByName('vegetation.azure.pbr-tree-wood.0');
+        if (!(grove instanceof THREE.InstancedMesh) || grove.count===0) {
+          throw new Error('Oak forest not present in rendered scene');
+        }
+        const matrix=new THREE.Matrix4(), treePos=new THREE.Vector3();
+        const chosen=new THREE.Vector3();
+        let best=Number.POSITIVE_INFINITY;
+        const targetX=GRAND_LAKE.x-GRAND_LAKE.radiusX*1.23;
+        const targetZ=GRAND_LAKE.z+GRAND_LAKE.radiusZ*.16;
+        for(let i=0;i<grove.count;i++){
+          grove.getMatrixAt(i,matrix);
+          treePos.setFromMatrixPosition(matrix);
+          if(treePos.y<GRAND_LAKE.surfaceY+4 || treePos.y>181)continue;
+          const distance=Math.hypot(treePos.x-targetX,treePos.z-targetZ);
+          if(distance<best){best=distance;chosen.copy(treePos);}
+        }
+        if(!Number.isFinite(best))throw new Error('No accessible lakeside oak');
+        const dx=chosen.x-GRAND_LAKE.x,dz=chosen.z-GRAND_LAKE.z;
+        const length=Math.max(.01,Math.hypot(dx,dz));
+        const viewX=chosen.x+dx/length*20;
+        const viewZ=chosen.z+dz/length*20;
+        const lookX=chosen.x-viewX,lookZ=chosen.z-viewZ;
+        this.flight.x=viewX+2;
+        this.flight.z=viewZ+2;
+        this.flight.y=heightAt(this.flight.x,this.flight.z)+FORMS.small.standHeight;
+        this.flight.yaw=Math.atan2(lookX,-lookZ);
+        this.flight.pitch=0;
+        this.flight.roll=0;
+        this.flight.speed=0;
+        this.flight.form='small';
+        this.flight.mode='ground';
+        this.flight.controlTarget='rider';
+        this.flight.transition=null;
+        this.flight.riderX=viewX;
+        this.flight.riderZ=viewZ;
+        this.flight.riderY=heightAt(viewX,viewZ)+.05;
+        this.flight.riderTargetY=this.flight.riderY;
+        this.flight.riderYaw=this.flight.yaw;
+        this.flight.riderSpeed=0;
+        this.flight.riderMode='ground';
+        this.cameraIndex=0;
+        this.coast.update(viewX,viewZ);
+        this.coast.setUnderwater(false);
+        this.dragon.update(this.flight);
+        this.updateCamera(1,true);
+        this.coast.updateAtmosphere(this.flight.time,this.camera.position);
+        this.updateHud(.2);
       };
       host.__scalebornQaLake = (): void => {
         this.flight.x = GRAND_LAKE.x + 78;
