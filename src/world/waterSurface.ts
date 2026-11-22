@@ -105,7 +105,7 @@ const foamFrag=`
     float turbulence=.5+.5*noiseA;
     float wisps=pow(turbulence,1.9);
     vec3 foam=mix(vec3(.55,.78,.75),vec3(.97,.99,.93),wisps);
-    gl_FragColor=vec4(foam,(.18+.55*wisps));
+    gl_FragColor=vec4(foam,(.11+.40*wisps));
   }
 `;
 

@@ -83,7 +83,7 @@ function treePrototypes(seed: number): {wood: THREE.BufferGeometry; foliage: THR
       const p = start.clone().lerp(end,t);
       p.x += (rand()-.5) * 1.75; p.y += (rand()-.5) * 2.5;
       p.z += (rand()-.5) * 1.75;
-      addLeaf(leaves,uv,p,a+rand()*6.28,0.65+rand()*0.79,0.30+rand()*0.30);
+      addLeaf(leaves,uv,p,a+rand()*6.28,1.10+rand()*1.32,0.43+rand()*0.55);
     }
   }
   const combined = mergeGeometries(wood, false);
@@ -158,7 +158,7 @@ export class PainterlyNature {
       const shore=Math.abs(lakeShoreDistance(x,z))<110;
       if(rand()<.23 && density>-0.34 && y>water+2.4 && !shore) {
         const type=Math.floor(rand()*4);
-        trees[type]!.push({x,y,z,scale:0.60+rand()*0.83,hue:rand()});
+        trees[type]!.push({x,y,z,scale:0.85+rand()*0.96,hue:rand()});
       } else {
         if(rand()<.72)grasses.push({x,y:y+.04,z,scale:0.34+rand()*0.9,hue:rand()});
         if(rand()<.052)rocks.push({x,y,z,scale:1+rand()*5,hue:rand()});
@@ -179,7 +179,7 @@ export class PainterlyNature {
       const pick=rand();
       if(pick<.34){
         const species=Math.floor(rand()*4);
-        trees[species]!.push({x,y,z,scale:.92+rand()*.85,hue:rand()});
+        trees[species]!.push({x,y,z,scale:1.10+rand()*1.15,hue:rand()});
       }else if(pick<.57){
         grasses.push({x,y:y+.06,z,scale:.65+rand()*.82,hue:rand()});
       }else if(pick<.65){
@@ -190,7 +190,7 @@ export class PainterlyNature {
     const rockMat=makeRockMaterial(quality);
     const leafTex=leafTexture();
     const leafMat=new THREE.MeshStandardMaterial({
-      color:0xd4e7cd,map:leafTex,roughness:.88,metalness:0,
+      color:0x8ebb79,map:leafTex,roughness:.88,metalness:0,
       side:THREE.DoubleSide,alphaTest:0.42,depthWrite:true,
     });
     const grassMat=new THREE.MeshStandardMaterial({

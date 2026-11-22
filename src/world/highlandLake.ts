@@ -31,10 +31,18 @@ const smoothstep = (a: number, b: number, x: number): number => {
   return t * t * (3 - 2 * t);
 };
 
+/** Low-frequency coves and headlands, shared by shore foam and water masks. */
+export function lakeBoundaryScale(theta: number): number {
+  return 1 + 0.067 * Math.sin(3 * theta + 1.10)
+    + 0.042 * Math.sin(7 * theta - 0.72)
+    + 0.023 * Math.sin(13 * theta + 2.0);
+}
+
 export function lakeRadius(x: number, z: number): number {
   const dx = (x - GRAND_LAKE.x) / GRAND_LAKE.radiusX;
   const dz = (z - GRAND_LAKE.z) / GRAND_LAKE.radiusZ;
-  return Math.hypot(dx, dz);
+  const angle = Math.atan2(dz, dx);
+  return Math.hypot(dx, dz) / lakeBoundaryScale(angle);
 }
 
 /** The shore is intentionally stable; deterministic terrain and foam agree. */

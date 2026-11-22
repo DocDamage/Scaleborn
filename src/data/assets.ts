@@ -27,6 +27,7 @@ export const ASSETS: readonly AssetManifestEntry[] = [
   { id: 'water.azure.ocean', type: 'water', source: 'procedural' },
   { id: 'water.azure.mirrorfall-lake', type: 'water', source: 'procedural' },
   { id: 'water.azure.mirrorfall-cascade', type: 'water', source: 'procedural' },
+  { id: 'terrain.azure.mirrorfall-cliff', type: 'terrain', source: 'procedural' },
   { id: 'vegetation.azure.pbr-tree', type: 'vegetation', source: 'procedural' },
   { id: 'vegetation.azure.waving-grass', type: 'vegetation', source: 'procedural' },
   { id: 'terrain.azure.rounded-pbr-boulders', type: 'terrain', source: 'procedural' },
