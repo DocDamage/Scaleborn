@@ -90,9 +90,15 @@ const fragment=`
     float porosity=noise(vec2(p.x*58.0+vSheetFold*2.3,
       p.y*66.0-t*flowAccel*.7));
     float breakup=smoothstep(.31,.67,porosity+broken*.15);
-    float baseAlpha=edge*(.18+.40*turbulence+.13*wash);
+    // Coherent slow-moving gaps break the silhouette into distinct
+    // water fingers instead of blending three opaque, square veils.
+    float macroSplit=noise(vec2(p.x*11.0+
+      sin(p.y*13.0)*.19,p.y*6.0-t*.48));
+    float jetIsolation=smoothstep(.38,.69,macroSplit+.13*whiteJet);
+    float baseAlpha=edge*(.105+.265*turbulence+.085*wash);
     baseAlpha*=mix(1.0,.38+.62*breakup,nearImpact*.85);
-    baseAlpha+=nearImpact*edge*broken*breakup*.15;
+    baseAlpha*=mix(1.0,.27+.73*jetIsolation,nearImpact*.65);
+    baseAlpha+=nearImpact*edge*broken*breakup*.09;
     vec3 base=vec3(.11,.29,.36);
     vec3 white=vec3(.91,.98,.96);
     vec3 color=mix(base,white,
@@ -112,11 +118,16 @@ function ribbon(width:number,zOffset:number,phase:number,material:THREE.ShaderMa
     const y=MIRRORFALL.topY - down*t;
     for(let j=0;j<=nx;j++){
       const u=j/nx;
-      const offset=(u-.5)*width*(.74+t*.49+.065*Math.sin(t*17+phase));
+      const offset=(u-.5)*width*(.74+t*.49+
+        .065*Math.sin(t*17+phase)+.047*Math.sin(u*11+t*5+phase));
       const ruffle=Math.sin(u*29+t*17+phase)*(.62+t*3.1)
           +Math.sin(u*66-t*12+phase)*.35;
+      // The headwater lip is eroded into scallops; the rest accelerates
+      // down a curved fall. No new draw calls or physics discontinuities.
+      const lipRelief=(1-t)*(.55*Math.sin(u*23+phase)
+        +.27*Math.sin(u*51-phase));
       points.push(x+Math.sin(u*8+phase)*1.1,
-        y+Math.sin(u*24+phase)*.25,
+        y+Math.sin(u*24+phase)*.25+lipRelief,
         GRAND_LAKE.z+zOffset+offset+ruffle);
       uv.push(u,t);
       if(i<ny && j<nx){

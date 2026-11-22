@@ -18,6 +18,8 @@ describe('animated cascade veils and wave-matched ballistic splash', () => {
       expect(shader.vertexShader).toContain('sheetFlutter.x +=');
       expect(shader.fragmentShader).toContain('flowAccel');
       expect(shader.fragmentShader).toContain('float porosity=');
+      expect(shader.fragmentShader).toContain('float macroSplit=');
+      expect(shader.fragmentShader).toContain('jetIsolation');
       expect(shader.fragmentShader).toContain('baseAlpha*=mix(1.0');
       expect(shader.fog).toBe(true);
       cascade.update(2.45);
@@ -26,6 +28,11 @@ describe('animated cascade veils and wave-matched ballistic splash', () => {
         const uv=curtain.geometry.getAttribute('uv');
         expect(uv.getY(0)).toBe(0);
         expect(uv.getY(uv.count-1)).toBe(1);
+        const position=curtain.geometry.getAttribute('position');
+        const crestSamples=Array.from({length:25},(_,i)=>position.getY(i));
+        expect(Math.max(...crestSamples)-Math.min(...crestSamples))
+          .toBeGreaterThan(.60);
+        expect(crestSamples.every(Number.isFinite)).toBe(true);
         expect(curtain.material).toBe(shader);
       }
     } finally {cascade.dispose();}

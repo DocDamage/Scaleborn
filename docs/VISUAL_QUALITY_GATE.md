@@ -1039,3 +1039,18 @@ simulated aerosol dynamics or final visual acceptance. Transparency blending
 within a single instance batch is not individually depth sorted; inspect
 actual near/far mist overlap in WebGL and measure the effect on the target
 RTX 3060 before claiming performance or quality improvements as verified.
+
+### Mirrorfall curtain translucency and irregular crest (WebGL correction)
+
+The real Mirrorfall browser artifact still showed an overly broad, solid
+rectangular-looking white curtain. The three existing animated veils now
+receive slower macro-scale opacity gaps on top of their existing fast
+filament turbulence, with reduced overlapping alpha near the plunge pool.
+Each of the same three **unchanged draw-call** meshes now has a scalloped
+water-lip silhouette and variable lateral spread using finite CPU geometry.
+The shared water ballistic trajectory, lake depth, shader fog block,
+filaments, spray, mist, collision and deterministic world seed remain.
+
+The latest texture/geometry changes still require fresh actual browser
+screenshots. This is a visual revision to an approximation of turbulent
+water, not proof of physical fluid simulation or visual-gate acceptance.
