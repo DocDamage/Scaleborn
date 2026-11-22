@@ -62,7 +62,14 @@ export function stepRider(state: FlightState, controls: FlightControls, dt: numb
   const canWade = shallows && clearStructures &&
     Math.abs(nextHeight - heightAt(state.riderX, state.riderZ)) < 1.0;
   const canSwim = riderCanSwim(nx, nz) && nextHeight < Math.min(nextWaterLevel, state.riderY - 0.2);
-  if (canWalk && (!water || state.riderY >= riderSurfaceY(state.riderX, state.riderZ) - 0.3)) {
+  // The creek lip is >100m above its plunge pool. Its bank transitions
+  // from elevated freshwater to dry highland terrain within a few metres.
+  // A swimmer must not snap instantly down a multi-metre ledge merely
+  // because the destination is classified as dry ground. Uphill bank exits
+  // remain available; large drops need a future controlled falling state.
+  const safeWaterExit = !water || nextHeight >= state.riderY - 1.25;
+  if (canWalk && safeWaterExit
+      && (!water || state.riderY >= riderSurfaceY(state.riderX, state.riderZ) - 0.3)) {
     state.riderX = nx; state.riderZ = nz;
     state.riderMode = 'ground';
     state.riderTargetY = nextHeight + 0.05;

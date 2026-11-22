@@ -843,3 +843,15 @@ shallow and bubbles never descend below its true terrain floor.
 This adds a recognizable underwater impact effect but is not true two-way
 air-water turbulence, fluid-pressure modeling or a volumetric CFD solver.
 Close-up gameplay screenshots and GPU fill-rate acceptance remain outstanding.
+
+### Safe, non-teleporting rider exits from elevated headwater
+
+At the new source creek, `waterSurfaceAt` can change from ~176m freshwater
+to a dry escarpment after crossing the western lip. The existing independent
+rider controller considered the dry target walkable and immediately snapped
+the swimmer down to the next terrain height. A conservative 1.25m maximum
+one-tick downward bank-exit allowance now protects that transition; ordinary
+uphill lake/ocean exits and level ground movement remain unchanged. River
+flow cannot silently push the rider into a physics-mode teleport. This is a
+safety constraint pending a future full airborne-rider/falling controller,
+not a claim that waterfall descent is already fully simulated.
