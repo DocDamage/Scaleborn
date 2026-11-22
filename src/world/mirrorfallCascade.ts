@@ -123,7 +123,14 @@ export class MirrorfallCascade {
   constructor(){
     this.group.name='water.azure.mirrorfall-cascade';
     this.waterMat=new THREE.ShaderMaterial({
-      uniforms:{uTime:{value:0}},vertexShader:vertex,fragmentShader:fragment,
+      // Custom ShaderMaterial fog chunks require the full stock fog uniform
+      // block. Without it WebGLRenderer dereferences undefined.value on the
+      // first rendered frame, freezing gameplay and screenshot automation.
+      uniforms:THREE.UniformsUtils.merge([
+        THREE.UniformsLib.fog,
+        {uTime:{value:0}},
+      ]),
+      vertexShader:vertex,fragmentShader:fragment,
       side:THREE.DoubleSide,transparent:true,depthWrite:false,fog:true,
     });
     for(const [i,width,offset] of [[0,78,0],[1,42,-21],[2,32,24]] as const){

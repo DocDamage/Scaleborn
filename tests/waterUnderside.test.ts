@@ -46,6 +46,11 @@ describe('submerged water-surface rendering contracts', () => {
       expect(curtain).toBeInstanceOf(THREE.Mesh);
       const material = (curtain as THREE.Mesh).material as THREE.ShaderMaterial;
       expect(material.fog).toBe(true);
+      expect(material.uniforms.fogColor?.value).toBeInstanceOf(THREE.Color);
+      expect(Number.isFinite(material.uniforms.fogDensity?.value)).toBe(true);
+      expect(Number.isFinite(material.uniforms.fogNear?.value)).toBe(true);
+      expect(Number.isFinite(material.uniforms.fogFar?.value)).toBe(true);
+      expect(material.uniforms.uTime?.value).toBe(0);
       expect(material.vertexShader).toContain('#include <fog_vertex>');
       expect(material.fragmentShader).toContain('#include <fog_fragment>');
     } finally {
