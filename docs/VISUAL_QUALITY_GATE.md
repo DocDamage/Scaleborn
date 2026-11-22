@@ -813,3 +813,18 @@ material or extra draw calls are changed. New tests trace the entire
 waterfall against the actual terrain heightfield and the same airborne
 dragon contact field. This is a gravity-inspired ballistic approximation,
 not a fluid-trajectory solver; inspect actual browser views.
+
+### Wind-dispersed, buoyant impact mist
+
+`src/world/waterfallMist.ts` replaces the 18 large, uniformly oscillating
+splash sprites with 16 Low / 36 High seed-stable mist wisps. A single generated
+96x96 feathered RGBA texture is shared by all wisps. Individual plumes
+rise, expand, drift offshore, and fade in and out over staggered lifetimes,
+rather than moving as a rigid row of circular billboards. The splash source
+tracks the same instantaneous freshwater impact-wave height as the falling
+spray. Existing curtain, current, pool foam, and swimmer mechanics are
+unchanged. The reusable texture, per-sprite materials, and scene nodes
+are released during disposal; the per-frame update creates no new sprites.
+This is a visual particle approximation, not simulated aerosol transport.
+Actual rider-height browser screenshots and RTX 3060 profile remain open
+acceptance blockers.

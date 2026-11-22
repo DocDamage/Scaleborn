@@ -7,6 +7,7 @@ import { MIRRORFALL_IMPACT } from './waterDynamics';
 import { PlungePoolFoam } from './plungePoolFoam';
 import { makeSprayStreakGeometry, makeSprayStreakTexture } from './sprayStreak';
 import { createCascadeFilaments } from './waterfallFilaments';
+import { WaterfallMist } from './waterfallMist';
 import { waterfallCenterXAt } from './waterfallTrajectory';
 
 const plungeX=MIRRORFALL_IMPACT.x;
@@ -157,7 +158,7 @@ export class MirrorfallCascade {
   private readonly sprayTexture:THREE.DataTexture;
   private readonly velocity=new THREE.Vector3();
   private readonly up=new THREE.Vector3(0,1,0);
-  private readonly mist:THREE.Sprite[]=[];
+  private readonly mist:WaterfallMist;
   private previousTime=0;
   constructor(quality:'high'|'low'='high'){
     this.group.name='water.azure.mirrorfall-cascade';
@@ -203,31 +204,9 @@ export class MirrorfallCascade {
     // Irregular, lake-clipped foam surface replaces artificial torus circles.
     this.group.add(this.foam.mesh);
 
-    const texture=this.makeMistTexture();
-    for(let i=0;i<18;i++){
-      const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
-        map:texture,transparent:true,opacity:.15+(i%4)*.055,
-        depthWrite:false,color:0xe3f6ed,
-      }));
-      sprite.position.set(plungeX+(this.random()-.5)*49,
-        GRAND_LAKE.surfaceY+8+(i%5)*4,
-        GRAND_LAKE.z+(this.random()-.5)*42);
-      sprite.scale.set(29+(i%5)*12,19+(i%3)*10,1);
-      this.mist.push(sprite);this.group.add(sprite);
-    }
-  }
-
-  private makeMistTexture():THREE.Texture{
-    const n=64,bytes=new Uint8Array(n*n*4);
-    for(let y=0;y<n;y++)for(let x=0;x<n;x++){
-      const dx=(x+.5-n/2)/(n/2),dy=(y+.5-n/2)/(n/2);
-      const a=Math.exp(-(dx*dx+dy*dy)*5.0);
-      const j=(y*n+x)*4;
-      bytes[j]=226;bytes[j+1]=246;bytes[j+2]=241;bytes[j+3]=Math.round(a*255);
-    }
-    const t=new THREE.DataTexture(bytes,n,n,THREE.RGBAFormat);
-    t.magFilter=THREE.LinearFilter;t.minFilter=THREE.LinearFilter;t.needsUpdate=true;
-    return t;
+    // Deterministic rising spray clouds replace the fixed oscillating sprites.
+    this.mist=new WaterfallMist(quality);
+    this.group.add(this.mist.group);
   }
 
   private reset(d:Droplet,randomAge:boolean):void{
@@ -271,13 +250,11 @@ export class MirrorfallCascade {
     });
     this.spray.instanceMatrix.needsUpdate=true;
     this.foam.update(time);
-    this.mist.forEach((s,i)=>{
-      s.position.y=GRAND_LAKE.surfaceY+5+(i%5)*4+Math.sin(time*.56+i)*2.1;
-      s.position.x=plungeX+Math.sin(time*.18+i*1.4)*11;
-    });
+    this.mist.update(time);
   }
   dispose():void{
     this.foam.dispose();
+    this.mist.dispose();
     const geometries=new Set<THREE.BufferGeometry>();
     const materials=new Set<THREE.Material>();
     this.group.traverse(obj=>{
@@ -289,8 +266,6 @@ export class MirrorfallCascade {
     });
     geometries.forEach(g=>g.dispose());
     materials.forEach(m=>m.dispose());
-    const tex=(this.mist[0]?.material as THREE.SpriteMaterial|undefined)?.map;
-    tex?.dispose();
     this.sprayTexture.dispose();
     this.group.removeFromParent();
   }
