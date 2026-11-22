@@ -1,30 +1,12 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { captureQaScreenshot } from './qa-screenshot.mjs';
 
 /** Fast, isolated real-WebGL capture; never use AI-generated imagery as QA.
  * --hardware uses the *high* game materials and refuses software fallback.
  * The default software-WebGL test remains unchanged for reproducible CI.
  */
-
-/**
- * Snapshot only a fully rendered game frame, without racing the next costly
- * software-WebGL draw. Repeated screenshots still use the real game scene.
- */
-async function captureQaScreenshot(page, options) {
-  await page.evaluate(() => {
-    if (typeof window.__scalebornQaHoldNextFrame !== 'function') {
-      throw new Error('Real-frame QA capture hook missing');
-    }
-    return window.__scalebornQaHoldNextFrame();
-  });
-  try {
-    await page.screenshot(options);
-  } finally {
-    await page.evaluate(() => window.__scalebornQaResumeFrames?.());
-  }
-}
-
 async function main() {
   const hardware = process.argv.includes('--hardware');
   const screenshotFile = (path) => hardware

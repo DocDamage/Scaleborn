@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { captureQaScreenshot } from './qa-screenshot.mjs';
 
 /**
  * Optional, real-WebGL headwater capture. Separate from the five-frame
@@ -39,7 +40,7 @@ async function main(){
       null,{timeout:30000});
     await page.waitForTimeout(650);
     await mkdir('artifacts',{recursive:true});
-    await page.screenshot({
+    await captureQaScreenshot(page, {
       path:'artifacts/mirrorfall-headwaters-browser.png',timeout:120000,
     });
     // A separate on-demand dive showcases the waterfall's actual
@@ -53,7 +54,7 @@ async function main(){
       document.querySelector('#mode-name')?.textContent==='DIVING',
       null,{timeout:30000});
     await page.waitForTimeout(650);
-    await page.screenshot({
+    await captureQaScreenshot(page, {
       path:'artifacts/mirrorfall-impact-underwater-browser.png',timeout:120000,
     });
     assert.deepEqual(errors,[],'No WebGL/JavaScript errors');
