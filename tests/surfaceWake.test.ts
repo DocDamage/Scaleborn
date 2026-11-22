@@ -90,8 +90,8 @@ describe('water-surface response to swimming',()=>{
       type Shader=Parameters<THREE.MeshBasicMaterial['onBeforeCompile']>[0];
       const shader={
         uniforms:{},
-        vertexShader:'#include <common>\\n#include <begin_vertex>',
-        fragmentShader:'#include <common>\\n#include <color_fragment>',
+        vertexShader:'#include <common>\n#include <begin_vertex>',
+        fragmentShader:'#include <common>\n#include <color_fragment>',
       } as Shader;
       mat.onBeforeCompile(shader,{} as THREE.WebGLRenderer);
       expect(shader.vertexShader).toContain('scWakeHeight(scWakeWorld.xz)');
