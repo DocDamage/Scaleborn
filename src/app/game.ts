@@ -10,6 +10,7 @@ import { CoastDiscovery } from '../world/discoveries';
 import { toggleDragonDive } from '../actors/dragon/swimming';
 import { toggleRiderControl, toggleRiderDive } from '../actors/rider/movement';
 import { SEA_LEVEL, LANDMARKS } from '../world/terrain';
+import { GRAND_LAKE } from '../world/highlandLake';
 import { TIDEGATE, newTidegateState, stepTidegate, interactTidegate, tidegateNearby, tidegateHint } from '../world/tidegate';
 import {
   ECHO_SHRINE, newTidalEchoState, echoPhase, echoObjective,
@@ -67,6 +68,10 @@ export class Game {
   private readonly altLabel = requireElement<HTMLElement>('#altitude-label');
   private readonly waterTint = requireElement<HTMLElement>('#water-tint');
   private readonly actionToast = requireElement<HTMLElement>('#action-toast');
+  private readonly menuButton = requireElement<HTMLButtonElement>('#menu-toggle');
+  private readonly compass = requireElement<HTMLElement>('#compass-heading');
+  private readonly app = requireElement<HTMLElement>('#app');
+  private menuOpen = false;
   private actionTimer = 0;
   private lastTime = 0;
   private accumulator = 0;
@@ -110,6 +115,13 @@ export class Game {
       this.flight.y = 16;
       this.flight.yaw = 0.7;
       this.flight.speed = 0;
+    } else if (start === 'lake' || start === 'mirrorfall') {
+      this.flight.x = GRAND_LAKE.x + 78;
+      this.flight.z = GRAND_LAKE.z + 76;
+      this.flight.y = GRAND_LAKE.surfaceY + 77;
+      this.flight.yaw = 1.31;
+      this.flight.pitch = -0.07;
+      this.flight.speed = 25;
     }
     this.coast = new AzureCoast(this.scene);
     this.dragon.attach(this.scene);
@@ -128,6 +140,7 @@ export class Game {
         __scalebornQaStageRiderRune?: () => void;
         __scalebornQaStageShrine?: () => void;
         __scalebornQaStageEchoReturn?: () => void;
+        __scalebornQaLake?: () => void;
       };
       host.__scalebornQaLand = (): void => {
         // Stage and trigger atomically: no frame-rate-dependent input race.
@@ -223,6 +236,25 @@ export class Game {
         this.coast.update(this.flight.x, this.flight.z);
         this.updateHud(0.2);
       };
+      host.__scalebornQaLake = (): void => {
+        this.flight.x = GRAND_LAKE.x + 78;
+        this.flight.z = GRAND_LAKE.z + 76;
+        this.flight.y = GRAND_LAKE.surfaceY + 77;
+        this.flight.yaw = 1.31;
+        this.flight.pitch = -0.07;
+        this.flight.roll = 0;
+        this.flight.speed = 0;
+        this.flight.form = 'rideable';
+        this.flight.mode = 'air';
+        this.flight.controlTarget = 'dragon';
+        this.flight.transition = null;
+        this.cameraIndex = 0;
+        this.coast.update(this.flight.x, this.flight.z);
+        this.coast.setUnderwater(false);
+        this.dragon.update(this.flight);
+        this.updateCamera(1, true);
+        this.updateHud(0.2);
+      };
       host.__scalebornQaAdvance = (frames: number): void => {
         if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
           throw new Error('QA frames must be an integer between 1 and 180');
@@ -257,6 +289,7 @@ export class Game {
     this.echoAction.addEventListener('click', () => {
       if (!this.paused) this.interactWithRune();
     });
+    this.menuButton.addEventListener('click', () => this.toggleMenu());
     requireElement<HTMLButtonElement>('#start').addEventListener('click', () => this.begin(canvas));
     canvas.addEventListener('click', () => {
       if (!this.paused && !this.input.isLocked()) void canvas.requestPointerLock();
@@ -264,6 +297,14 @@ export class Game {
     window.addEventListener('resize', () => this.resize());
     this.updateCamera(1, true);
     this.cameraText.textContent = cameraModes[this.cameraIndex] ?? 'CHASE';
+  }
+
+  private toggleMenu(): void {
+    this.menuOpen = !this.menuOpen;
+    this.app.classList.toggle('hud-menu-open', this.menuOpen);
+    this.menuButton.setAttribute('aria-expanded', String(this.menuOpen));
+    this.menuButton.textContent = this.menuOpen ? 'Close · M' : 'Controls · M';
+    if (this.menuOpen && document.pointerLockElement) void document.exitPointerLock();
   }
 
   private begin(canvas: HTMLCanvasElement): void {
@@ -424,6 +465,10 @@ export class Game {
       button.setAttribute('aria-pressed', String(selected));
     });
     this.cameraText.textContent = cameraModes[this.cameraIndex] ?? 'CHASE';
+    const yaw = this.flight.controlTarget === 'rider' ? this.flight.riderYaw : this.flight.yaw;
+    const deg = ((yaw * 180 / Math.PI) % 360 + 360) % 360;
+    const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+    this.compass.textContent = dirs[Math.round(deg / 45) % 8] ?? 'N';
     const target = this.discoveries.nearest(current.x, current.z);
     this.waypointName.textContent = target?.name ?? 'Coast fully charted';
     this.waypointDistance.textContent = target ? Math.round(target.meters) + ' m' : LANDMARKS.length + ' discoveries found';
@@ -465,8 +510,9 @@ export class Game {
       this.intro.hidden = !this.paused;
       if (this.paused && document.pointerLockElement) void document.exitPointerLock();
     }
+    if (this.input.take('menu')) this.toggleMenu();
     if (this.input.take('camera')) this.cameraIndex = (this.cameraIndex + 1) % cameraModes.length;
-    if (!this.paused) {
+    if (!this.paused && !this.menuOpen) {
       if (this.input.take('land')) this.landAction();
       if (this.input.take('switchFocus')) this.notify(toggleRiderControl(this.flight));
       if (this.input.take('submerge')) this.diveAction();
@@ -477,7 +523,7 @@ export class Game {
     }
     this.actionTimer = Math.max(0, this.actionTimer - elapsed);
     if (this.actionTimer === 0) this.actionToast.hidden = true;
-    if (!this.paused) {
+    if (!this.paused && !this.menuOpen) {
       this.accumulator = Math.min(0.1, this.accumulator + elapsed);
       const controls = this.input.sample();
       let steps = 0;

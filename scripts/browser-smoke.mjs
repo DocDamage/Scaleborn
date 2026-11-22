@@ -161,8 +161,15 @@ async function main() {
     assert.equal(stored?.tidegateSolved, true);
     assert.equal(stored?.echo?.collected, true);
     assert.equal(stored?.echo?.attuned, true);
+    // A real rendered visual acceptance screenshot, not a generated concept image.
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaLake !== 'function') throw new Error('Lake QA hook missing');
+      window.__scalebornQaLake();
+    });
+    await page.waitForTimeout(850);
+    await page.screenshot({ path: 'artifacts/mirrorfall-lake-visual.png', timeout: 60000 });
     assert.deepEqual(errors, [], 'Browser reported runtime or shader errors');
-    console.log('PASS: WebGL2, dragon/rider controls, ocean diving, Tidegate, Tidal Echo shrine and saved quest progress.');
+    console.log('PASS: WebGL2, dragon/rider controls, ocean diving, quest progress and Mirrorfall Lake visual screenshot.');
   } finally {
     await browser.close();
   }

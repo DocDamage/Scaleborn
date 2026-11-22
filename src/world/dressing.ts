@@ -207,9 +207,8 @@ function clouds(scene: THREE.Scene): void {
   scene.add(mesh);
 }
 
-export function addCoastalDressing(scene: THREE.Scene): void {
-  makeFoliage(scene);
-  makeGroundCover(scene);
+export function addCoastalDressing(scene: THREE.Scene, useLegacyNature = true): void {
+  if (useLegacyNature) { makeFoliage(scene); makeGroundCover(scene); }
   clouds(scene);
   addAncientLandmarks(scene);
   const harbor = LANDMARKS.find((l) => l.id === 'azure.harbor');

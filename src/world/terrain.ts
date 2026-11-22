@@ -1,4 +1,5 @@
 import { fbm } from '../core/random';
+import { GRAND_LAKE, MIRRORFALL, sculptMirrorfallTerrain, waterSurfaceAt } from './highlandLake';
 
 export const AZURE_SEED = 0x5ca1e0;
 export const WORLD_WIDTH_METERS = 4000;
@@ -13,6 +14,8 @@ export const LANDMARKS: readonly WorldAnchor[] = [
   { id: 'azure.sea-arch', x: 565, z: 775 },
   { id: 'azure.sunken-shrine', x: 1560, z: 1440 },
   { id: 'azure.tidegate', x: -553.3, z: 100 },
+  { id: GRAND_LAKE.id, x: GRAND_LAKE.x, z: GRAND_LAKE.z },
+  { id: MIRRORFALL.id, x: MIRRORFALL.x, z: MIRRORFALL.z },
 ];
 
 /** Meter-based X/Z geography. Y is up. Fixed islands, deterministic erosion-like detail. */
@@ -32,12 +35,12 @@ export function heightAt(x: number, z: number, seed = AZURE_SEED): number {
   const weight = Math.min(1, Math.max(0, mass / 75));
   const ridge = Math.abs(fbm(x * 0.0038, z * 0.0038, seed + 17, 4));
   const fine = fbm(x * 0.018, z * 0.018, seed + 71, 3);
-  return mass - 52 + (ridge * 21 + fine * 10) * weight;
+  return sculptMirrorfallTerrain(x, z, mass - 52 + (ridge * 21 + fine * 10) * weight, seed);
 }
 
 /** Ground plus near-water margin for safe flight (underwater is a later milestone). */
 export function minimumFlightY(x: number, z: number): number {
-  return Math.max(11, heightAt(x, z) + 10);
+  return Math.max(11, waterSurfaceAt(x, z) + 10, heightAt(x, z) + 10);
 }
 
 export function biomeAt(x: number, z: number): 'seabed' | 'beach' | 'grass' | 'forest' | 'cliff' {

@@ -15,11 +15,11 @@ export function toggleDragonDive(state: FlightState): InteractionResult {
     const check = canDragonDive(state.x, state.z, state.form);
     if (!check.ok) return { ok: false, message: check.reason };
     state.mode = 'underwater';
-    state.waterTargetY = dragonDiveY(state.form);
+    state.waterTargetY = dragonDiveY(state.form, state.x, state.z);
     return { ok: true, message: 'Dragon dives below the waves.' };
   }
   state.mode = 'surface';
-  state.waterTargetY = dragonSurfaceY(state.form);
+  state.waterTargetY = dragonSurfaceY(state.form, state.x, state.z);
   return { ok: true, message: 'Dragon swims toward the surface.' };
 }
 
@@ -41,7 +41,7 @@ export function stepDragonSwimming(state: FlightState, controls: FlightControls,
     state.z = nz;
   } else state.speed = 0;
   const bottom = dragonBottomY(state.x, state.z, state.form);
-  const top = dragonSurfaceY(state.form);
+  const top = dragonSurfaceY(state.form, state.x, state.z);
   if (underwater) {
     state.waterTargetY += clamp(controls.bank, -1, 1) * dt * 8;
     state.waterTargetY = clamp(state.waterTargetY, bottom, top - 1.0);

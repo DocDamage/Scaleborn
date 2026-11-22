@@ -2,6 +2,7 @@ import { hash2 } from '../core/random';
 import type { DragonForm } from '../actors/dragon/forms';
 import { FORMS } from '../actors/dragon/forms';
 import { AZURE_SEED, heightAt, LANDMARKS } from './terrain';
+import { waterSurfaceAt } from './highlandLake';
 
 export interface WorldObstacle {
   id: string;
@@ -61,7 +62,8 @@ export function highestTerrainUnder(x: number, z: number, radius: number): numbe
 /** Automatic clearance is intentionally forgiving for arcade flight. */
 export function safeFlightY(x: number, z: number, form: DragonForm): number {
   const config = FORMS[form];
-  let floor = Math.max(11, highestTerrainUnder(x, z, config.radius) + Math.max(10, config.standHeight + 6));
+  let floor = Math.max(11, waterSurfaceAt(x,z)+10,
+    highestTerrainUnder(x, z, config.radius) + Math.max(10, config.standHeight + 6));
   for (const o of nearbyObstacle(x, z, config.radius)) {
     floor = Math.max(floor, o.top + config.standHeight + 3);
   }
@@ -76,7 +78,7 @@ export interface ClearanceResult {
 export function canStand(x: number, z: number, form: DragonForm): ClearanceResult {
   const config = FORMS[form];
   const ground = heightAt(x, z);
-  if (ground < 2) return { ok: false, reason: 'Land traversal requires solid ground; swimming comes later.' };
+  if (ground < waterSurfaceAt(x,z) + 2) return { ok: false, reason: 'Land traversal requires dry ground. Swim in deep water instead.' };
   const high = highestTerrainUnder(x, z, config.radius);
   if (high - ground > Math.max(1.9, config.radius * 0.85)) {
     return { ok: false, reason: 'Ground is too uneven for this dragon form.' };

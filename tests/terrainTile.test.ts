@@ -18,9 +18,9 @@ describe('procedural terrain geometry', () => {
     try {
       const high = surface(a.group).getAttribute('position');
       const low = surface(b.group).getAttribute('position');
-      for (let k = 0; k <= 8; k++) {
-        const fineVertex = (k * 4) * 33 + 32;
-        const coarseVertex = k * 9;
+      for (let k = 0; k <= 16; k++) {
+        const fineVertex = (k * 4) * 65 + 64;
+        const coarseVertex = k * 17;
         expect(high.getY(fineVertex)).toBeCloseTo(low.getY(coarseVertex), 4);
       }
     } finally {

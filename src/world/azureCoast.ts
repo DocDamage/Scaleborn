@@ -2,7 +2,10 @@ import * as THREE from 'three';
 import { TILE_METERS, TILE_RADIUS, specKey, tileSpec } from './tileLod';
 import { makeTerrainTile, disposeTerrainTile } from './terrainTile';
 import { addCoastalDressing } from './dressing';
-import { PainterlyOcean } from './ocean';
+import { PainterlyWaterSurface, LakeShoreFoam, makeFoamShader } from './waterSurface';
+import { MirrorfallCascade } from './mirrorfallCascade';
+import { PainterlyNature } from './painterlyNature';
+import { makeTerrainMaterial } from './materials';
 import { PainterlySky } from './sky';
 import { addMarineDressing } from './marineDressing';
 import { TidegateVisual } from './tidegateVisual';
@@ -17,14 +20,13 @@ export class AzureCoast {
   private tiles = new Map<string, TerrainTile>();
   private lastTileX = Number.NaN;
   private lastTileZ = Number.NaN;
-  private readonly terrainMaterial = new THREE.MeshLambertMaterial({
-    vertexColors: true, flatShading: false, side: THREE.DoubleSide,
-  });
-  private readonly foamMaterial = new THREE.MeshBasicMaterial({
-    color: 0xccece7, transparent: true, opacity: 0.63,
-    depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
-  });
-  private readonly water = new PainterlyOcean();
+  private readonly terrainMaterial = makeTerrainMaterial();
+  private readonly foamMaterial = makeFoamShader();
+  private readonly water = new PainterlyWaterSurface('ocean');
+  private readonly lake = new PainterlyWaterSurface('lake');
+  private readonly lakeFoam = new LakeShoreFoam();
+  private readonly waterfall = new MirrorfallCascade();
+  private readonly nature: PainterlyNature;
   private readonly sky = new PainterlySky();
   private readonly tidegate = new TidegateVisual();
   private readonly echoVisual = new TidalEchoVisual();
@@ -45,8 +47,9 @@ export class AzureCoast {
     sun.position.set(-420, 600, -520);
     scene.add(sun);
     this.ocean = this.water.mesh;
-    scene.add(this.sky.mesh, this.ocean);
-    addCoastalDressing(scene);
+    scene.add(this.sky.mesh, this.ocean, this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group);
+    this.nature = new PainterlyNature(scene);
+    addCoastalDressing(scene, false);
     addMarineDressing(scene);
     scene.add(this.tidegate.root, this.echoVisual.root);
   }
@@ -98,6 +101,11 @@ export class AzureCoast {
 
   animate(time: number, x: number, y: number, z: number): void {
     this.water.update(time);
+    this.lake.update(time);
+    this.lakeFoam.update(time);
+    this.waterfall.update(time);
+    this.nature.update(time);
+    this.foamMaterial.uniforms.uTime!.value=time;
     this.sky.moveWithCamera(x, y, z);
   }
 
@@ -116,6 +124,10 @@ export class AzureCoast {
     this.terrainMaterial.dispose();
     this.foamMaterial.dispose();
     this.water.dispose();
+    this.lake.dispose();
+    this.lakeFoam.dispose();
+    this.waterfall.dispose();
+    this.nature.dispose();
     this.sky.dispose();
     this.echoVisual.dispose();
   }

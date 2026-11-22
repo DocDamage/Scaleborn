@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { AZURE_SEED, SEA_LEVEL } from './terrain';
 import { fbm } from '../core/random';
+import { GRAND_LAKE, lakeShoreDistance } from './highlandLake';
 import { stitchedHeight, TILE_METERS, type TileSpec } from './tileLod';
 
 const sand = new THREE.Color(0xe8cfa6);
@@ -22,6 +23,9 @@ function paintTerrain(x: number, z: number, h: number, target: THREE.Color): voi
   else if (h < 32) target.copy(sand).lerp(grass, Math.min(1, (h - 8) / 24));
   else if (h < 88) target.copy(grass).lerp(forest, Math.min(1, (h - 32) / 56));
   else target.copy(forest).lerp(stone, Math.min(1, (h - 88) / 45));
+  if (Math.abs(lakeShoreDistance(x,z)) < 18 && Math.abs(h-GRAND_LAKE.surfaceY)<10) {
+    target.copy(sand).lerp(stone, .26 + Math.abs(wash)*.21);
+  }
   if (h > 9) target.lerp(wash > 0 ? ochre : blueSage, Math.min(0.24, Math.abs(wash) * 0.42));
   target.lerp(white, Math.max(0, variation) * 0.06);
   target.multiplyScalar(0.95 + variation * 0.14);

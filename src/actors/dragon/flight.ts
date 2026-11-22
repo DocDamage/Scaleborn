@@ -1,4 +1,5 @@
 import { minimumFlightY, SPAWN, heightAt, SEA_LEVEL } from '../../world/terrain';
+import { waterSurfaceAt } from '../../world/highlandLake';
 import { canExpandInAir, canStand, safeFlightY } from '../../world/collision';
 import {
   canEnterSea, dragonBottomY, dragonSurfaceY, WATER_ENTRY_HEIGHT,
@@ -108,7 +109,7 @@ export function toggleLanding(state: FlightState): InteractionResult {
   if (state.transition) return reject('Finish the current flight maneuver first.');
   if (state.mode === 'underwater') return reject('Return to the surface before taking off.');
   if (state.mode === 'surface') {
-    if (state.y < dragonSurfaceY(state.form) - 1) {
+    if (state.y < dragonSurfaceY(state.form, state.x, state.z) - 1) {
       return reject('Reach the surface before taking off.');
     }
     beginTraversal(state, 'waterLaunch',
@@ -116,13 +117,14 @@ export function toggleLanding(state: FlightState): InteractionResult {
       FORMS[state.form].cruise * 0.72);
     return accept('Rising out of the water — wings unfurling.');
   }
-  if (state.mode === 'air' && heightAt(state.x, state.z) < SEA_LEVEL - 3) {
+  const localWaterLevel = waterSurfaceAt(state.x, state.z);
+  if (state.mode === 'air' && heightAt(state.x, state.z) < localWaterLevel - 3) {
     const check = canEnterSea(state.x, state.z, state.form);
     if (!check.ok) return reject(check.reason);
-    if (state.y - SEA_LEVEL > WATER_ENTRY_HEIGHT) {
+    if (state.y - localWaterLevel > WATER_ENTRY_HEIGHT) {
       return reject('Descend closer to the sea before splashing down.');
     }
-    beginTraversal(state, 'splashdown', dragonSurfaceY(state.form), 0);
+    beginTraversal(state, 'splashdown', dragonSurfaceY(state.form, state.x, state.z), 0);
     return accept('Dragon splashes into the sea.');
   }
   const check = canStand(state.x, state.z, state.form);

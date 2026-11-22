@@ -1,5 +1,7 @@
 # Scaleborn
 
+**VISUAL OVERHAUL IN PROGRESS:** the large HUD and primitive tree/terrain/water rendering are being replaced by an original painterly PBR environment, Mirrorfall Lake and Cascade. See [visual acceptance gate](docs/VISUAL_QUALITY_GATE.md). Gameplay G3 continues to work but the art is not finished.
+
 **Scaleborn** is an original painterly 3D fantasy adventure about a 13-year-old dragon-human hybrid and her bonded dragon. The project begins with a **desktop-browser Azure Coast flight prototype** and is structured for a later **Unreal Engine implementation**. Browser gameplay will not automatically transfer to Unreal.
 
 ## Current state: G0–G3, expanding G3.2 multi-location Tidal Echo Trial
@@ -124,3 +126,7 @@ The original Tidegate now leads into a three-stage adventure spanning land and d
 The existing asset-independent design remains unchanged. All new effects use generated rings and motes in Three.js; portable quest rules live separately in `src/world/tidalEcho.ts`. Software-WebGL QA uses development-only staging hooks to exercise both interactions without spending minutes flying between coordinates. Ordinary gameplay still requires actual travel and correct proximity.
 
 **Limitations:** the Sunken Shrine is still a simple open-air submerged ruin, not a fully explorable interior; there are no underwater enemies, key inventory, dialog sequences, animated cutscenes or level transitions. The returned Echo is a narrative flag, not a physical carryable item. Full save slots, richer story and character assets remain future gates.
+
+## Mirrorfall visual test location
+
+`http://localhost:5173/?start=lake` places the rider above Mirrorfall Lake looking toward the waterfall. It is a real in-game camera, not a concept image. The lake and ocean use their own surface elevations; the game supports swimming and diving into the lake basin. M opens the control palette; F3 toggles diagnostic statistics. Existing keyboard and clickable actions remain wired. See `docs/VISUAL_QUALITY_GATE.md` for the accuracy limitations of the water simulation and the next visual quality acceptance checks.

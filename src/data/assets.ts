@@ -25,6 +25,11 @@ export const ASSETS: readonly AssetManifestEntry[] = [
   { id: 'structure.azure.tidegate', type: 'structure', source: 'procedural' },
   { id: 'terrain.azure.coast', type: 'terrain', source: 'procedural' },
   { id: 'water.azure.ocean', type: 'water', source: 'procedural' },
+  { id: 'water.azure.mirrorfall-lake', type: 'water', source: 'procedural' },
+  { id: 'water.azure.mirrorfall-cascade', type: 'water', source: 'procedural' },
+  { id: 'vegetation.azure.pbr-tree', type: 'vegetation', source: 'procedural' },
+  { id: 'vegetation.azure.waving-grass', type: 'vegetation', source: 'procedural' },
+  { id: 'terrain.azure.rounded-pbr-boulders', type: 'terrain', source: 'procedural' },
 ] as const;
 
 export function getAsset(id: string): AssetManifestEntry {
