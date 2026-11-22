@@ -32,6 +32,9 @@ export class AzureCoast {
   private readonly clouds: PainterlyClouds;
   private readonly cliffs: MirrorfallCliffs;
   private readonly sky = new PainterlySky();
+  private readonly sun = new THREE.DirectionalLight(0xffd3a5, 2.1);
+  private readonly sunTarget = new THREE.Object3D();
+  private readonly quality: 'high' | 'low';
   private readonly tidegate = new TidegateVisual();
   private readonly echoVisual = new TidalEchoVisual();
   private readonly airFog = new THREE.FogExp2(0xb6cbd4, 0.00038);
@@ -43,14 +46,28 @@ export class AzureCoast {
   readonly ocean: THREE.Mesh;
 
   constructor(scene: THREE.Scene, quality: 'high' | 'low' = 'high') {
+    this.quality = quality;
     this.terrainMaterial = makeTerrainMaterial(quality);
     this.scene = scene;
     scene.background = this.airBackground;
     scene.fog = this.airFog;
-    scene.add(new THREE.HemisphereLight(0xbde7ee, 0x716251, 1.4));
-    const sun = new THREE.DirectionalLight(0xffd3a5, 2.1);
-    sun.position.set(-420, 600, -520);
-    scene.add(sun);
+    scene.add(new THREE.HemisphereLight(0xbde7ee, 0x716251, quality==='high' ? 1.17 : 1.4));
+    this.sun.position.set(-420,600,-520);
+    this.sun.castShadow = quality === 'high';
+    if (this.sun.castShadow) {
+      this.sun.shadow.mapSize.set(2048,2048);
+      this.sun.shadow.camera.left=-215;
+      this.sun.shadow.camera.right=215;
+      this.sun.shadow.camera.top=215;
+      this.sun.shadow.camera.bottom=-215;
+      this.sun.shadow.camera.near=1;
+      this.sun.shadow.camera.far=1500;
+      this.sun.shadow.bias=-0.00017;
+      this.sun.shadow.normalBias=0.052;
+      this.sun.shadow.blurSamples=5;
+    }
+    this.sun.target=this.sunTarget;
+    scene.add(this.sun,this.sunTarget);
     this.ocean = this.water.mesh;
     scene.add(this.sky.mesh, this.ocean, this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group);
     this.nature = new PainterlyNature(scene, quality);
@@ -117,6 +134,12 @@ export class AzureCoast {
     this.foamMaterial.uniforms.uTime!.value=time;
     this.sky.update(time);
     this.sky.moveWithCamera(x, y, z);
+    if (this.quality === 'high') {
+      // Camera-centered shadow frustum avoids blurry 1km-wide texture maps.
+      this.sun.position.set(x-350,y+650,z-440);
+      this.sunTarget.position.set(x,0,z);
+      this.sunTarget.updateMatrixWorld();
+    }
   }
 
   tileCount(): number {
@@ -142,5 +165,7 @@ export class AzureCoast {
     this.cliffs.dispose();
     this.sky.dispose();
     this.echoVisual.dispose();
+    this.sun.removeFromParent();
+    this.sunTarget.removeFromParent();
   }
 }

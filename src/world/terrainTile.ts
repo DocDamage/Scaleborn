@@ -141,6 +141,7 @@ export function makeTerrainTile(
   group.name = 'terrain.azure.tile.' + tx + '.' + tz;
   const surface = new THREE.Mesh(geometry, terrainMaterial);
   surface.name = 'terrain.azure.coast';
+  surface.receiveShadow = true;
   group.add(surface);
   const foam = coastlineFoam(points);
   if (foam) {

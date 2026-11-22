@@ -235,6 +235,9 @@ export class PainterlyNature {
       });
       wood.name='vegetation.azure.pbr-tree-wood.'+species;
       crown.name='vegetation.azure.pbr-tree-leaves.'+species;
+      wood.castShadow = quality === 'high';
+      crown.castShadow = quality === 'high';
+      wood.receiveShadow = quality === 'high';
       this.root.add(wood,crown);
       this.meshes.push(wood,crown);
     }
@@ -248,6 +251,7 @@ export class PainterlyNature {
       grass.setColorAt(i,new THREE.Color().setHSL(.22+p.hue*.10,.31,.42+p.hue*.16));
     });
     grass.name='vegetation.azure.waving-grass';
+    grass.receiveShadow = quality === 'high';
     this.root.add(grass);this.meshes.push(grass);
 
     const rock=new THREE.InstancedMesh(irregularRock(),rockMat,rocks.length);
@@ -258,6 +262,8 @@ export class PainterlyNature {
       dummy.updateMatrix();rock.setMatrixAt(i,dummy.matrix);
     });
     rock.name='terrain.azure.rounded-pbr-boulders';
+    rock.castShadow=quality==='high';
+    rock.receiveShadow=quality==='high';
     this.root.add(rock);this.meshes.push(rock);
   }
   update(time:number):void{if(this.grassWind)this.grassWind.value=time;}
