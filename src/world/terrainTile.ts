@@ -3,6 +3,7 @@ import { AZURE_SEED, SEA_LEVEL, heightAt } from './terrain';
 import { fbm } from '../core/random';
 import { GRAND_LAKE, lakeContains, lakeRadius, lakeShoreDistance } from './highlandLake';
 import { stitchedHeight, TILE_METERS, type TileSpec } from './tileLod';
+import { terrainUvAt } from './terrainUv';
 
 const sand = new THREE.Color(0xc5b698);
 const grass = new THREE.Color(0x668d61);
@@ -77,6 +78,11 @@ function paintTerrain(x: number, z: number, h: number, target: THREE.Color): voi
   target.multiplyScalar(.93+variation*.15);
 }
 
+const groupWorldX = (tx: number, localX: number): number =>
+  (tx + .5) * TILE_METERS + localX;
+const groupWorldZ = (tz: number, localZ: number): number =>
+  (tz + .5) * TILE_METERS + localZ;
+
 type Point = { x: number; z: number; h: number };
 function intersect(a: Point, b: Point): Point {
   const t = (SEA_LEVEL - a.h) / (b.h - a.h);
@@ -144,6 +150,7 @@ export function makeTerrainTile(
   const geometry = new THREE.PlaneGeometry(TILE_METERS, TILE_METERS, n, n);
   geometry.rotateX(-Math.PI / 2);
   const positions = geometry.getAttribute('position');
+  const texCoords = geometry.getAttribute('uv');
   const colors = new Float32Array(positions.count * 3);
   const points: Point[][] = [];
   for (let row = 0; row <= n; row++) {
@@ -154,6 +161,8 @@ export function makeTerrainTile(
       const wz = (tz + row / n) * TILE_METERS;
       const h = stitchedHeight(tx, tz, col, row, spec);
       positions.setY(index, h);
+      const uv = terrainUvAt(wx, h, wz);
+      texCoords.setXY(index, uv.u, uv.v);
       paintTerrain(wx, wz, h, temp);
       colors[index * 3] = temp.r;
       colors[index * 3 + 1] = temp.g;
@@ -165,6 +174,7 @@ export function makeTerrainTile(
     points.push(line);
   }
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  texCoords.needsUpdate = true;
   geometry.computeVertexNormals();
   // Alpine escarpments must remain stone even on the inexpensive renderer.
   // Shader-based slope blending covers high mode, vertex color acts as a
@@ -172,13 +182,22 @@ export function makeTerrainTile(
   const normals=geometry.getAttribute('normal');
   const colorsAttr=geometry.getAttribute('color');
   const slate=new THREE.Color(0x738183);
+  const darkStratum=new THREE.Color(0x475e65);
+  const warmStratum=new THREE.Color(0x95988c);
   for(let i=0;i<normals.count;i++){
     const steep=1-Math.abs(normals.getY(i));
     const weather=Math.max(0,Math.min(1,(steep-.20)/.54));
     if(weather<.01)continue;
     temp.setRGB(colorsAttr.getX(i),colorsAttr.getY(i),colorsAttr.getZ(i));
-    const variation=0.04*Math.sin(i*7.13);
-    temp.lerp(slate,Math.min(.96,weather*.89+variation));
+    const worldX=groupWorldX(tx, positions.getX(i));
+    const worldZ=groupWorldZ(tz, positions.getZ(i));
+    const y=positions.getY(i);
+    const bedding=.5+.5*Math.sin(y*.082+
+      Math.sin(worldZ*.028+worldX*.013)*1.7);
+    const variation=.04*Math.sin(worldX*.31+worldZ*.19);
+    temp.lerp(slate,Math.min(.96,weather*.78+variation));
+    temp.lerp(darkStratum,weather*(1-bedding)*.24);
+    temp.lerp(warmStratum,weather*bedding*.19);
     colorsAttr.setXYZ(i,temp.r,temp.g,temp.b);
   }
   colorsAttr.needsUpdate=true;

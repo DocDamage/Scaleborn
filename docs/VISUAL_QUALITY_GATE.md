@@ -153,3 +153,23 @@ Swimming wakes are now generated around the controlled dragon and independent ri
   (`artifacts/mirrorfall-underwater-browser.png`) plus the existing overhead
   and shoreline views. Hardware GPU profiling and human image review remain
   mandatory before claiming final art quality.
+
+### Actual-screenshot geometric correction (follow-up to visual pass 4)
+
+A review of the **actual Chromium overhead and shoreline images** revealed broad,
+smooth geometric walls and UV-stretched terrain at the lake's escarpment,
+despite the earlier successful build and screenshot tests. Passing rendering
+tests must not be mistaken for passing the artistic visual-quality gate.
+
+- The flanking lake-bank heightfield now uses a broader eroded cliff ramp;
+  the narrow central waterfall cleft stays steep. The same deterministic
+  heightfield still drives terrain mesh, collision, and lake bathymetry.
+- `terrainUvAt` projects painted surface maps in shared world coordinates
+  with gradual vertical projection on Mirrorfall's high rock faces. This
+  removes the previous single texture repetition across each 250 m tile,
+  and preserves matched UV coordinates across LOD boundaries.
+- Low-preset geological vertex colors receive layered strata rather than a
+  flat gray slope. Seeded PBR scree uses the existing instanced boulder mesh
+  and gently vegetated shelves, without introducing visible debug primitives.
+- GPU-frame benchmarks and human review of new screenshots remain mandatory;
+  generated textures and procedural rocks are still not photogrammetric assets.

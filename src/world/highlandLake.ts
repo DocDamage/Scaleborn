@@ -88,9 +88,19 @@ export function sculptMirrorfallTerrain(
   // Terrain collision, streamed mesh and rock shading all use this face.
   const easternFace = smoothstep(0.36, 0.88, (x - GRAND_LAKE.x) / GRAND_LAKE.radiusX);
   const canyonBand = Math.exp(-Math.pow((z - GRAND_LAKE.z) / 205, 4));
-  const cliffStep = smoothstep(1.008, 1.063, r);
+  // The previous 20 m cliff step produced a single giant vertical polygon
+  // wall in actual browser screenshots. Preserve the waterfall's steep core
+  // while spreading the side banks into layered, eroded rock slopes.
+  const core = Math.exp(-Math.pow((z - GRAND_LAKE.z) / 92, 4));
+  const cliffStep = smoothstep(1.006, 1.177 - core * 0.099, r);
+  const erosion = fbm(x * 0.031, z * 0.037, seed + 2401, 4);
+  const rockFolds = Math.sin((z - GRAND_LAKE.z) * .069
+    + r * 21.0 + erosion * 3.3) * 4.8;
+  const gullyRelief = (erosion * 8.8 + rockFolds)
+    * Math.sin(Math.PI * cliffStep) * easternFace * canyonBand;
   const escarpment = GRAND_LAKE.surfaceY
-    + (111 + lap * 14) * cliffStep * easternFace * canyonBand;
+    + (111 + lap * 14) * cliffStep * easternFace * canyonBand
+    + gullyRelief;
   const highBank = Math.max(shore + crest, escarpment);
   if (r < 1.43) return highBank;
   const transition = smoothstep(1.43, 1.72, r);
