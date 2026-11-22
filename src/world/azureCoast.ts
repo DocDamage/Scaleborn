@@ -35,7 +35,7 @@ export class AzureCoast {
   private readonly lakeFoam = new LakeShoreFoam();
   private readonly caustics: LakeCaustics;
   private readonly shafts: UnderwaterLightShafts;
-  private readonly waterfall = new MirrorfallCascade();
+  private readonly waterfall: MirrorfallCascade;
   private readonly nature: PainterlyNature;
   private readonly nearGrass: LocalGroundcover;
   private readonly clouds: PainterlyClouds;
@@ -84,6 +84,7 @@ export class AzureCoast {
     this.ocean = this.water.mesh;
     this.caustics = new LakeCaustics(quality);
     this.shafts = new UnderwaterLightShafts(quality);
+    this.waterfall = new MirrorfallCascade(quality);
     scene.add(this.sky.mesh, this.ocean, this.caustics.mesh, this.shafts.mesh,
       this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group);
     this.nature = new PainterlyNature(scene, quality);

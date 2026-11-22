@@ -258,3 +258,22 @@ no per-frame new mesh creation, world-coordinate reseeding or gameplay changes.
 Known limitation: this is a CPU distance gate, not hardware occlusion culling,
 impostor LOD, or GPU-driven per-instance culling. Test distant pop-in and
 performance on the actual desktop GPU before visual release.
+
+### Visual pass 6: physically inspired waterfall spray and plume breakup
+
+The waterfall impact originally used 4 opaque torus outlines and 720 visible
+icosahedral droplet beads. These read as game primitives in the real lake
+screenshot. `PlungePoolFoam` replaces the toruses with one deterministic
+lake-clipped mesh of translucent, irregular foam sheets. Its vertex waves use
+the lake's four wind-wave bands and waterfall impact displacement; turbulent
+fragment breakup prevents white unbroken ring outlines, with underwater
+backface suppression. `sprayStreak.ts` supplies a crossed-card tapered alpha
+texture and geometry; each ballistic particle rotates along its real velocity
+and becomes a small soft splash streak rather than a polygonal sphere.
+
+High uses the original 720 fixed-pool ballistic droplets, low uses 420.
+Geometry and material disposal deduplicates shared waterfall materials.
+The visible effect is still an approximation to splashing water; particle
+pressure, mass conservation, waterfall-body collision and detailed 3D fluid
+simulation remain unimplemented. Review *actual* browser waterline screenshots
+and desktop-GPU alpha overdraw rather than treating the code as final realism.

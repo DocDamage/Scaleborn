@@ -3,6 +3,8 @@ import { rng } from '../core/random';
 import { AZURE_SEED } from './terrain';
 import { GRAND_LAKE, MIRRORFALL } from './highlandLake';
 import { MIRRORFALL_IMPACT } from './waterDynamics';
+import { PlungePoolFoam } from './plungePoolFoam';
+import { makeSprayStreakGeometry, makeSprayStreakTexture } from './sprayStreak';
 
 const crestX=MIRRORFALL.x-1;
 const plungeX=MIRRORFALL_IMPACT.x;
@@ -117,11 +119,15 @@ export class MirrorfallCascade {
   private readonly droplets:Droplet[]=[];
   private readonly random=rng(AZURE_SEED+602);
   private readonly dummy=new THREE.Object3D();
-  private readonly rings:THREE.Mesh[]=[];
+  private readonly foam:PlungePoolFoam;
+  private readonly sprayTexture:THREE.DataTexture;
+  private readonly velocity=new THREE.Vector3();
+  private readonly up=new THREE.Vector3(0,1,0);
   private readonly mist:THREE.Sprite[]=[];
   private previousTime=0;
-  constructor(){
+  constructor(quality:'high'|'low'='high'){
     this.group.name='water.azure.mirrorfall-cascade';
+    this.foam=new PlungePoolFoam(quality);
     this.waterMat=new THREE.ShaderMaterial({
       // Custom ShaderMaterial fog chunks require the full stock fog uniform
       // block. Without it WebGLRenderer dereferences undefined.value on the
@@ -136,11 +142,15 @@ export class MirrorfallCascade {
     for(const [i,width,offset] of [[0,78,0],[1,42,-21],[2,32,24]] as const){
       this.group.add(ribbon(width,offset,i*2.3,this.waterMat));
     }
+    this.sprayTexture=makeSprayStreakTexture();
     const material=new THREE.MeshBasicMaterial({
-      color:0xc8edeb,transparent:true,opacity:.60,depthWrite:false,
+      color:0xe2f5f0,map:this.sprayTexture,transparent:true,
+      opacity:.68,alphaTest:.025,depthWrite:false,
+      side:THREE.DoubleSide,fog:true,
     });
-    const particleCount=720;
-    this.spray=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,1),material,particleCount);
+    const particleCount=quality==='high'?720:420;
+    this.spray=new THREE.InstancedMesh(
+      makeSprayStreakGeometry(),material,particleCount);
     this.spray.name='water.azure.mirrorfall-ballistic-spray';
     this.spray.frustumCulled=false;
     for(let i=0;i<particleCount;i++){
@@ -149,19 +159,8 @@ export class MirrorfallCascade {
     }
     this.group.add(this.spray);
 
-    for(let i=0;i<4;i++){
-      const ring=new THREE.Mesh(
-        new THREE.TorusGeometry(7+i*4,.38+i*.13,6,72),
-        new THREE.MeshBasicMaterial({
-          color:i%2?0xb8e6df:0xebf6f1,side:THREE.DoubleSide,
-          transparent:true,opacity:.38,depthWrite:false
-        }),
-      );
-      ring.rotation.x=-Math.PI/2;
-      ring.position.set(plungeX,GRAND_LAKE.surfaceY+.90+i*.08,GRAND_LAKE.z);
-      ring.name='water.azure.mirrorfall-impact-ripple';
-      this.rings.push(ring);this.group.add(ring);
-    }
+    // Irregular, lake-clipped foam surface replaces artificial torus circles.
+    this.group.add(this.foam.mesh);
 
     const texture=this.makeMistTexture();
     for(let i=0;i<18;i++){
@@ -215,31 +214,39 @@ export class MirrorfallCascade {
       if(d.y<GRAND_LAKE.surfaceY+.15||d.life>4.8)this.reset(d,false);
       const s=.10+(i%4)*.082;
       this.dummy.position.set(d.x,d.y,d.z);
-      this.dummy.scale.set(s,s*(1.1+(i%5)*.14),s);
+      this.velocity.set(d.vx,d.vy,d.vz);
+      const speed=this.velocity.length();
+      if(speed>.0001) {
+        this.velocity.multiplyScalar(1/speed);
+        this.dummy.quaternion.setFromUnitVectors(this.up,this.velocity);
+      }else this.dummy.quaternion.identity();
+      this.dummy.scale.set(s*.82,.38+Math.min(1.05,speed*.018),s*.82);
       this.dummy.updateMatrix();
       this.spray.setMatrixAt(i,this.dummy.matrix);
     });
     this.spray.instanceMatrix.needsUpdate=true;
-    this.rings.forEach((ring,i)=>{
-      const k=(time*.20+i*.25)%1;
-      ring.scale.setScalar(.8+k*1.8);
-      (ring.material as THREE.MeshBasicMaterial).opacity=.46*(1-k);
-    });
+    this.foam.update(time);
     this.mist.forEach((s,i)=>{
       s.position.y=GRAND_LAKE.surfaceY+5+(i%5)*4+Math.sin(time*.56+i)*2.1;
       s.position.x=plungeX+Math.sin(time*.18+i*1.4)*11;
     });
   }
   dispose():void{
+    this.foam.dispose();
+    const geometries=new Set<THREE.BufferGeometry>();
+    const materials=new Set<THREE.Material>();
     this.group.traverse(obj=>{
       if(obj instanceof THREE.Mesh || obj instanceof THREE.Sprite){
-        if(obj instanceof THREE.Mesh)obj.geometry.dispose();
-        if(Array.isArray(obj.material))obj.material.forEach(m=>m.dispose());
-        else obj.material.dispose();
+        if(obj instanceof THREE.Mesh)geometries.add(obj.geometry);
+        if(Array.isArray(obj.material))obj.material.forEach(m=>materials.add(m));
+        else materials.add(obj.material);
       }
     });
+    geometries.forEach(g=>g.dispose());
+    materials.forEach(m=>m.dispose());
     const tex=(this.mist[0]?.material as THREE.SpriteMaterial|undefined)?.map;
-    tex?.dispose();this.waterMat.dispose();
+    tex?.dispose();
+    this.sprayTexture.dispose();
     this.group.removeFromParent();
   }
 }
