@@ -18,6 +18,9 @@ describe('near-camera natural vegetation visual gate', () => {
       expect((leaves as THREE.InstancedMesh).geometry.getAttribute('position').count)
         .toBeGreaterThanOrEqual(1500);
       expect((boulders as THREE.InstancedMesh).count).toBeGreaterThan(10);
+      const foliage=(leaves as THREE.InstancedMesh).material as THREE.MeshStandardMaterial;
+      expect(foliage.customProgramCacheKey()).toContain('foliage-motion');
+      nature.update(5.25);
       expect(scene.children.length).toBeLessThan(5);
     } finally {nature.dispose();}
   });

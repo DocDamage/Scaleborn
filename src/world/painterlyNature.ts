@@ -148,6 +148,7 @@ export class PainterlyNature {
   private readonly meshes: THREE.InstancedMesh[] = [];
   private readonly textures: THREE.Texture[] = [];
   private grassWind: { value: number } | null = null;
+  private leafWind: { value: number } | null = null;
   constructor(scene: THREE.Scene, quality: 'high' | 'low' = 'high') {
     this.root.name='vegetation.azure.painterly-nature';
     scene.add(this.root);
@@ -227,6 +228,31 @@ export class PainterlyNature {
       color:0x8ebb79,map:leafTex,roughness:.88,metalness:0,
       side:THREE.DoubleSide,alphaTest:0.28,depthWrite:true,
     });
+    // Gentle leaf motion follows the rooted tree, not a rotating billboard.
+    // The tips sway more than the branch attachment, with a world-seeded
+    // gust phase so distant tree crowns do not oscillate in lockstep.
+    const leafWind={value:0};
+    this.leafWind=leafWind;
+    leafMat.onBeforeCompile=(shader)=>{
+      shader.uniforms.uScLeafTime=leafWind;
+      shader.vertexShader=shader.vertexShader.replace('#include <common>',
+        '#include <common>\nuniform float uScLeafTime;');
+      shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',
+        `#include <begin_vertex>
+          #ifdef USE_INSTANCING
+            float gustPhase=instanceMatrix[3].x*.015+
+              instanceMatrix[3].z*.017;
+          #else
+            float gustPhase=0.0;
+          #endif
+          float canopyWeight=smoothstep(1.0,7.5,position.y);
+          transformed.x+=sin(uScLeafTime*.74+gustPhase+
+            position.z*.33)*canopyWeight*.12;
+          transformed.z+=cos(uScLeafTime*.63+gustPhase+
+            position.x*.22)*canopyWeight*.10;
+        `);
+    };
+    leafMat.customProgramCacheKey=()=> 'scaleborn-foliage-motion-v1';
     const grassMat=new THREE.MeshStandardMaterial({
       color:0xb8c99c,roughness:.94,metalness:0,side:THREE.DoubleSide
     });
@@ -300,7 +326,10 @@ export class PainterlyNature {
     rock.receiveShadow=quality==='high';
     this.root.add(rock);this.meshes.push(rock);
   }
-  update(time:number):void{if(this.grassWind)this.grassWind.value=time;}
+  update(time:number):void{
+    if(this.grassWind)this.grassWind.value=time;
+    if(this.leafWind)this.leafWind.value=time;
+  }
   dispose():void{
     this.meshes.forEach(mesh=>mesh.geometry.dispose());
     this.materials.forEach(m=>m.dispose());
