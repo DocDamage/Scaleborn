@@ -14,6 +14,7 @@ import { LocalGroundcover } from './localGroundcover';
 import { ShorelineReeds } from './shorelineReeds';
 import { PainterlyClouds } from './painterlyClouds';
 import { MirrorfallCliffs } from './mirrorfallCliffs';
+import { CliffOutcrops } from './cliffOutcrops';
 import { SurfaceWake } from './surfaceWake';
 import { CreatureSplash } from './creatureSplash';
 import type { FlightState } from '../actors/dragon/flight';
@@ -47,6 +48,7 @@ export class AzureCoast {
   private readonly reeds: ShorelineReeds;
   private readonly clouds: PainterlyClouds;
   private readonly cliffs: MirrorfallCliffs;
+  private readonly outcrops: CliffOutcrops;
   private readonly wake: SurfaceWake;
   private readonly splash: CreatureSplash;
   private readonly sky = new PainterlySky();
@@ -106,6 +108,7 @@ export class AzureCoast {
     this.reeds = new ShorelineReeds(scene, quality);
     this.clouds = new PainterlyClouds(scene, quality);
     this.cliffs = new MirrorfallCliffs(quality);
+    this.outcrops = new CliffOutcrops(scene,quality);
     this.wake = new SurfaceWake(scene,quality);
     this.splash = new CreatureSplash(scene,quality);
     scene.add(this.cliffs.group);
@@ -238,6 +241,7 @@ export class AzureCoast {
     this.reeds.dispose();
     this.clouds.dispose();
     this.cliffs.dispose();
+    this.outcrops.dispose();
     this.wake.dispose();
     this.splash.dispose();
     this.sky.dispose();

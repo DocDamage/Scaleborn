@@ -637,3 +637,19 @@ draw-call ownership changes.
 
 This is direct screenshot-guided work. Real rerendering and target-hardware
 overdraw benchmarks remain required before calling forest quality accepted.
+
+### Screenshot-guided escarpment rock relief (visual continuation)
+
+The actual low-mode `mirrorfall-shoreline-browser.png` frame still displayed a
+huge smooth, brown-grey cliff face despite the improved triplanar surface maps.
+`CliffOutcrops` now samples steep rock banks beside Mirrorfall directly from
+`heightAt`, avoids the waterfall's open cleft and projects *tiered fractured
+sedimentary ledges* onto terrain normals. The ledges are a **single instanced
+MeshStandardMaterial batch**, use existing painterly rock textures/lighting and
+have independent low/high budgets. Geometry has angular bedding outlines
+instead of featureless round stones, and roots sink into the physical slope.
+
+This is a visible geometry-detail improvement and does not alter collision.
+Ledge protrusions are decorative; larger collidable rock formations and
+production-quality authored cliff assets remain required. Review the actual
+rider-height waterfall frame and GPU geometry workload before art signoff.
