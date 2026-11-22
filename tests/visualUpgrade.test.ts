@@ -28,6 +28,13 @@ describe('Mirrorfall visual systems contract', () => {
       expect(lake.mesh.geometry.getAttribute('position').count).toBeGreaterThan(10_000);
       expect(shore.mesh.geometry.getAttribute('position').count).toBeGreaterThan(4000);
       expect(lake.mesh.material).toBeInstanceOf(THREE.ShaderMaterial);
+      const lakeShader=lake.mesh.material as THREE.ShaderMaterial;
+      expect(lakeShader.uniforms.uBathymetry?.value)
+        .toBeInstanceOf(THREE.DataTexture);
+      const bathy=lakeShader.uniforms.uBathymetry?.value as THREE.DataTexture;
+      expect(bathy.image.width).toBeGreaterThanOrEqual(128);
+      expect(shore.mesh.geometry.getAttribute('uv').count)
+        .toBe(shore.mesh.geometry.getAttribute('position').count);
       lake.update(12.5);
       expect((lake.mesh.material as THREE.ShaderMaterial).uniforms.uTime?.value).toBe(12.5);
     } finally {ocean.dispose();lake.dispose();shore.dispose();}

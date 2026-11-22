@@ -3,6 +3,7 @@ import { canStand, OBSTACLES } from '../../world/collision';
 import { heightAt } from '../../world/terrain';
 import { waterSurfaceAt } from '../../world/highlandLake';
 import { plungeCurrentStep } from '../../world/waterDynamics';
+import { waterWaveOffsetAt } from '../../world/waterWaves';
 import { approach, riderSurfaceY, riderDiveY, riderCanSwim, riderFloorY } from '../../world/waterPhysics';
 
 const clamp = (value: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, value));
@@ -81,19 +82,21 @@ export function stepRider(state: FlightState, controls: FlightControls, dt: numb
     return;
   }
   const bottom = riderFloorY(state.riderX, state.riderZ);
+  const crest = riderSurfaceY(state.riderX, state.riderZ)
+    + waterWaveOffsetAt(state.riderX, state.riderZ, state.time)*.43;
   if (state.riderMode === 'underwater') {
     state.riderTargetY += clamp(controls.bank, -1, 1) * dt * 3.2;
-    if (state.riderTargetY >= riderSurfaceY(state.riderX, state.riderZ)) {
+    if (state.riderTargetY >= crest) {
       state.riderMode = 'surface';
-      state.riderTargetY = riderSurfaceY(state.riderX, state.riderZ);
+      state.riderTargetY = crest;
     }
   } else {
-    state.riderTargetY = riderSurfaceY(state.riderX, state.riderZ);
+    state.riderTargetY = crest;
   }
-  if (bottom > riderSurfaceY(state.riderX, state.riderZ)) {
+  if (bottom > crest) {
     state.riderY = bottom;
     return;
   }
-  state.riderTargetY = clamp(state.riderTargetY, bottom, riderSurfaceY(state.riderX, state.riderZ));
+  state.riderTargetY = clamp(state.riderTargetY, bottom, crest);
   state.riderY = Math.max(bottom, approach(state.riderY, state.riderTargetY, dt * 3.8));
 }

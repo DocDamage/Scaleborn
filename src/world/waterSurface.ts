@@ -14,15 +14,17 @@ const vert=`
   varying float vScWave;
   uniform float uTime;
   uniform float uLake;
-  uniform vec2 uImpactLocal;
+  uniform vec2 uImpactWorld;
+  uniform vec2 uWaveOrigin;
   vec3 wavePos(vec3 p) {
     float t=uTime;
-    float w1=dot(p.xz,normalize(vec2(.87,.49)))*.16-t*.95;
-    float w2=dot(p.xz,normalize(vec2(-.23,.97)))*.37-t*1.47;
-    float w3=dot(p.xz,normalize(vec2(.64,-.76)))*.76-t*2.15;
-    float w4=dot(p.xz,normalize(vec2(.18,.98)))*.08-t*.62;
+    vec2 worldXZ=p.xz+uWaveOrigin;
+    float w1=dot(worldXZ,normalize(vec2(.87,.49)))*.16-t*.95;
+    float w2=dot(worldXZ,normalize(vec2(-.23,.97)))*.37-t*1.47;
+    float w3=dot(worldXZ,normalize(vec2(.64,-.76)))*.76-t*2.15;
+    float w4=dot(worldXZ,normalize(vec2(.18,.98)))*.08-t*.62;
     p.y+=.53*sin(w1)+.24*sin(w2)+.10*sin(w3)+.64*sin(w4);
-    float plungeD=length(p.xz-uImpactLocal);
+    float plungeD=length(worldXZ-uImpactWorld);
     float plungeDecay=exp(-plungeD*.038);
     p.y += uLake*plungeDecay*.72*sin(plungeD*.225-t*1.63);
     p.x+=.16*cos(w1)+.05*cos(w2);
@@ -174,8 +176,8 @@ export class PainterlyWaterSurface {
       uniforms:{
         uTime:{value:0},
         uLake:{value:isLake?1:0},
-        uImpactLocal:{value:new THREE.Vector2(
-          MIRRORFALL_IMPACT.x-GRAND_LAKE.x,MIRRORFALL_IMPACT.z-GRAND_LAKE.z)},
+        uWaveOrigin:{value:new THREE.Vector2(isLake ? GRAND_LAKE.x : 0,
+          isLake ? GRAND_LAKE.z : 0)},
         uImpactWorld:{value:new THREE.Vector2(MIRRORFALL_IMPACT.x,MIRRORFALL_IMPACT.z)},
         uBathymetry:{value:this.bathymetry},
         uBathyOrigin:{value:new THREE.Vector2(

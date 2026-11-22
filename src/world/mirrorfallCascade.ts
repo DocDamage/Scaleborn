@@ -32,15 +32,31 @@ const fragment=`
   void main(){
     vec2 p=vFlowUv;
     float t=uTime;
-    float strip=noise(vec2(p.x*38.0+sin(p.y*11.0)*.09,p.y*24.0-t*5.4));
-    float wash=noise(vec2(p.x*92.0,p.y*72.0-t*11.8));
-    float streaks=pow(.5+.5*sin(p.x*154.0+sin(p.y*12.0-t)*2.6),2.2);
-    float turbulence=smoothstep(.42,.77,strip*.65+wash*.35);
-    float edge=smoothstep(0.0,.06,p.x)*(1.0-smoothstep(.92,1.0,p.x));
-    float baseAlpha=edge*(.44+.32*turbulence+.18*streaks);
-    vec3 color=mix(vec3(.20,.42,.47),vec3(.87,.96,.98),strip*.55+streaks*.35);
-    color+=vec3(.12,.13,.12)*wash;
-    gl_FragColor=vec4(color,clamp(baseAlpha,.0,.91));
+    // Advected streaks vary in flow velocity and separate into finer
+    // jets near the plunge pool. Edges are turbulent, not rectangular.
+    float strip=noise(vec2(p.x*29.0+sin(p.y*10.0)*.24,
+      p.y*35.0-t*(7.4+p.x*1.1)));
+    float wash=noise(vec2(p.x*78.0+p.y*1.9,
+      p.y*95.0-t*17.1));
+    float longFlow=pow(.5+.5*sin(p.x*84.0+wash*3.1+
+      sin(p.y*20.0-t*2.1)*1.4),3.3);
+    float whiteJet=pow(.5+.5*sin(p.x*155.0+
+      sin(p.y*37.0-t*2.3)*2.3),4.0);
+    float broken=smoothstep(.35,.86,strip*.57+wash*.43);
+    float turbulence=clamp(broken*.55+whiteJet*.36+longFlow*.26,0.0,1.0);
+    float edgeNoise=.07*(strip-.5)+.028*sin(p.y*43.0-t*2.4);
+    float ragged=p.x+edgeNoise;
+    float edge=smoothstep(.035,.18,ragged)
+      *(1.0-smoothstep(.79,.965,ragged));
+    float baseAlpha=edge*(.18+.40*turbulence+.13*wash);
+    float nearImpact=smoothstep(.66,.98,p.y);
+    baseAlpha+=nearImpact*edge*broken*.15;
+    vec3 base=vec3(.11,.29,.36);
+    vec3 white=vec3(.91,.98,.96);
+    vec3 color=mix(base,white,
+      clamp(.20+.54*turbulence+.16*longFlow,0.0,.95));
+    color+=vec3(.08,.09,.08)*wash;
+    gl_FragColor=vec4(color,clamp(baseAlpha,0.0,.78));
   }
 `;
 
@@ -54,8 +70,8 @@ function ribbon(width:number,zOffset:number,phase:number,material:THREE.ShaderMa
     const y=MIRRORFALL.topY - down*t;
     for(let j=0;j<=nx;j++){
       const u=j/nx;
-      const offset=(u-.5)*width*(.95+.08*Math.sin(t*17+phase));
-      const ruffle=Math.sin(u*29+t*17+phase)*(.45+t*2.5)
+      const offset=(u-.5)*width*(.74+t*.49+.065*Math.sin(t*17+phase));
+      const ruffle=Math.sin(u*29+t*17+phase)*(.62+t*3.1)
           +Math.sin(u*66-t*12+phase)*.35;
       points.push(x+Math.sin(u*8+phase)*1.1,
         y+Math.sin(u*24+phase)*.25,
@@ -136,15 +152,15 @@ export class MirrorfallCascade {
     }
 
     const texture=this.makeMistTexture();
-    for(let i=0;i<12;i++){
+    for(let i=0;i<18;i++){
       const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
-        map:texture,transparent:true,opacity:.12+(i%3)*.07,
+        map:texture,transparent:true,opacity:.15+(i%4)*.055,
         depthWrite:false,color:0xe3f6ed,
       }));
       sprite.position.set(plungeX+(this.random()-.5)*49,
         GRAND_LAKE.surfaceY+8+(i%5)*4,
         GRAND_LAKE.z+(this.random()-.5)*42);
-      sprite.scale.set(23+(i%4)*13,17+(i%3)*8,1);
+      sprite.scale.set(29+(i%5)*12,19+(i%3)*10,1);
       this.mist.push(sprite);this.group.add(sprite);
     }
   }

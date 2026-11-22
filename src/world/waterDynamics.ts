@@ -13,7 +13,7 @@ export const MIRRORFALL_IMPACT = Object.freeze({
   radius: 112,
   turbulenceRadius: 43,
   maxCurrent: 5.4,
-  waveAmplitude: 0.82,
+  waveAmplitude: 0.72,
   waveLength: 28,
   waveSpeed: 7.2,
 });
@@ -43,7 +43,7 @@ export function plungeCurrentAt(x: number, z: number): WaterCurrent {
 export function plungeWaveAt(x:number,z:number,time:number):number {
   if(!Number.isFinite(time)||!lakeContains(x,z))return 0;
   const d=Math.hypot(x-MIRRORFALL_IMPACT.x,z-MIRRORFALL_IMPACT.z);
-  const decay=Math.exp(-d/.48/MIRRORFALL_IMPACT.radius);
+  const decay=Math.exp(-d*.038);
   const phase=(d/MIRRORFALL_IMPACT.waveLength-time*
     MIRRORFALL_IMPACT.waveSpeed/MIRRORFALL_IMPACT.waveLength)*Math.PI*2;
   return Math.sin(phase)*MIRRORFALL_IMPACT.waveAmplitude*decay;

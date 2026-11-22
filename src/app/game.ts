@@ -9,7 +9,7 @@ import { heightAt } from '../world/terrain';
 import { CoastDiscovery } from '../world/discoveries';
 import { toggleDragonDive } from '../actors/dragon/swimming';
 import { toggleRiderControl, toggleRiderDive } from '../actors/rider/movement';
-import { SEA_LEVEL, LANDMARKS } from '../world/terrain';
+import { LANDMARKS } from '../world/terrain';
 import { GRAND_LAKE, waterSurfaceAt } from '../world/highlandLake';
 import { TIDEGATE, newTidegateState, stepTidegate, interactTidegate, tidegateNearby, tidegateHint } from '../world/tidegate';
 import {

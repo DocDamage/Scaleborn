@@ -1,6 +1,7 @@
 import type { FlightControls, FlightState, InteractionResult } from './flight';
 import { FORMS } from './forms';
 import { plungeCurrentStep } from '../../world/waterDynamics';
+import { waterWaveOffsetAt } from '../../world/waterWaves';
 import {
   approach, canDragonDive, canEnterSea, dragonBottomY, dragonDiveY, dragonSurfaceY,
 } from '../../world/waterPhysics';
@@ -45,7 +46,10 @@ export function stepDragonSwimming(state: FlightState, controls: FlightControls,
     state.z = nz;
   } else state.speed = 0;
   const bottom = dragonBottomY(state.x, state.z, state.form);
-  const top = dragonSurfaceY(state.form, state.x, state.z);
+  // The dragon follows the SAME time-varying wave height as the GPU mesh.
+  // Damped vertical response avoids animated high-frequency bobbing.
+  const wave = waterWaveOffsetAt(state.x, state.z, state.time) * .62;
+  const top = dragonSurfaceY(state.form, state.x, state.z) + wave;
   if (underwater) {
     state.waterTargetY += clamp(controls.bank, -1, 1) * dt * 8;
     state.waterTargetY = clamp(state.waterTargetY, bottom, top - 1.0);
