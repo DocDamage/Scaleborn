@@ -665,3 +665,16 @@ lakebanks receive an irregular damp moss/clay tint aligned to the exact lake
 boundary equation and surface elevation via stable shader uniforms. No
 heightfield, collision, tile mesh, extra texture, or draw-call changes.
 These remain original painted approximations pending human visual review.
+
+### Natural sediment at the freshwater waterline
+
+The painterly lake shore previously transitioned from flat grass polygons
+straight into bright foam and blue water. `ShorelineSediment` adds an
+original seeded ring of tiny broken sediment stones on dry, shallow,
+low-gradient parts of the *actual irregular* Mirrorfall shoreline. Pebbles
+have chipped closed geometry, varied cool/ochre mineral coloring, and a
+single instanced PBR draw group which is distance-culled on movement.
+The waterfall plunge corridor and steep walls remain clear. Terrain and
+swimming collision, wave height and lake boundary are unchanged. A real
+rider-height shoreline image and GPU benchmark are still required before
+art acceptance.

@@ -15,6 +15,7 @@ import { ShorelineReeds } from './shorelineReeds';
 import { PainterlyClouds } from './painterlyClouds';
 import { MirrorfallCliffs } from './mirrorfallCliffs';
 import { CliffOutcrops } from './cliffOutcrops';
+import { ShorelineSediment } from './shorelineSediment';
 import { SurfaceWake } from './surfaceWake';
 import { CreatureSplash } from './creatureSplash';
 import type { FlightState } from '../actors/dragon/flight';
@@ -49,6 +50,7 @@ export class AzureCoast {
   private readonly clouds: PainterlyClouds;
   private readonly cliffs: MirrorfallCliffs;
   private readonly outcrops: CliffOutcrops;
+  private readonly sediment: ShorelineSediment;
   private readonly wake: SurfaceWake;
   private readonly splash: CreatureSplash;
   private readonly sky = new PainterlySky();
@@ -109,6 +111,7 @@ export class AzureCoast {
     this.clouds = new PainterlyClouds(scene, quality);
     this.cliffs = new MirrorfallCliffs(quality);
     this.outcrops = new CliffOutcrops(scene,quality);
+    this.sediment = new ShorelineSediment(scene,quality);
     this.wake = new SurfaceWake(scene,quality);
     this.splash = new CreatureSplash(scene,quality);
     scene.add(this.cliffs.group);
@@ -196,6 +199,7 @@ export class AzureCoast {
     this.waterfall.update(time);
     this.cliffs.update(time);
     this.outcrops.update(x,z);
+    this.sediment.update(x,z);
     if(state){
       this.wake.update(state,time);
       this.splash.update(state,time);
@@ -243,6 +247,7 @@ export class AzureCoast {
     this.clouds.dispose();
     this.cliffs.dispose();
     this.outcrops.dispose();
+    this.sediment.dispose();
     this.wake.dispose();
     this.splash.dispose();
     this.sky.dispose();
