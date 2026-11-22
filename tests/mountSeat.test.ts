@@ -46,6 +46,27 @@ describe('rider contact with Onyx in all three forms',()=>{
     }finally{dragon.dispose();}
   });
 
+  it('holds pelvis contact to Onyx during body-bob without changing game state',()=>{
+    const dragon=new DragonVisual(), state=newFlightState();
+    try{
+      state.mode='ground'; state.speed=5.5; state.time=.45;
+      const original={x:state.x,y:state.y,z:state.z};
+      dragon.update(state);
+      const seat=mountedRiderSeat(dragon.body.scale.x);
+      expect(Math.abs(dragon.body.position.y)).toBeGreaterThan(.001);
+      expect(dragon.rider.position.y-seat.y)
+        .toBeCloseTo(dragon.body.position.y,6);
+      expect(dragon.rider.position.z).toBeCloseTo(seat.z,6);
+      expect(dragon.rider.scale.x).toBe(1);
+      expect({x:state.x,y:state.y,z:state.z}).toEqual(original);
+      // Flight has no gait bob: rider returns exactly to the seat socket.
+      state.mode='air';state.time+=.05;
+      dragon.update(state);
+      expect(dragon.rider.position.y)
+        .toBeCloseTo(mountedRiderSeat(dragon.body.scale.x).y,6);
+    }finally{dragon.dispose();}
+  });
+
   it('rests legs forward in a seated position rather than in a standing gait',()=>{
     const state=newFlightState();
     const pose=riderPose(state);

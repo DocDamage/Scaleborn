@@ -339,8 +339,10 @@ export class DragonVisual {
     } else {
       if (this.rider.parent !== this.root) this.root.add(this.rider);
       const seat=mountedRiderSeat(this.displayedScale);
-      this.rider.position.set(0,seat.y,seat.z);
-      this.rider.rotation.set(-state.pitch * 0.13, 0, pose.riderLean);
+      // Both torso and saddle occupy the same world-space bobbing frame.
+      // Previously the dragon walked through the fixed rider pelvis.
+      this.rider.position.set(0,seat.y + this.body.position.y,seat.z);
+      this.rider.rotation.set(riderMotion.torsoLean, 0, pose.riderLean);
       this.rider.visible = true;
     }
   }
