@@ -1,6 +1,6 @@
 import { lakeContains, headwaterContains, headwaterWaveAt,
   waterSurfaceAt } from './highlandLake';
-import { plungeWaveAt } from './waterDynamics';
+import { plungeWaveAt, plungeWaveUnmaskedAt } from './waterDynamics';
 
 /**
  * CPU counterpart to the GPU Gerstner-like surface. Wind direction,
@@ -23,17 +23,29 @@ const waveDirections = [
   { x: .18, z: .98, k: .08, speed: .62, amplitude: .64 },
 ] as const;
 
-export function waterWaveOffsetAt(x: number, z: number, time: number): number {
+/** Shared wind-wave height on either side of the shoreline. */
+export function windWaveOffsetAt(x: number, z: number, time: number): number {
   if (![x,z,time].every(Number.isFinite)) return 0;
-  if(headwaterContains(x,z))return headwaterWaveAt(x,z,time);
   let y=0;
   for(const w of waveDirections){
     const length=Math.hypot(w.x,w.z);
     const phase=((x*w.x+z*w.z)/length)*w.k-time*w.speed;
     y+=w.amplitude*Math.sin(phase);
   }
-  if(lakeContains(x,z)) y+=plungeWaveAt(x,z,time);
   return y;
+}
+
+/** Height the moving Mirrorfall waterline would have at a shore fragment. */
+export function lakeShoreWaveOffsetAt(x:number,z:number,time:number):number {
+  if (![x,z,time].every(Number.isFinite))return 0;
+  return windWaveOffsetAt(x,z,time)+plungeWaveUnmaskedAt(x,z,time);
+}
+
+export function waterWaveOffsetAt(x: number, z: number, time: number): number {
+  if (![x,z,time].every(Number.isFinite)) return 0;
+  if(headwaterContains(x,z))return headwaterWaveAt(x,z,time);
+  const y=windWaveOffsetAt(x,z,time);
+  return lakeContains(x,z) ? y+plungeWaveAt(x,z,time) : y;
 }
 
 export function sampleWaterWaves(x:number,z:number,time:number):WaterWaveSample {
