@@ -105,7 +105,7 @@ export class Game {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.22;
+    this.renderer.toneMappingExposure = 1.04;
     this.camera = new THREE.PerspectiveCamera(71, window.innerWidth / window.innerHeight, 0.2, 6500);
     // A seeded, safe location for repeatable manual and browser landing QA.
     const start = new URLSearchParams(window.location.search).get('start');
@@ -399,10 +399,10 @@ export class Game {
     const root = new THREE.Vector3(position.x, position.y + (rider ? 1 : 0), position.z);
     const mode = cameraModes[this.cameraIndex] ?? 'CHASE';
     const scale = rider ? 1 : FORMS[state.form].visualScale;
-    const distance = rider ? 7 : submerged ? 11 :
-      state.form === 'small' ? 5.8 : state.form === 'giant' ? 37 : 17;
+    const distance = rider ? 7 : submerged ? 10 :
+      state.form === 'small' ? 5.8 : state.form === 'giant' ? 34 : 11;
     const rise = rider ? (submerged ? 0.45 : 2.1) : submerged ? 0.75 :
-      state.form === 'small' ? 2 : state.form === 'giant' ? 14 : 6.8;
+      state.form === 'small' ? 2 : state.form === 'giant' ? 13 : 4.5;
     const target = root.clone().addScaledVector(forward, rider ? 2.5 : 7);
     let desired: THREE.Vector3;
     if (mode === 'WIDE') desired = root.clone().addScaledVector(forward, -distance * 1.9)

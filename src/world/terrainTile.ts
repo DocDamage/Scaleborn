@@ -4,10 +4,10 @@ import { fbm } from '../core/random';
 import { GRAND_LAKE, lakeShoreDistance } from './highlandLake';
 import { stitchedHeight, TILE_METERS, type TileSpec } from './tileLod';
 
-const sand = new THREE.Color(0xe8cfa6);
-const grass = new THREE.Color(0x9bba8e);
-const forest = new THREE.Color(0x62847c);
-const stone = new THREE.Color(0x918b88);
+const sand = new THREE.Color(0xc5b698);
+const grass = new THREE.Color(0x668d61);
+const forest = new THREE.Color(0x496e5b);
+const stone = new THREE.Color(0x737c7d);
 const deep = new THREE.Color(0x376c79);
 const ochre = new THREE.Color(0xb9a57c);
 const blueSage = new THREE.Color(0x6e9c95);

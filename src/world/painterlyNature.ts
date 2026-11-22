@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rng, fbm } from '../core/random';
 import { AZURE_SEED, heightAt, LANDMARKS } from './terrain';
-import { waterSurfaceAt, lakeShoreDistance } from './highlandLake';
+import { GRAND_LAKE, waterSurfaceAt, lakeShoreDistance } from './highlandLake';
 import { makeBarkMaterial, makeRockMaterial } from './materials';
 
 interface PlantSite { x: number; y: number; z: number; scale: number; hue: number }
@@ -162,6 +162,28 @@ export class PainterlyNature {
       } else {
         if(rand()<.72)grasses.push({x,y:y+.04,z,scale:0.34+rand()*0.9,hue:rand()});
         if(rand()<.052)rocks.push({x,y,z,scale:1+rand()*5,hue:rand()});
+      }
+    }
+    // Dedicated shoreline forest: natural density where lake banks, falls,
+    // inlets and sunlit cliffs dominate the player's field of view.
+    // Still instanced by tree archetype; avoids global high-cost grass floods.
+    const bankSamples = quality === 'low' ? 1150 : 4900;
+    for (let i = 0; i < bankSamples; i++) {
+      const theta=rand()*Math.PI*2;
+      const radius=1.07+rand()*0.46;
+      const x=GRAND_LAKE.x+Math.cos(theta)*GRAND_LAKE.radiusX*radius;
+      const z=GRAND_LAKE.z+Math.sin(theta)*GRAND_LAKE.radiusZ*radius;
+      const y=heightAt(x,z);
+      if(y<waterSurfaceAt(x,z)+2.5 || y>196)continue;
+      if(Math.hypot(x-(GRAND_LAKE.x+GRAND_LAKE.radiusX*1.13),z-GRAND_LAKE.z)<42)continue;
+      const pick=rand();
+      if(pick<.34){
+        const species=Math.floor(rand()*4);
+        trees[species]!.push({x,y,z,scale:.92+rand()*.85,hue:rand()});
+      }else if(pick<.57){
+        grasses.push({x,y:y+.06,z,scale:.65+rand()*.82,hue:rand()});
+      }else if(pick<.65){
+        rocks.push({x,y,z,scale:1.3+rand()*7.2,hue:rand()});
       }
     }
     const woodMat=makeBarkMaterial(quality);

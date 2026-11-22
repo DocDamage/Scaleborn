@@ -30,7 +30,7 @@ export class AzureCoast {
   private readonly sky = new PainterlySky();
   private readonly tidegate = new TidegateVisual();
   private readonly echoVisual = new TidalEchoVisual();
-  private readonly airFog = new THREE.FogExp2(0xb6cbd4, 0.00055);
+  private readonly airFog = new THREE.FogExp2(0xb6cbd4, 0.00038);
   private readonly seaFog = new THREE.FogExp2(0x1b5866, 0.012);
   private readonly airBackground = new THREE.Color(0xc4d9df);
   private readonly seaBackground = new THREE.Color(0x1b5866);
@@ -43,8 +43,8 @@ export class AzureCoast {
     this.scene = scene;
     scene.background = this.airBackground;
     scene.fog = this.airFog;
-    scene.add(new THREE.HemisphereLight(0xbde7ee, 0x716251, 2.2));
-    const sun = new THREE.DirectionalLight(0xffd3a5, 2.0);
+    scene.add(new THREE.HemisphereLight(0xbde7ee, 0x716251, 1.4));
+    const sun = new THREE.DirectionalLight(0xffd3a5, 2.1);
     sun.position.set(-420, 600, -520);
     scene.add(sun);
     this.ocean = this.water.mesh;
