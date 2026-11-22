@@ -451,6 +451,15 @@ export class Game {
       ? s.riderMode === 'underwater' : s.mode === 'underwater';
   }
 
+  private isWaterborne(): boolean {
+    // At the water surface the third-person camera can dip through a wave.
+    // Optical submersion must follow the camera there, too.
+    const s = this.flight;
+    return s.controlTarget === 'rider'
+      ? s.riderMode === 'underwater' || s.riderMode === 'surface'
+      : s.mode === 'underwater' || s.mode === 'surface';
+  }
+
   private updateCamera(dt: number, instant = false): void {
     const state = this.flight;
     const rider = state.controlTarget === 'rider';
@@ -645,7 +654,7 @@ export class Game {
       this.reveal.hidden = this.revealTimer === 0;
     } else this.accumulator = 0;
     const focus = this.focusPosition();
-    this.coast.setUnderwater(this.isUnderwater());
+    this.coast.setUnderwater(this.isWaterborne());
     this.coast.animate(this.flight.time, focus.x, focus.y, focus.z, this.flight);
     this.coast.updateTidegate(this.tidegate, this.flight.time, this.echo.attuned);
     this.coast.updateEcho(echoPhase(this.echo, this.tidegate), this.flight.time);
