@@ -28,8 +28,8 @@ describe('near-camera natural vegetation visual gate', () => {
       const wx=GRAND_LAKE.x+258,wz=GRAND_LAKE.z+320;
       const m=new THREE.Matrix4(),position=new THREE.Vector3();
       for(let species=0;species<4;species++){
-        const tree=scene.getObjectByName('vegetation.azure.pbr-tree-wood.'+species)
-          as THREE.InstancedMesh | undefined;
+        const tree=scene.getObjectByName('vegetation.azure.pbr-tree-wood.'+species) as
+          THREE.InstancedMesh | undefined;
         expect(tree).toBeDefined();
         for(let i=0;i<tree!.count;i++){
           tree!.getMatrixAt(i,m);
