@@ -13,6 +13,7 @@ import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
 import { dragonExpression } from './dragonExpression';
 import { createDragonLegSculpt } from './limbSculpt';
 import { RiderCloakMotion } from '../rider/cloakMotion';
+import { mountedRiderSeat } from '../rider/mountSeat';
 
 const scaleTextures=makeDragonScaleTextures();
 const skin = applyDragonScales(
@@ -337,7 +338,8 @@ export class DragonVisual {
       this.rider.visible = true;
     } else {
       if (this.rider.parent !== this.root) this.root.add(this.rider);
-      this.rider.position.set(0, this.displayedScale * 0.72, -this.displayedScale * 0.40);
+      const seat=mountedRiderSeat(this.displayedScale);
+      this.rider.position.set(0,seat.y,seat.z);
       this.rider.rotation.set(-state.pitch * 0.13, 0, pose.riderLean);
       this.rider.visible = true;
     }

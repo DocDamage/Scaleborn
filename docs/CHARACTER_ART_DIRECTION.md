@@ -168,3 +168,17 @@ pigments with restrained violet variation, retaining painted vein maps,
 material iridescence and three-bone deformation. These improvements are
 testable geometry/material changes, not final visual approvals. Review
 real close-up gameplay captures on a dedicated GPU.
+
+### Rider mounting posture and seat height
+
+True 1280x720 character close-ups showed the hybrid rider floating or
+standing high above Onyx's shoulders, especially in giant form. The
+mounted offset is now computed from the **dragon's actual displayed form
+scale** and the original child rider's fixed hip height, so the pelvis
+rests against the upper back through size transitions. The legs lean
+forward in a seated posture without resizing the child or replacing
+the actor/socket data. Independent small-dragon dismount logic and
+full quest state remain unchanged.
+
+This is a first procedural mounting correction. Authored knee/ankle IK
+and saddle/grip animations remain future visual-quality work.

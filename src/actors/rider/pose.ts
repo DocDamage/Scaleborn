@@ -15,7 +15,8 @@ export interface RiderPose {
 export function riderPose(state: FlightState): RiderPose {
   if (state.form !== 'small') {
     return { motion: 'mounted', leftArm: -0.28, rightArm: -0.28,
-      leftLeg: -0.45, rightLeg: -0.45,
+      // Rotate the thighs toward the snout instead of standing straight.
+      leftLeg: 0.42, rightLeg: 0.42,
       torsoLean: -state.pitch * 0.12, breathing: 0 };
   }
   const swimming = state.riderMode !== 'ground';
