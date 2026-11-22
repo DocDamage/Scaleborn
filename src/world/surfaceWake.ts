@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import type { FlightState } from '../actors/dragon/flight';
-import { waterSurfaceAt } from './highlandLake';
+import { lakeContains, waterSurfaceAt } from './highlandLake';
 import { waterWaveOffsetAt } from './waterWaves';
-import { makeWakeCrestGeometry, makeWakeCrestTexture } from './wakeCrest';
+import { makeWakeCrestGeometry, makeWakeCrestTexture, installWakeWaveDeformation, type WakeWaveUniforms } from './wakeCrest';
 
 type WakeEvent = {
   mesh: THREE.Mesh;
   material: THREE.MeshBasicMaterial;
+  wave: WakeWaveUniforms;
   age:number; duration:number;active:boolean;
   x:number; z:number; scale:number;
 };
@@ -42,12 +43,16 @@ export class SurfaceWake {
         depthTest:true,
         toneMapped:true,
       });
+      const wave: WakeWaveUniforms = {
+        time:{value:0},anchorWave:{value:0},lake:{value:0},
+      };
+      installWakeWaveDeformation(mat,wave);
       const mesh=new THREE.Mesh(this.crestGeometry,mat);
       mesh.visible=false;
       mesh.renderOrder=4;
       mesh.name='water.azure.directional-swim-wake';
       this.group.add(mesh);
-      this.events.push({mesh,material:mat,age:0,duration:1.5,
+      this.events.push({mesh,material:mat,wave,age:0,duration:1.5,
         active:false,x:0,z:0,scale:1});
     }
   }
@@ -60,8 +65,11 @@ export class SurfaceWake {
     event.duration=1.28+scale*.12;
     event.x=x;event.z=z;event.scale=scale;
     event.mesh.visible=true;
+    event.wave.time.value=time;
+    event.wave.lake.value=lakeContains(x,z)?1:0;
+    event.wave.anchorWave.value=waterWaveOffsetAt(x,z,time);
     event.mesh.position.set(
-      x,waterSurfaceAt(x,z)+waterWaveOffsetAt(x,z,time)+.14,z,
+      x,waterSurfaceAt(x,z)+event.wave.anchorWave.value+.14,z,
     );
     // Actor yaw 0 faces -Z. Geometry grows behind (+Z); rotating by -yaw
     // keeps its open V trailing the swimmer in the actual movement direction.
@@ -105,8 +113,10 @@ export class SurfaceWake {
       const p=Math.min(1,event.age/event.duration);
       const spread=event.scale*(.65+p*.42);
       event.mesh.scale.set(spread,1,spread*(1+p*.19));
+      event.wave.time.value=time;
+      event.wave.anchorWave.value=waterWaveOffsetAt(event.x,event.z,time);
       event.mesh.position.y=waterSurfaceAt(event.x,event.z)
-        +waterWaveOffsetAt(event.x,event.z,time)+.14;
+        +event.wave.anchorWave.value+.14;
       event.material.opacity=.27*Math.pow(1-p,1.55);
       if(p>=1){
         event.active=false;
