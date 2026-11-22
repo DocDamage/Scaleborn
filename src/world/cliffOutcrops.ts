@@ -3,6 +3,7 @@ import { rng } from '../core/random';
 import { GRAND_LAKE, MIRRORFALL, waterSurfaceAt } from './highlandLake';
 import { AZURE_SEED, heightAt } from './terrain';
 import { makeRockMaterial } from './materials';
+import { InstanceVisibility } from './instanceVisibility';
 
 export type CliffDetailQuality = 'high'|'low';
 
@@ -108,6 +109,7 @@ export class CliffOutcrops {
   readonly group=new THREE.Group();
   readonly mesh:THREE.InstancedMesh;
   private readonly material:THREE.MeshStandardMaterial;
+  private readonly visibility=new InstanceVisibility();
 
   constructor(scene:THREE.Scene,quality:CliffDetailQuality='high'){
     this.group.name='terrain.azure.mirrorfall-fractured-outcrops';
@@ -137,9 +139,17 @@ export class CliffOutcrops {
     });
     this.mesh.castShadow=quality==='high';
     this.mesh.receiveShadow=true;
-    this.mesh.frustumCulled=false;
+    // Keep the source transforms/tints, but submit ONLY the rock shelves
+    // inside the current view budget. Without culling, the high preset
+    // draws ~1,700 cliff ledges even at the far side of Azure Coast.
+    this.visibility.register(this.mesh,sites,quality==='high'?600:430);
+    this.mesh.count=0;
     this.group.add(this.mesh);
     scene.add(this.group);
+  }
+
+  update(x:number,z:number):void{
+    this.visibility.update(x,z);
   }
 
   dispose():void{

@@ -44,7 +44,14 @@ describe('Mirrorfall rock shelf visual detail',()=>{
     try{
       expect(rocks.group.children).toHaveLength(1);
       expect(rocks.mesh).toBeInstanceOf(THREE.InstancedMesh);
+      expect(rocks.mesh.count).toBe(0);
+      rocks.update(GRAND_LAKE.x+GRAND_LAKE.radiusX*1.15, GRAND_LAKE.z);
       expect(rocks.mesh.count).toBeGreaterThan(25);
+      const nearbyCount=rocks.mesh.count;
+      rocks.update(1600,1600);
+      expect(rocks.mesh.count).toBe(0);
+      rocks.update(GRAND_LAKE.x+GRAND_LAKE.radiusX*1.15, GRAND_LAKE.z);
+      expect(rocks.mesh.count).toBe(nearbyCount);
       expect(rocks.mesh.material).toBeInstanceOf(THREE.MeshStandardMaterial);
       const m=new THREE.Matrix4(),pos=new THREE.Vector3();
       rocks.mesh.getMatrixAt(0,m);
