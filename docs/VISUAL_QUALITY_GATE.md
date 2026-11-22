@@ -576,3 +576,17 @@ The boulders remain original procedural geology, not approved scanned
 production assets. Inspect actual rider-height scree and waterfall-cliff
 screenshots for repeating forms, scale, penetration and normal seams;
 dedicated GPU profiling is still required.
+
+### Instanced-rock and forest world-space shader correction
+
+High-quality rock/bark custom shaders now incorporate each object's
+`instanceMatrix` when deriving world-space material positions, wetness and
+geological/moss shading. Nonuniform instanced scales are removed before
+transforming world normals. Previously, all instanced boulders and tree
+trunks shaded the same origin-relative location even though their
+positions and rotations differed. Low-budget map-only materials remain
+unchanged; existing rock/bark geometry and instanced draw budgets remain
+unchanged. Regression checks inspect shader injection for both materials.
+
+This corrects a source-level shading defect, but it does not replace
+actual browser screenshots or prove the absence of WebGL shader errors.
