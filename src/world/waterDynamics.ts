@@ -53,8 +53,9 @@ export function plungeWaveUnmaskedAt(x:number,z:number,time:number):number {
   if(![x,z,time].every(Number.isFinite))return 0;
   const d=Math.hypot(x-MIRRORFALL_IMPACT.x,z-MIRRORFALL_IMPACT.z);
   const decay=Math.exp(-d*.038);
-  const phase=(d/MIRRORFALL_IMPACT.waveLength-time*
-    MIRRORFALL_IMPACT.waveSpeed/MIRRORFALL_IMPACT.waveLength)*Math.PI*2;
+  // Keep the CPU phase identical to the water/foam GLSL shaders.
+  // Earlier wavelength-based rounding drifted at long gameplay times.
+  const phase=d*.225-time*1.63;
   return Math.sin(phase)*MIRRORFALL_IMPACT.waveAmplitude*decay;
 }
 
