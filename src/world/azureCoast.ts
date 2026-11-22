@@ -23,6 +23,7 @@ import { SurfaceWake } from './surfaceWake';
 import { CreatureSplash } from './creatureSplash';
 import type { FlightState } from '../actors/dragon/flight';
 import { makeTerrainMaterial } from './materials';
+import { updateTerrainPigmentTime } from './terrainPigment';
 import { PainterlySky } from './sky';
 import { addMarineDressing } from './marineDressing';
 import { TidegateVisual } from './tidegateVisual';
@@ -200,6 +201,9 @@ export class AzureCoast {
   }
 
   animate(time: number, x: number, y: number, z: number, state?: FlightState, camera?: THREE.Camera): void {
+    // Animate terrain contact wetness with the very same absolute clock as
+    // wave vertices, swimmer heights and waterfall-impact surface foam.
+    updateTerrainPigmentTime(this.terrainMaterial,time);
     this.water.follow(x,z);
     this.water.update(time);
     this.lake.update(time);
