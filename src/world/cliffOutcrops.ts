@@ -57,8 +57,10 @@ export function fracturedLedgeGeometry(quality:CliffDetailQuality):THREE.BufferG
     colors.push(c.r,c.g,c.b);
     const row=ring*(sides+1);
     for(let j=0;j<sides;j++){
-      if(top)triangles.push(i,row+j,row+j+1);
-      else triangles.push(i,row+j+1,row+j);
+      // For X/Z polar rings, x→z winding points DOWN. Reverse top and
+      // bottom to ensure light-facing outward normals at both caps.
+      if(top)triangles.push(i,row+j+1,row+j);
+      else triangles.push(i,row+j,row+j+1);
     }
   };
   cap(false);cap(true);

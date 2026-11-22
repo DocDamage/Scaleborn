@@ -18,6 +18,9 @@ describe('Mirrorfall rock shelf visual detail',()=>{
       expect(low.getAttribute('uv').count).toBe(p.count);
       const arr=(p.array as Float32Array);
       expect([...arr].every(Number.isFinite)).toBe(true);
+      const n=low.getAttribute('normal');
+      expect(n.getY(p.count-1)).toBeGreaterThan(.4);
+      expect(n.getY(p.count-2)).toBeLessThan(-.4);
     }finally{low.dispose();high.dispose();}
   });
 

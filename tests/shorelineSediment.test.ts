@@ -27,6 +27,9 @@ describe('physically grounded shoreline sediment',()=>{
       expect(highG.index!.count).toBeGreaterThan(lowG.index!.count);
       expect(lowG.getAttribute('normal').count).toBe(lowG.getAttribute('position').count);
       expect(lowG.getAttribute('color').count).toBe(lowG.getAttribute('position').count);
+      const normal=lowG.getAttribute('normal'),count=normal.count;
+      expect(normal.getY(count-1)).toBeGreaterThan(.4);
+      expect(normal.getY(count-2)).toBeLessThan(-.4);
     }finally{lowG.dispose();highG.dispose();}
     const scene=new THREE.Scene(),sediment=new ShorelineSediment(scene,'low');
     try{

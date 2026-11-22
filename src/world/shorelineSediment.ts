@@ -45,8 +45,10 @@ export function makeShoreStone(quality:Quality):THREE.BufferGeometry {
     colors.push(.69,.70,.65);
     const row=ring*(radial+1);
     for(let j=0;j<radial;j++){
-      if(top)indices.push(center,row+j,row+j+1);
-      else indices.push(center,row+j+1,row+j);
+      // Winding in X/Z has downward-facing cross product. Flip the
+      // top cap for correct stone lighting; underside faces down.
+      if(top)indices.push(center,row+j+1,row+j);
+      else indices.push(center,row+j,row+j+1);
     }
   }
   const geometry=new THREE.BufferGeometry();
