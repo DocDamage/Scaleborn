@@ -14,13 +14,15 @@ const smoothstep = (a: number, b: number, x: number): number => {
 
 /**
  * Continuous world-space UVs remove a 250-meter stretched texture from every
- * terrain tile. Around the Mirrorfall escarpment, gradually tilt mapping into
- * vertical geological coordinates so the cliff face retains rock grain.
+ * terrain tile. Cliff masks remain available for future triplanar shader
+ * blending, but texture coordinates DO NOT interpolate between horizontal
+ * and vertical projections: doing so stretched normal maps into moiré bands
+ * in actual rider-height gameplay captures.
  *
  * Depends only on real world coordinates, not per-tile normals; edge vertices
  * use identical UVs even across different terrain LODs.
  */
-export function terrainUvAt(x: number, y: number, z: number): TerrainUvSample {
+export function terrainUvAt(x: number, _y: number, z: number): TerrainUvSample {
   const metersPerRepeat = 13;
   let cliffBlend = 0;
   if (Math.abs(x - GRAND_LAKE.x) < GRAND_LAKE.radiusX * 1.65 &&
@@ -34,8 +36,10 @@ export function terrainUvAt(x: number, y: number, z: number): TerrainUvSample {
     cliffBlend = elevation * bankFade * face * canyon;
   }
   return {
-    u: (x * (1 - cliffBlend) + z * cliffBlend) / metersPerRepeat,
-    v: (z * (1 - cliffBlend) + y * cliffBlend) / metersPerRepeat,
+    // No mixed UV coordinates across bank slope. This preserves smooth,
+    // seam-stable mipmapped texturing on all quality presets.
+    u: x / metersPerRepeat,
+    v: z / metersPerRepeat,
     cliffBlend,
   };
 }

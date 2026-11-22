@@ -17,7 +17,8 @@ describe('Mirrorfall erosion and continuous terrain projection', () => {
     expect(meadow.cliffBlend).toBe(0);
     expect(meadow.u).toBeCloseTo(-900/13);
     expect(meadow.v).toBeCloseTo(-200/13);
-    expect(cliff.u).not.toBeCloseTo(x/13,1);
+    expect(cliff.u).toBeCloseTo(x/13,4);
+    expect(cliff.v).toBeCloseTo(z/13,4);
     expect(Number.isFinite(cliff.v)).toBe(true);
   });
 

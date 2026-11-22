@@ -165,7 +165,7 @@ tests must not be mistaken for passing the artistic visual-quality gate.
   the narrow central waterfall cleft stays steep. The same deterministic
   heightfield still drives terrain mesh, collision, and lake bathymetry.
 - `terrainUvAt` projects painted surface maps in shared world coordinates
-  with gradual vertical projection on Mirrorfall's high rock faces. This
+  while reserving geological cliff masks for a later triplanar material shader. This
   removes the previous single texture repetition across each 250 m tile,
   and preserves matched UV coordinates across LOD boundaries.
 - Low-preset geological vertex colors receive layered strata rather than a
@@ -183,3 +183,12 @@ fragments; surface-only breaking foam is discarded from below. Lake sunshaft
 cards also use broader feathering and lower opacity to avoid vertical
 laser-like streaks. These are shader approximations, not physical refraction,
 and require a fresh **actual** browser screenshot before acceptance.
+
+### Shoreline UV-regression correction
+
+Actual rider-height screenshot review showed dense striated moiré bands where
+the horizontal and vertical UV coordinate sets were interpolated across
+Mirrorfall's slopes. The cliff mask is retained for later triplanar **shader**
+blending, but mixed vertex UV projections are disabled. Both flat and steep
+terrain now use stable continuous world-XZ tiling; this trades some steep-face
+anisotropy for correct texture filtering and no projection-induced ripples.
