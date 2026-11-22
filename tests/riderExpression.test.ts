@@ -5,7 +5,7 @@ import { DragonVisual } from '../src/actors/dragon/visual';
 import { riderPose } from '../src/actors/rider/pose';
 import { riderFacialPose } from '../src/actors/rider/riderExpression';
 
-describe('young Scaleborn heroine's original subtle facial expressions',()=>{
+describe("young Scaleborn heroine's original subtle facial expressions",()=>{
   it('generates finite, deterministic small expression shifts with a complete blink',()=>{
     const state=newFlightState();
     state.form='small';
