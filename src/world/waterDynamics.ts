@@ -77,6 +77,10 @@ export function plungeVelocityAt(x: number, y: number, z: number): WaterVelocity
   const dx = x - MIRRORFALL_IMPACT.x;
   const dz = z - MIRRORFALL_IMPACT.z;
   const radius = Math.hypot(dx, dz);
+  // Bound the whole 3D field, including the Gaussian downdraft tail.
+  // Returning an exact still-water vector beyond the authored impact
+  // radius prevents tiny currents from leaking across Mirrorfall Lake.
+  if (radius >= MIRRORFALL_IMPACT.radius) return still;
   const downwelling = -2.65
     * Math.exp(-Math.pow(radius / 21, 2))
     * smooth(clamp01((depth - .5) / 3.0))
