@@ -5,6 +5,8 @@ import { createWingRig, poseWing } from './wingRig';
 import { dragonPose } from './animationPose';
 import { riderPose } from '../rider/pose';
 import { applyDragonScales, makeDragonScaleTextures } from './skinSurface';
+import { loadCharacterModel } from './characterSources';
+import { ImportedCharacterRig, type CharacterKind, type CharacterModelFile } from '../rider/importedCharacterRig';
 
 const scaleTextures=makeDragonScaleTextures();
 const skin = applyDragonScales(
@@ -109,6 +111,14 @@ export class DragonVisual {
   private readonly legs: Array<{ group: THREE.Group; diagonal: boolean }> = [];
   private displayedScale = FORMS.rideable.visualScale;
   private previousTime = 0;
+  private importedDragon: ImportedCharacterRig | null = null;
+  private importedRider: ImportedCharacterRig | null = null;
+  private readonly legacyDragonNodes: THREE.Object3D[] = [];
+  private readonly legacyRiderNodes: THREE.Object3D[] = [];
+  private disposed = false;
+  readonly modelStatus: Record<CharacterKind, 'pending' | 'ready' | 'fallback'> = {
+    dragon: 'pending', rider: 'pending',
+  };
 
   constructor() {
     this.root.name = 'creature.dragon.onyx';
@@ -177,12 +187,52 @@ export class DragonVisual {
     tailFin(this.tail);
     this.body.add(this.tail);
     this.root.add(this.body, this.rider);
+    this.legacyDragonNodes.push(...this.body.children);
+    this.legacyRiderNodes.push(...this.rider.children);
     this.body.scale.setScalar(this.displayedScale);
   }
 
   attach(scene: THREE.Scene): void {
     this.scene = scene;
     scene.add(this.root);
+    // Model loading is independent of the deterministic fixed-step game.
+    // Keep collision and existing animation usable if either asset fails.
+    for (const kind of ['dragon', 'rider'] as const) {
+      void loadCharacterModel(kind)
+        .then((model) => {
+          if (this.disposed) {
+            // Avoid adding a stale async result after the game is torn down.
+            const unused = new ImportedCharacterRig(kind, model);
+            unused.dispose();
+          } else this.replaceCharacter(kind, model);
+        })
+        .catch((error: unknown) => {
+          this.modelStatus[kind] = 'fallback';
+          console.warn('Scaleborn character asset unavailable: ' + kind, error);
+        });
+    }
+  }
+
+  /**
+   * Replace rendered geometry without replacing actor/root objects, sockets,
+   * collision, form scale, rider control or scene ownership. Also exercised
+   * directly by deterministic tests without a network/WebGL context.
+   */
+  replaceCharacter(kind: CharacterKind, model: CharacterModelFile): void {
+    if (this.disposed) throw new Error('DragonVisual has been disposed');
+    const imported = new ImportedCharacterRig(kind, model);
+    if (kind === 'dragon') {
+      this.importedDragon?.dispose();
+      this.importedDragon = imported;
+      this.body.add(imported.root);
+      for (const child of this.legacyDragonNodes) child.visible = false;
+    } else {
+      this.importedRider?.dispose();
+      this.importedRider = imported;
+      this.rider.add(imported.root);
+      for (const child of this.legacyRiderNodes) child.visible = false;
+    }
+    this.modelStatus[kind] = 'ready';
   }
 
   update(state: FlightState): void {
@@ -218,7 +268,9 @@ export class DragonVisual {
     const blinking = (state.time % 7.3) > 7.08;
     for (const eye of this.eyes) eye.scale.y = blinking ? 0.025 : 0.16;
 
+    this.importedDragon?.animateDragon(pose, dt);
     const riderMotion = riderPose(state);
+    this.importedRider?.animateRider(riderMotion, Math.abs(state.riderSpeed), dt);
     this.riderLimbs.leftArm.rotation.x = riderMotion.leftArm;
     this.riderLimbs.rightArm.rotation.x = riderMotion.rightArm;
     this.riderLimbs.leftLeg.rotation.x = riderMotion.leftLeg;
@@ -240,5 +292,15 @@ export class DragonVisual {
       this.rider.rotation.set(-state.pitch * 0.13, 0, pose.riderLean);
       this.rider.visible = true;
     }
+  }
+
+  dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.importedDragon?.dispose();
+    this.importedRider?.dispose();
+    this.rider.removeFromParent();
+    this.root.removeFromParent();
+    this.scene = null;
   }
 }
