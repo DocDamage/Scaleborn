@@ -291,3 +291,71 @@ button:focus-visible { outline: 3px solid white; outline-offset:3px; }
   #tidegate-panel{bottom:64px;right:10px;width:180px;}
   #dragon-panel{bottom:54px;left:10px;}
 }
+
+/* After the title screen, scenery—not the UI—gets the screen space.
+   Combat bars are deliberately absent until real combat attributes exist. */
+.game-started .titlebar {
+  opacity:0;
+  transition:opacity 700ms ease;
+  pointer-events:none;
+}
+.game-started #hud {
+  display:none;
+}
+.game-started.hud-menu-open #hud {
+  display:grid;
+  left:20px;
+  bottom:330px;
+  top:auto;
+}
+.game-started #echo-panel {
+  top:24px;
+  right:26px;
+  width:240px;
+  opacity:.72;
+  transition:opacity .2s ease;
+}
+.game-started #echo-panel p {
+  display:none;
+}
+.game-started #echo-panel .eyebrow{
+  font-size:8px;
+  letter-spacing:.13em;
+}
+.game-started #echo-panel strong{
+  font-size:14px;
+  font-weight:400;
+  margin-top:1px;
+}
+.game-started #echo-panel:hover {
+  opacity:1;
+}
+.game-started #minimal-compass {
+  top:16px;
+  opacity:.84;
+}
+.game-started #menu-toggle {
+  background:rgba(8,18,20,.12);
+  border-color:rgba(220,202,161,.12);
+  opacity:.52;
+  transition:opacity .2s ease,background .2s ease;
+}
+.game-started #menu-toggle:hover,
+.game-started.hud-menu-open #menu-toggle{
+  opacity:1;
+  background:rgba(10,22,24,.8);
+}
+@media(max-width:660px){
+  .game-started #echo-panel{
+    top:46px;
+    right:10px;
+    width:160px;
+  }
+  .game-started #echo-panel strong{
+    font-size:12px;
+  }
+  .game-started.hud-menu-open #hud {
+    bottom:380px;
+    left:10px;
+  }
+}

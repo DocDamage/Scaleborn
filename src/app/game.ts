@@ -10,7 +10,7 @@ import { CoastDiscovery } from '../world/discoveries';
 import { toggleDragonDive } from '../actors/dragon/swimming';
 import { toggleRiderControl, toggleRiderDive } from '../actors/rider/movement';
 import { SEA_LEVEL, LANDMARKS } from '../world/terrain';
-import { GRAND_LAKE } from '../world/highlandLake';
+import { GRAND_LAKE, waterSurfaceAt } from '../world/highlandLake';
 import { TIDEGATE, newTidegateState, stepTidegate, interactTidegate, tidegateNearby, tidegateHint } from '../world/tidegate';
 import {
   ECHO_SHRINE, newTidalEchoState, echoPhase, echoObjective,
@@ -317,6 +317,7 @@ export class Game {
   private begin(canvas: HTMLCanvasElement): void {
     this.paused = false;
     this.intro.hidden = true;
+    this.app.classList.add('game-started');
     void canvas.requestPointerLock().catch(() => {
       // Keyboard flight remains available when pointer lock is refused.
     });
@@ -445,7 +446,7 @@ export class Game {
     const belowSurface = this.isUnderwater();
     this.altLabel.textContent = belowSurface ? 'DEPTH' : swimming ? 'SEA LEVEL' : 'GROUND CLEARANCE';
     this.altitudeText.textContent = belowSurface
-      ? String(Math.round(Math.max(0, SEA_LEVEL - current.y)))
+      ? String(Math.round(Math.max(0, waterSurfaceAt(current.x, current.z) - current.y)))
       : swimming || (rider ? this.flight.riderMode === 'ground' : this.flight.mode === 'ground')
         ? '0' : String(Math.round(Math.max(0, current.y - Math.max(0, heightAt(current.x, current.z)))));
     this.speedText.textContent = Math.round(Math.abs(rider ? this.flight.riderSpeed : this.flight.speed)).toString();

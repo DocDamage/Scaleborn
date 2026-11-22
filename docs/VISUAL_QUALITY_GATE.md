@@ -94,3 +94,10 @@ content and Unreal replacements remain possible.
 
 The priorities are *environment materials and readability first*; expanding
 quests and combat is on hold until the visual checkpoint improves meaningfully.
+
+### Bathymetry and material acceptance (visual pass 2)
+
+- `src/world/lakeBathymetry.ts` samples the gameplay heightfield into a limited-size 2D data texture; the shader uses the same bathymetry to attenuate light through water using a Beer–Lambert approximation. This is **not** a refractive raytracer; it is a real-time shaded/transmissive approximation.
+- Shallow water can reveal painted seabed; depth and wave normals modulate Fresnel reflection and directional highlights. Shoreline ribbons carry UV fade and time-varying wave breakup so white outlines do not dominate the image.
+- Steep lake-facing terrain has rock/mineral vertex colors even on low settings. The standalone cliff face has independent mineral strata vertex coloration; geometry and gameplay still share the heightfield, with the cliff face a supplementary scenic detail.
+- After starting flight, nonessential title/header and numerical cards are hidden; the M panel still exposes actual controls/status. The compass remains minimally visible. The completed UI must be verified across desktop, mobile and keyboard controls.

@@ -17,9 +17,11 @@ export class MirrorfallCliffs {
     this.group.name='terrain.azure.mirrorfall-cliff';
     this.material=makeRockMaterial(quality);
     this.material.side=THREE.DoubleSide;
-    const segmentZ=quality==='low'?52:100;
-    const segmentY=quality==='low'?35:66;
+    this.material.vertexColors=true;
+    const segmentZ=quality==='low'?76:160;
+    const segmentY=quality==='low'?58:112;
     const positions:number[]=[];
+    const colors:number[]=[];
     const indices:number[]=[];
     const middle=GRAND_LAKE.z;
     for(let row=0;row<=segmentY;row++){
@@ -40,6 +42,17 @@ export class MirrorfallCliffs {
         const waterfallX=MIRRORFALL.x-82 + 81*t;
         const x=waterfallX+7 + ridge*0.20+noise*3.4+stratum*.23;
         positions.push(x,y,z);
+        // Rock albedo is geological rather than a flat grey slab. Broad
+        // strata, mineral veins, and moss near the crest are baked into
+        // vertex colors so the low renderer benefits as well.
+        const striation=Math.sin(y*.19+u*24+noise*1.5)*.09;
+        const mineral=Math.max(0,Math.min(1,.46+noise*.43+striation));
+        const rock=new THREE.Color(0x54636c).lerp(
+          new THREE.Color(0xb0aaa0),mineral*.77+.06);
+        const crestMoss=Math.pow(t,4)*.28*
+          Math.max(0,Math.min(1,noise+.42));
+        rock.lerp(new THREE.Color(0x445a4b),crestMoss);
+        colors.push(rock.r,rock.g,rock.b);
         if(row<segmentY&&col<segmentZ){
           // An open cleft must separate the cliff wings; opaque rock should
           // never obscure the center of the falling-water curtain.
@@ -53,6 +66,7 @@ export class MirrorfallCliffs {
     }
     const geometry=new THREE.BufferGeometry();
     geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+    geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
     this.wall=new THREE.Mesh(geometry,this.material);

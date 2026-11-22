@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GRAND_LAKE, lakeBoundaryScale } from './highlandLake';
 import { MIRRORFALL_IMPACT } from './waterDynamics';
+import { makeLakeBathymetry, BATHYMETRY_RANGE_METERS, LAKE_MAP_WIDTH, LAKE_MAP_HEIGHT } from './lakeBathymetry';
 import { SEA_LEVEL, WORLD_WIDTH_METERS } from './terrain';
 
 /**
@@ -41,6 +42,10 @@ const frag=`
   uniform float uTime;
   uniform float uLake;
   uniform vec2 uImpactWorld;
+  uniform sampler2D uBathymetry;
+  uniform vec2 uBathyOrigin;
+  uniform vec2 uBathySpan;
+  uniform float uDepthRange;
   varying vec3 vScWorld;
   varying float vScWave;
   float h(vec2 p) {
@@ -60,6 +65,9 @@ const frag=`
        +.042*sin(7.0*angle-.72)+.023*sin(13.0*angle+2.0);
     float r=length(d)/shoreShape;
     if (uLake>0.5 && r>.981) discard;
+    vec2 bathyUv=(q-uBathyOrigin)/uBathySpan;
+    float waterDepth=texture2D(uBathymetry,clamp(bathyUv,0.0,1.0)).r*uDepthRange;
+    float shallow=uLake*(1.0-smoothstep(0.4,11.0,waterDepth));
     // Remove the ocean below the isolated freshwater basin.
     if (uLake<0.5 && r<1.05) discard;
     float t=uTime;
@@ -85,51 +93,67 @@ const frag=`
     float ripples=noise(q*.22+vec2(t*.10,t*.08));
     float micro=noise(q*1.25-vec2(t*.24,t*.11));
     float waveFoam=smoothstep(.83,1.07,abs(sin(p2)+sin(p3)*.48))*.14;
-    float nearShore=uLake>0.5?smoothstep(.84,.985,r):0.0;
+    float nearShore=uLake>0.5?smoothstep(.948,.981,r):0.0;
     float surge=sin(r*134.0-t*2.3+noise(q*.055)*3.0);
     float foam=uLake>0.5?
-       nearShore*(.30+.52*smoothstep(.18,.86,surge+micro*.31)):
+       nearShore*shallow*(.06+.42*smoothstep(.28,.91,surge+micro*.31)):
        waveFoam;
     float turbulence=0.55+0.45*sin(plungeDist*.225-t*1.63);
     foam=clamp(foam+plungeDecay*(0.38+0.34*turbulence),0.0,0.93);
     vec3 deep=uLake>0.5?vec3(.025,.19,.245):vec3(.027,.155,.19);
     vec3 turquoise=uLake>0.5?vec3(.105,.39,.415):vec3(.10,.34,.39);
-    vec3 base=mix(deep,turquoise,.20+.36*ripples+.12*sin(p1));
-    base+=vec3(.012,.026,.020)*(micro-.5);
-    vec3 sky=vec3(.39,.57,.64);
-    vec3 reflected=mix(sky,vec3(.93,.74,.48),pow(max(dot(V,L),0.0),12.0));
-    vec3 color=mix(base,reflected,fresnel*.74);
-    color+=vec3(.93,.80,.57)*sparkle*1.22;
-    color=mix(color,vec3(.83,.94,.88),clamp(foam,0.0,.88));
-    // Slight transparency over painted shallows; opaque deep water.
-    float alpha=uLake>0.5?mix(.90,.985,smoothstep(.2,.95,r)):.945;
+    float BeerLambert=exp(-waterDepth*.071);
+    // Shallows transmit a sand/mineral tint; depth absorbs it progressively.
+    vec3 bed=vec3(.40,.49,.38);
+    vec3 shallowWater=vec3(.17,.53,.47);
+    vec3 lakeAlbedo=mix(deep,shallowWater,BeerLambert*.84);
+    lakeAlbedo=mix(lakeAlbedo,bed,BeerLambert*.20);
+    vec3 base=mix(deep,turquoise,.18+.28*ripples+.08*sin(p1));
+    base=mix(base,lakeAlbedo,uLake);
+    base+=vec3(.018,.025,.016)*(micro-.5);
+    vec3 reflected=mix(vec3(.27,.43,.57),vec3(.94,.73,.47),
+      pow(max(dot(V,L),0.0),15.0));
+    float skyFresnel=clamp(fresnel*.86+.05,0.0,.96);
+    vec3 color=mix(base,reflected,skyFresnel);
+    color+=vec3(.97,.88,.62)*sparkle*.87;
+    color=mix(color,vec3(.82,.94,.87),clamp(foam,0.0,.91));
+    // Transparent shallow water reveals painted lake-floor terrain.
+    float alpha=uLake>.5 ? mix(.97,.49,BeerLambert*.70) : .95;
     gl_FragColor=vec4(color,alpha);
   }
 `;
 
 const foamVert=`
   varying vec3 vWorld;
+  varying vec2 vFoamUv;
   void main() {
     vWorld=(modelMatrix*vec4(position,1.0)).xyz;
+    vFoamUv=uv;
     gl_Position=projectionMatrix*viewMatrix*vec4(vWorld,1.0);
   }
 `;
 const foamFrag=`
   uniform float uTime;
+  uniform float uLakeStrip;
   varying vec3 vWorld;
+  varying vec2 vFoamUv;
   void main() {
     float noiseA=sin(vWorld.x*.41+uTime*1.3+sin(vWorld.z*.31))*
                  sin(vWorld.z*.57-uTime*.83+sin(vWorld.x*.29));
     float turbulence=.5+.5*noiseA;
     float wisps=pow(turbulence,1.9);
     vec3 foam=mix(vec3(.55,.78,.75),vec3(.97,.99,.93),wisps);
-    gl_FragColor=vec4(foam,(.11+.40*wisps));
+    float coastalFade=sin(clamp(vFoamUv.y,0.0,1.0)*3.1415926);
+    float striped=pow(max(0.0,sin(vFoamUv.x*300.0-uTime*1.36
+      +noiseA*2.7)),2.0);
+    float pulse=mix(1.0,coastalFade*(.3+.7*striped),uLakeStrip);
+    gl_FragColor=vec4(foam,clamp((.07+.46*wisps)*pulse,0.0,.61));
   }
 `;
 
-export function makeFoamShader(): THREE.ShaderMaterial {
+export function makeFoamShader(lakeStrip = false): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms:{uTime:{value:0}},
+    uniforms:{uTime:{value:0},uLakeStrip:{value:lakeStrip?1:0}},
     vertexShader:foamVert,fragmentShader:foamFrag,
     transparent:true,depthWrite:false,side:THREE.DoubleSide,
     blending:THREE.NormalBlending,
@@ -139,8 +163,13 @@ export function makeFoamShader(): THREE.ShaderMaterial {
 export class PainterlyWaterSurface {
   readonly mesh: THREE.Mesh;
   private readonly material: THREE.ShaderMaterial;
+  private readonly bathymetry: THREE.DataTexture;
   constructor(kind:'ocean'|'lake') {
     const isLake=kind==='lake';
+    this.bathymetry = isLake
+      ? makeLakeBathymetry()
+      : new THREE.DataTexture(new Uint8Array([255,255,255,255]),1,1,THREE.RGBAFormat);
+    this.bathymetry.needsUpdate=true;
     this.material=new THREE.ShaderMaterial({
       uniforms:{
         uTime:{value:0},
@@ -148,6 +177,11 @@ export class PainterlyWaterSurface {
         uImpactLocal:{value:new THREE.Vector2(
           MIRRORFALL_IMPACT.x-GRAND_LAKE.x,MIRRORFALL_IMPACT.z-GRAND_LAKE.z)},
         uImpactWorld:{value:new THREE.Vector2(MIRRORFALL_IMPACT.x,MIRRORFALL_IMPACT.z)},
+        uBathymetry:{value:this.bathymetry},
+        uBathyOrigin:{value:new THREE.Vector2(
+          GRAND_LAKE.x-LAKE_MAP_WIDTH*.5,GRAND_LAKE.z-LAKE_MAP_HEIGHT*.5)},
+        uBathySpan:{value:new THREE.Vector2(LAKE_MAP_WIDTH,LAKE_MAP_HEIGHT)},
+        uDepthRange:{value:BATHYMETRY_RANGE_METERS},
       },
       vertexShader:vert,fragmentShader:frag,
       transparent:true,depthWrite:false,side:THREE.DoubleSide,
@@ -166,14 +200,14 @@ export class PainterlyWaterSurface {
     this.mesh.renderOrder=isLake?2:1;
   }
   update(time:number):void{this.material.uniforms.uTime!.value=time;}
-  dispose():void{this.mesh.geometry.dispose();this.material.dispose();}
+  dispose():void{this.mesh.geometry.dispose();this.material.dispose();this.bathymetry.dispose();}
 }
 
 export class LakeShoreFoam {
   readonly mesh: THREE.Mesh;
-  private readonly material=makeFoamShader();
+  private readonly material=makeFoamShader(true);
   constructor(){
-    const positions:number[]=[];
+    const positions:number[]=[],uvs:number[]=[];
     const n=720,ring=0.981;
     for(let i=0;i<n;i++){
       const a=(i/n)*Math.PI*2,b=((i+1)/n)*Math.PI*2;
@@ -184,9 +218,12 @@ export class LakeShoreFoam {
       ];
       const p0=point(a,0.0),p1=point(a,0.011),p2=point(b,0),p3=point(b,0.011);
       positions.push(...p0,...p1,...p2,...p1,...p3,...p2);
+      const u0=i/n,u1=(i+1)/n;
+      uvs.push(u0,0,u0,1,u1,0,u0,1,u1,1,u1,0);
     }
     const geometry=new THREE.BufferGeometry();
     geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+    geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
     geometry.computeVertexNormals();
     this.mesh=new THREE.Mesh(geometry,this.material);
     this.mesh.name='water.azure.lake-shore-foam';

@@ -138,3 +138,7 @@ The game runs **high** painterly PBR shaders by default. Add `?quality=low` to r
 ### Waterfall flow coupling
 
 The lake waterfall now drives a shared, fixed-step local current field in `src/world/waterDynamics.ts` and an accompanying ripple/foam distortion in the lake shader. Swimming dragons and independently swimming riders are nudged away from the plunge point, with a collision-safety check. Impact current fades with distance and does not affect the ocean. This is not a fully coupled 3D fluid or water-pressure solver and will require additional work before being labeled realistic water physics.
+
+### Renderer–terrain alignment and quiet HUD (visual pass 2)
+
+Lake shallow-water coloration now samples a deterministic GPU bathymetry map derived from the same heightfield as swimming collisions. Shallow areas transmit more lakebed color, deeper water absorbs more light, and the shoreline foam ribbon fades across its width rather than painting a continuous opaque white line. Eastern lake cliff walls use slope-aware stone and mineral-variation coloring even on the Low preset. In gameplay the opening title and routine speed cards fade away; M reopens controls and readouts, while the compass and concise quest remain. No fake HP, magic or stamina bars were introduced.
