@@ -41,6 +41,11 @@ export class MirrorfallCliffs {
         const x=waterfallX+7 + ridge*0.20+noise*3.4+stratum*.23;
         positions.push(x,y,z);
         if(row<segmentY&&col<segmentZ){
+          // An open cleft must separate the cliff wings; opaque rock should
+          // never obscure the center of the falling-water curtain.
+          const nextU=(col+1)/segmentZ*2-1;
+          if (u < -0.23 && nextU > -0.23 || u < 0.23 && nextU > 0.23 ||
+            (u >= -0.23 && u <= 0.23)) continue;
           const a=row*(segmentZ+1)+col,b=a+segmentZ+1;
           indices.push(a,b,a+1,b,b+1,a+1);
         }

@@ -415,8 +415,16 @@ export class Game {
       desired = root.clone().add(new THREE.Vector3(
         Math.sin(angle) * distance * 1.5, rise * 1.9, Math.cos(angle) * distance * 1.5,
       ));
-    } else desired = root.clone().addScaledVector(forward, -distance)
-      .add(new THREE.Vector3(0, rise, 0));
+    } else {
+      desired = root.clone().addScaledVector(forward, -distance)
+        .add(new THREE.Vector3(0, rise, 0));
+      // An original over-shoulder exploration composition, revealing
+      // the vista instead of covering waterfalls with the player's dragon.
+      if (!rider && !submerged && state.form !== 'giant') {
+        const right = new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));
+        desired.addScaledVector(right,-distance*.28);
+      }
+    }
     desired.y = Math.max(desired.y, heightAt(desired.x, desired.z) + 1.25);
     this.camera.up.set(0, 1, 0);
     this.camera.position.lerp(desired, instant ? 1 : 1 - Math.exp(-dt * 4.5));
