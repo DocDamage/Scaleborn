@@ -43,13 +43,23 @@ export function plungeCurrentAt(x: number, z: number): WaterCurrent {
     z:Math.sin(direction)*magnitude, magnitude };
 }
 
-export function plungeWaveAt(x:number,z:number,time:number):number {
-  if(!Number.isFinite(time)||!lakeContains(x,z))return 0;
+/**
+ * Unmasked plunge ripple for the immediate dry bank. This matches the lake
+ * vertex shader at the waterline; masking it at the lake boundary would
+ * abruptly freeze the adjoining shore's wetness when the wave passes.
+ * Never use this by itself to apply a current outside the lake.
+ */
+export function plungeWaveUnmaskedAt(x:number,z:number,time:number):number {
+  if(![x,z,time].every(Number.isFinite))return 0;
   const d=Math.hypot(x-MIRRORFALL_IMPACT.x,z-MIRRORFALL_IMPACT.z);
   const decay=Math.exp(-d*.038);
   const phase=(d/MIRRORFALL_IMPACT.waveLength-time*
     MIRRORFALL_IMPACT.waveSpeed/MIRRORFALL_IMPACT.waveLength)*Math.PI*2;
   return Math.sin(phase)*MIRRORFALL_IMPACT.waveAmplitude*decay;
+}
+
+export function plungeWaveAt(x:number,z:number,time:number):number {
+  return lakeContains(x,z) ? plungeWaveUnmaskedAt(x,z,time) : 0;
 }
 
 export function plungeFoamAt(x:number,z:number):number {
