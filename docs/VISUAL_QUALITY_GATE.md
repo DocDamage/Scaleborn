@@ -590,3 +590,20 @@ unchanged. Regression checks inspect shader injection for both materials.
 
 This corrects a source-level shading defect, but it does not replace
 actual browser screenshots or prove the absence of WebGL shader errors.
+
+
+### Synchronized forest bough and leaf motion / alpha-tested shadows
+
+Forest tree branches and foliage now share an instance-position-seeded,
+root-anchored gust field, so leaves no longer drift independently of the
+visible branches. The existing bark mineral/PBR shader remains chained,
+rather than being replaced. On High, the same displacement is applied to
+shared shadow-depth materials, including the actual leaf-atlas alpha cutoff,
+avoiding rigid silhouettes and solid rectangular leaf-card shadows.
+Low retains wind on lit tree meshes but skips shadow-only resources.
+Regressions cover shader chaining, rooted displacements, shared clocks,
+depth/alpha parity and the low/high graphics budgets.
+
+This fixes a **source-level forest-motion and shadow defect**; it is not
+evidence of in-game visual fidelity. Still require moving forest gameplay
+captures, actual Chromium shader validation and GPU shadow-cost profiling.

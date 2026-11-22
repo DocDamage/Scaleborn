@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createTreePrototype, makeLeafAtlas, type TreeSpecies } from './treeCanopy';
+import { installTreeWind } from './treeWind';
 import { makeFernTuft } from './fernUnderstory';
 import { InstanceVisibility } from './instanceVisibility';
 import { rng, fbm } from '../core/random';
@@ -156,31 +157,27 @@ export class PainterlyNature {
       color:0xffffff,map:leafTex,roughness:.88,metalness:0,
       side:THREE.DoubleSide,alphaTest:0.28,depthWrite:true,
     });
-    // Gentle leaf motion follows the rooted tree, not a rotating billboard.
-    // The tips sway more than the branch attachment, with a world-seeded
-    // gust phase so distant tree crowns do not oscillate in lockstep.
+    // Drive the tree's trunk, limbs and leaf cards from one gust field.
+    // Identical vertex offsets in the color and shadow passes keep foliage
+    // attached to bending boughs and prevent stationary shadow silhouettes.
     const leafWind={value:0};
     this.leafWind=leafWind;
-    leafMat.onBeforeCompile=(shader)=>{
-      shader.uniforms.uScLeafTime=leafWind;
-      shader.vertexShader=shader.vertexShader.replace('#include <common>',
-        '#include <common>\nuniform float uScLeafTime;');
-      shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',
-        `#include <begin_vertex>
-          #ifdef USE_INSTANCING
-            float gustPhase=instanceMatrix[3].x*.015+
-              instanceMatrix[3].z*.017;
-          #else
-            float gustPhase=0.0;
-          #endif
-          float canopyWeight=smoothstep(1.0,7.5,position.y);
-          transformed.x+=sin(uScLeafTime*.74+gustPhase+
-            position.z*.33)*canopyWeight*.12;
-          transformed.z+=cos(uScLeafTime*.63+gustPhase+
-            position.x*.22)*canopyWeight*.10;
-        `);
-    };
-    leafMat.customProgramCacheKey=()=> 'scaleborn-foliage-motion-v1';
+    installTreeWind(woodMat,leafWind,'wood');
+    installTreeWind(leafMat,leafWind,'foliage');
+    // Depth-pass vertex offsets and alpha-tested leaf cutouts match the
+    // visible foliage. These depth materials are shared by all archetypes.
+    const woodDepth=quality==='high'
+      ? new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}) : null;
+    const leafDepth=quality==='high'
+      ? new THREE.MeshDepthMaterial({
+        depthPacking:THREE.RGBADepthPacking,map:leafTex,
+        alphaTest:.28,side:THREE.DoubleSide,
+      }) : null;
+    if(woodDepth && leafDepth) {
+      installTreeWind(woodDepth,leafWind,'wood');
+      installTreeWind(leafDepth,leafWind,'foliage');
+      this.materials.push(woodDepth,leafDepth);
+    }
     const grassMat=new THREE.MeshStandardMaterial({
       color:0xb8c99c,roughness:.94,metalness:0,side:THREE.DoubleSide
     });
@@ -227,6 +224,10 @@ export class PainterlyNature {
       crown.name='vegetation.azure.pbr-tree-leaves.'+species;
       wood.castShadow = quality === 'high';
       crown.castShadow = quality === 'high';
+      if(woodDepth && leafDepth) {
+        wood.customDepthMaterial=woodDepth;
+        crown.customDepthMaterial=leafDepth;
+      }
       wood.receiveShadow = quality === 'high';
       this.root.add(wood,crown);
       this.meshes.push(wood,crown);
