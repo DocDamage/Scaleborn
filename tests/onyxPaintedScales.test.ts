@@ -30,7 +30,8 @@ describe('original AI-assisted Onyx scale paint is bound to real gameplay',()=>{
   it('uses repeat wrapped, mipmapped image-derived albedo with no runtime fetch',()=>{
     const texture=makeOnyxPaintedScaleMap();
     try{
-      expect(texture.image.width).toBe(32);
+      expect(texture.image.width).toBe(64);
+      expect(texture.image.height).toBe(64);
       expect(texture.wrapS).toBe(THREE.RepeatWrapping);
       expect(texture.minFilter).toBe(THREE.LinearMipmapLinearFilter);
       expect(texture.colorSpace).toBe(THREE.SRGBColorSpace);

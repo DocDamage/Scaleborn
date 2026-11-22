@@ -245,3 +245,11 @@ the bone's rest quaternion before local X and Z rotations. Existing animation
 clips remain preferred and identity/height normalization is unchanged. This
 improves future authored Blender and Unreal asset interchange without
 introducing any donor character or changing current fallback visuals.
+
+### Painterly original Onyx pigment sample fidelity
+The original generated navy/violet dragon-scale painting's existing synchronous
+DataTexture now samples 64×64 pixels (4× the previous 32² image pixels) with
+the same deterministic 16-pigment packed palette, using 2 KB of image indices
+and retaining all original form/material/socket interfaces. This remains a
+compact real image-derived working asset, **not** a full-resolution authored
+atlas or final texture signoff; real WebGL close-up verification is mandatory.

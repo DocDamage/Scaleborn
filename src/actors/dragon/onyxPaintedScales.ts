@@ -6,15 +6,15 @@ import * as THREE from 'three';
  * The full-resolution original remains the production texture-art source;
  * this low-budget version must NOT be visually signed off as final.
  */
-export const ONYX_PAINTED_SAMPLE_SIZE = 32;
+export const ONYX_PAINTED_SAMPLE_SIZE = 64;
 const PALETTE = [3486806,3025995,2959175,2500417,2630208,2302267,2171192,2105142,2235959,2169653,2038834,1841968,1775917,1775404,1578793,1446693] as const;
-// Two 4-bit indices / byte: source painting, downsampled to 32x32, 16 pigments.
-const SAMPLE = 'h6Qsc7kt7lWthezDE4t0mBzxHmGmnugUf0HeuwHWrpK1LUA/xUGLAVXfKNzfQLIram5xc4/Ugbc+INUIUXpUUhJzf1OyKqFa5jREjBJhK7S8exXcVB7yGjPtFbjuocEVtlfOskrlpV2vRfoBA3+4qlWzztvVGqvlVF+r+idyArz4Grt62TtxfdTjNUV15IUKq5W+qxL6PkO/s+8C/Dvnd0CHGvzIVcu+MTxKrUI8OIRIcgX2qAP8XqKI2qQE+sgB3KHfMeqfxQqtUiVxkhd2AlXkBFpl1X/MFdwm5OmDDPtOMxL+NqTHM/gEszx78z5x1QW7nNYe9gWFn8VVFBr1xQXtMaU8oyz8Avc7vXZpraMcVdnyGmNsi87iD+YA91SUQoskEvYeuZsxfsp7EzyAHSLX1QRT7RCqMFtzPNt3avy8qjGuE0XtFF3jbuIESM0hEX46cV6CSZoqSFBb+hW4Ix1Rz/oA+kGa5QRgPUjmBaW17kRehLfOoBo7TPQYiEGumYSgXO9zp1dwBaItzKv6ZpEBj+3Rv8M8sQySzjHeV6s+40MYvlJN53zQCiFZSlrWW2uwBS5yMY41tCU1pADvcdMxP6Xjr1K30zsR+1QCUZUS5nxb6+a/y7ID/8UZ9wblRVfQRxNa034B/1tKkruqyssU9+xkBLNmI/+7c17YMaI=';
+// Two 4-bit indices / byte: source painting, sampled at 64x64, 16 pigments.
+const SAMPLE = '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';
 export function paintedScalePixels(): Uint8Array {
   const packed = atob(SAMPLE);
-  if (packed.length !== 512) throw new Error('Invalid original Onyx painted-scale atlas');
-  const pixels = new Uint8Array(32 * 32 * 4);
-  for (let i=0; i<1024; i++) {
+  if (packed.length !== ONYX_PAINTED_SAMPLE_SIZE ** 2 / 2) throw new Error('Invalid original Onyx painted-scale atlas');
+  const pixels = new Uint8Array(ONYX_PAINTED_SAMPLE_SIZE ** 2 * 4);
+  for (let i=0; i<ONYX_PAINTED_SAMPLE_SIZE ** 2; i++) {
     const packedIndex=packed.charCodeAt(i >> 1);
     const index=(i & 1) === 0 ? packedIndex >> 4 : packedIndex & 15;
     const color=PALETTE[index]!;
@@ -29,7 +29,7 @@ export function paintedScalePixels(): Uint8Array {
   return pixels;
 }
 export function makeOnyxPaintedScaleMap(): THREE.DataTexture {
-  const map = new THREE.DataTexture(paintedScalePixels(),32,32,THREE.RGBAFormat);
+  const map = new THREE.DataTexture(paintedScalePixels(),ONYX_PAINTED_SAMPLE_SIZE,ONYX_PAINTED_SAMPLE_SIZE,THREE.RGBAFormat);
   map.name = 'Onyx original painterly scale pigments';
   map.colorSpace=THREE.SRGBColorSpace;
   map.wrapS=map.wrapT=THREE.RepeatWrapping;
