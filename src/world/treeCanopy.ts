@@ -82,7 +82,7 @@ export function makeLeafAtlas(size = 128): THREE.DataTexture {
       const v = 2 * (y + .5) / cell - 1;
       const mid = Math.abs(v);
       const edge = species === 2
-        ? .20 * Math.pow(Math.max(0, 1-mid*mid), .66)
+        ? (.32+.038*Math.cos(v*24)) * Math.pow(Math.max(0, 1-mid*mid), .66)
         : species === 1
           ? .45 * Math.pow(Math.max(0, 1-mid*mid), .95) * (1-.12*v)
           : species === 0
@@ -115,8 +115,13 @@ function appendLeaf(
   lift: number,
 ): void {
   const direction = new THREE.Vector3(Math.cos(yaw),lift,Math.sin(yaw)).normalize();
+  // Rider-height captures exposed the problem with mostly horizontal leaf
+  // planes: branches were visible, but foliage appeared as thin shards.
+  // Broadly upright, differently tilted leaves remain readable from ground
+  // level without making a single flat camera-facing billboard.
   const sideways = new THREE.Vector3(
-    -Math.sin(yaw),.28*Math.cos(yaw*1.7),Math.cos(yaw),
+    -Math.sin(yaw)*.64,.75+.15*Math.sin(yaw*1.7),
+    Math.cos(yaw)*.64,
   ).normalize();
   // Use the entire textured quad. The old diamond-shaped pair of
   // triangles sampled only the centre of the alpha leaf, exposing thin
@@ -219,10 +224,34 @@ export function createTreePrototype(
         const yaw=sideAngle+(rand()-.5)*Math.PI*2;
         appendLeaf(leafPositions,leafUv,species,center,yaw,
           (species===2?.88:.57)+rand()*(species===2?.60:.62),
-          (species===2?.14:.20)+rand()*(species===2?.060:.25),
+          (species===2?.19:.23)+rand()*(species===2?.095:.27),
           species===2 ? .18+rand()*.32 : (rand()-.4)*.85);
       }
     }
+    // Dense overlapping sprays along the full main-branch volume create
+    // readable crowns from rider height. These are still individual painted
+    // alpha-tested leaf cards, not spherical solid foliage blobs. Low uses a
+    // bounded fraction to limit distant instanced triangle/alpha overdraw.
+    const sprayCount=quality==='high'?3:2;
+    const sprayLeaves=(quality==='high'?1:.65)*(species===2?8:10);
+    for(let spray=0;spray<sprayCount;spray++){
+      const anchor=mid.clone().lerp(end,.17+spray*.30);
+      const spread=species===2?.82:1.35;
+      const leaves=Math.round(sprayLeaves);
+      for(let k=0;k<leaves;k++){
+        const az=k*2.3999632297+rand()*.45+angle;
+        const radius=Math.sqrt(rand())*spread;
+        const center=anchor.clone().add(new THREE.Vector3(
+          Math.cos(az)*radius,(rand()-.5)*spread*1.12,
+          Math.sin(az)*radius,
+        ));
+        appendLeaf(leafPositions,leafUv,species,center,az+rand()*1.3,
+          (species===2?.82:.78)+rand()*(species===2?.54:.64),
+          (species===2?.22:.33)+rand()*(species===2?.11:.24),
+          (rand()-.22)*.85);
+      }
+    }
+
     // Fill gaps close to the main limbs instead of a skeletal branch fan.
     if(species!==2)for(let k=0;k<(quality==='high'?22:13);k++){
       const center=mid.clone().lerp(end,.20+rand()*.8);

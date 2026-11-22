@@ -621,3 +621,19 @@ instance tint and base PBR color. Fading and deterministic world-seeding
 remain unchanged. This is a measurable density/material adjustment rather
 than proof that the meadow looks finished; evaluate real shader screenshots
 and GPU time before visual approval.
+
+### Ground-view canopy correction (actual PR #12 screenshot inspection)
+
+The latest successful low-mode forest and shoreline captures at
+`3dbc77bc` show tall, nearly bare branch fans despite earlier density
+changes. `treeCanopy.ts` therefore rotates painted leaf cards into a
+broadly upright but varied orientation so they have visible surface area at
+rider height, while retaining non-billboard three-dimensional placement.
+Bounded extra foliage sprays are rooted along the lengths of main branches
+instead of only at exposed twig endpoints. The pine atlas needles are a
+little wider and feathery, with alpha outside the silhouette; every quality
+preset keeps its separate polygon budget. No tree logic, collisions or
+draw-call ownership changes.
+
+This is direct screenshot-guided work. Real rerendering and target-hardware
+overdraw benchmarks remain required before calling forest quality accepted.
