@@ -31,10 +31,12 @@ async function main() {
     const url = process.env.SCALEBORN_URL ?? 'http://127.0.0.1:5173';
     // SwiftShader CPU rendering must not be mistaken for a dedicated GPU.
     const lowUrl = url + '?start=lake&quality=low&qa=1';
+    // Vite's persistent HMR requests and expensive SwiftShader frames need not
+    // make the page network-idle. Wait for the actual app controls below.
     let connected = false;
     for (let attempt = 0; attempt < 12; attempt++) {
       try {
-        const response = await page.goto(lowUrl, { waitUntil: 'networkidle', timeout: 10000 });
+        const response = await page.goto(lowUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
         assert.equal(response?.status(), 200);
         connected = true;
         break;
@@ -88,7 +90,7 @@ async function main() {
     // Extended QA uses real player keyboard controls (1/2/Tab/G), not hidden menu buttons. SwiftShader sometimes
     // stalls RAF, so dev-only bounded simulation steps refresh HUD deterministically.
     // Exercise a complete animated landing/size change/takeoff in a deterministic meadow.
-    const meadowResponse = await page.goto(url + '?start=meadow&qa=1&quality=low', { waitUntil: 'networkidle' });
+    const meadowResponse = await page.goto(url + '?start=meadow&qa=1&quality=low', { waitUntil: 'domcontentloaded' });
     assert.equal(meadowResponse?.status(), 200);
     await page.locator('#start').click();
     await page.evaluate(() => {
