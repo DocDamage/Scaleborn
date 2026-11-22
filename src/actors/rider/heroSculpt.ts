@@ -86,31 +86,31 @@ function smallEye(parent:THREE.Group,side:number,
   // floating as round green toy-like globes in real close-up screenshots.
   const white = new THREE.Mesh(new THREE.SphereGeometry(1,18,14),eye);
   white.name=side<0?'rider.eye.left':'rider.eye.right';
-  white.position.set(side*.118,1.295,-.128);
+  white.position.set(side*.086,1.295,-.148);
   white.scale.set(.038,.018,.006);
   parent.add(white);
   const jewel=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),iris);
   jewel.name=side<0?'rider.iris.left':'rider.iris.right';
-  jewel.position.set(side*.118,1.295,-.136);
+  jewel.position.set(side*.086,1.295,-.155);
   jewel.scale.set(.012,.014,.0045);
   parent.add(jewel);
   // Curved upper and lower eyelids partially enclose the thin almond eye.
   // They hide the exposed sphere edges that appeared googly in real WebGL QA.
   const upperLid = new THREE.Mesh(taperedSpine([
-    [side*.077,1.309,-.129],[side*.112,1.320,-.137],
-    [side*.151,1.306,-.124],
+    [side*.047,1.309,-.142],[side*.085,1.320,-.158],
+    [side*.122,1.306,-.145],
   ],.011,10,20),skin);
   upperLid.name=side<0?'rider.eyelid.upper.left':'rider.eyelid.upper.right';
   parent.add(upperLid);
   const lowerLid = new THREE.Mesh(taperedSpine([
-    [side*.079,1.280,-.129],[side*.112,1.277,-.136],
-    [side*.150,1.285,-.124],
+    [side*.047,1.280,-.143],[side*.086,1.277,-.156],
+    [side*.122,1.285,-.146],
   ],.008,10,20),skin);
   lowerLid.name=side<0?'rider.eyelid.lower.left':'rider.eyelid.lower.right';
   parent.add(lowerLid);
   const brow=new THREE.Mesh(taperedSpine([
-    [side*.060,1.349,-.134],[side*.110,1.359,-.149],
-    [side*.165,1.342,-.127],
+    [side*.040,1.346,-.143],[side*.086,1.358,-.157],
+    [side*.133,1.345,-.133],
   ],.018,8),skin);
   brow.name=side<0?'rider.brow.left':'rider.brow.right';
   parent.add(brow);
@@ -122,7 +122,7 @@ function createRiderArm(
 ):THREE.Group {
   const arm=new THREE.Group();
   arm.name=side<0?'rider.leftArm':'rider.rightArm';
-  arm.position.set(side*.248,1.107,-.018);
+  arm.position.set(side*.228,1.107,-.018);
   const sleeve=shapedTorso([
     [.025,.066,.077,0],[0,.073,.082,-.008],
     [-.13,.083,.089,-.018],[-.25,.075,.084,-.032],
@@ -236,20 +236,23 @@ export function makeScalebornRider():THREE.Group {
   for(const side of [-1,1] as const){
     smallEye(group,side,shadowSkin,eyes,irises);
     group.add(new THREE.Mesh(taperedSpine([
-      [side*.120,1.462,.032],[side*.170,1.39,.053],
-      [side*.182,1.275,.067],
+      [side*.112,1.462,.032],[side*.151,1.39,.053],
+      [side*.158,1.298,.069],
     ],.055),hair));
     // Dragon ancestry is subtle: swept short horns, not adult antlers.
     const horn=new THREE.Mesh(taperedSpine([
-      [side*.102,1.474,.056],[side*.143,1.526,.111],
-      [side*.173,1.568,.173],
-    ],.052,12),scale);
+      [side*.108,1.471,.071],[side*.137,1.516,.135],
+      [side*.185,1.517,.210],[side*.212,1.487,.274],
+    ],.039,14),scale);
     horn.name=side<0?'rider.horn.left':'rider.horn.right';
     group.add(horn);
+    // The previous side tusks looked like stray ears in real screenshots.
+    // Small scales now lie along her cheek/temple, inside the face outline.
     const smallScales=new THREE.Mesh(taperedSpine([
-      [side*.17,1.26,.01],[side*.20,1.243,-.025],
-      [side*.215,1.215,-.005],
-    ],.032),scale);
+      [side*.148,1.332,-.052],[side*.158,1.299,-.066],
+      [side*.16,1.274,-.072],
+    ],.014,10),scale);
+    smallScales.name=side<0?'rider.temple-scales.left':'rider.temple-scales.right';
     group.add(smallScales);
     createRiderArm(group,side,coat,warmSkin,trim);
     createRiderLeg(group,side,cloth,boot,trim);
@@ -257,8 +260,9 @@ export function makeScalebornRider():THREE.Group {
 
   // Subtle dragon-hybrid nose bridge keeps the painted face dimensional.
   const nose=new THREE.Mesh(taperedSpine([
-    [0,1.297,-.151],[0,1.266,-.176],[0,1.245,-.174],
-  ],.026,10,18),warmSkin);
+    [0,1.302,-.146],[0,1.281,-.156],
+    [0,1.268,-.166],[0,1.256,-.171],
+  ],.015,12,24),warmSkin);
   nose.name='rider.nose';
   group.add(nose);
 
