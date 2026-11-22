@@ -1,5 +1,18 @@
 import * as THREE from 'three';
 import { GRAND_LAKE, MIRRORFALL } from './highlandLake';
+import { MIRRORFALL_IMPACT } from './waterDynamics';
+
+const pigmentTimes=new WeakMap<THREE.MeshStandardMaterial,{value:number}>();
+
+/** Update one preallocated shader uniform; no per-frame mesh uploads. */
+export function updateTerrainPigmentTime(
+  material:THREE.MeshStandardMaterial,time:number,
+):void {
+  if(Number.isFinite(time)){
+    const uniform=pigmentTimes.get(material);
+    if(uniform)uniform.value=time;
+  }
+}
 
 /**
  * Painterly landcover and geological bedding are blended in world-space
@@ -7,6 +20,8 @@ import { GRAND_LAKE, MIRRORFALL } from './highlandLake';
  * Runtime uniforms keep the shoreline aligned with the actual lake.
  */
 export function installTerrainPigment(material:THREE.MeshStandardMaterial):void {
+  const pigmentTime={value:0};
+  pigmentTimes.set(material,pigmentTime);
   const original=material.onBeforeCompile;
   const originalKey=material.customProgramCacheKey.bind(material);
   material.customProgramCacheKey=()=>originalKey()+'-scaleborn-terrain-pigment-v1';
@@ -16,6 +31,7 @@ export function installTerrainPigment(material:THREE.MeshStandardMaterial):void 
        ||!shader.fragmentShader.includes('varying vec3 vScTriNormal;')){
       throw new Error('Terrain pigment requires installed world triplanar projections');
     }
+    shader.uniforms.uScPigTime=pigmentTime;
     shader.uniforms.uScPigLakeCenter={value:new THREE.Vector2(GRAND_LAKE.x,GRAND_LAKE.z)};
     shader.uniforms.uScPigLakeRadii={
       value:new THREE.Vector2(GRAND_LAKE.radiusX,GRAND_LAKE.radiusZ)};
@@ -24,6 +40,7 @@ export function installTerrainPigment(material:THREE.MeshStandardMaterial):void 
       value:new THREE.Vector2(MIRRORFALL.x-1,MIRRORFALL.topY),
     };
     const functions=`
+      uniform float uScPigTime;
       uniform vec2 uScPigLakeCenter;
       uniform vec2 uScPigLakeRadii;
       uniform float uScPigLakeLevel;
@@ -41,6 +58,20 @@ export function installTerrainPigment(material:THREE.MeshStandardMaterial):void 
           mix(scPigHash(i+vec2(0.0,1.0)),
               scPigHash(i+vec2(1.0,1.0)),f.x),f.y);
       }
+      // Four wind-wave phases and the shared impact ripple are identical
+      // to PainterlyWaterSurface's real-time vertex displacement.
+      float scPigLakeWave(vec2 point) {
+        float t=uScPigTime;
+        float p1=dot(point,normalize(vec2(.87,.49)))*.16-t*.95;
+        float p2=dot(point,normalize(vec2(-.23,.97)))*.37-t*1.47;
+        float p3=dot(point,normalize(vec2(.64,-.76)))*.76-t*2.15;
+        float p4=dot(point,normalize(vec2(.18,.98)))*.08-t*.62;
+        float height=.53*sin(p1)+.24*sin(p2)+.10*sin(p3)+.64*sin(p4);
+        float d=length(point-vec2(${MIRRORFALL_IMPACT.x.toFixed(3)},
+          ${MIRRORFALL_IMPACT.z.toFixed(3)}));
+        height+=exp(-d*.038)*.72*sin(d*.225-t*1.63);
+        return height;
+      }
       float scPigCreekWet(vec2 point,float elevation){
         float along=(point.x-uScPigFallLip.x)/132.0;
         if(along<-.14 || along>1.13)return 0.0;
@@ -54,7 +85,10 @@ export function installTerrainPigment(material:THREE.MeshStandardMaterial):void 
           *(1.0-smoothstep(1.20,1.83,lateral));
         float upstream=smoothstep(-.14,0.0,along)
           *(1.0-smoothstep(.91,1.13,along));
-        float waterLevel=uScPigFallLip.y+1.75*t;
+        // Creek ripples follow headwaterWaveAt(), not ocean swell.
+        float riffles=.065*sin(point.x*.32+point.y*.11+uScPigTime*2.35)
+          +.035*sin(point.x*.57-point.y*.28+uScPigTime*3.4);
+        float waterLevel=uScPigFallLip.y+1.75*t+riffles;
         float moisture=1.0-smoothstep(1.0,6.5,abs(elevation-waterLevel));
         return bank*upstream*moisture;
       }
@@ -100,12 +134,32 @@ export function installTerrainPigment(material:THREE.MeshStandardMaterial):void 
           uScPigLakeLevel+1.0,uScPigLakeLevel+23.0,vScTriPosition.y);
         float wetBank=bankMask*lowBank
           *(.55+.45*scPigNoise(worldPig*.22));
+        // Contact follows the rendered wave crest, not a fixed shoreline
+        // height. Restrict the swash to above-water, shallow dry bank.
+        float scPigSwash=0.0;
+        if(bankMask>.001 && lowBank>.001){
+          float waterline=uScPigLakeLevel+scPigLakeWave(worldPig);
+          float contact=1.0-smoothstep(waterline+.10,waterline+2.10,
+            vScTriPosition.y);
+          float aboveWater=smoothstep(uScPigLakeLevel-1.0,
+            uScPigLakeLevel+.30,vScTriPosition.y);
+          scPigSwash=clamp(bankMask*lowBank*contact*aboveWater,0.0,1.0);
+        }
         diffuseColor.rgb=mix(diffuseColor.rgb,
           diffuseColor.rgb*vec3(.53,.69,.64),wetBank*.50);
         float creekWet=scPigCreekWet(worldPig,vScTriPosition.y)
           *(.74+.26*scPigNoise(worldPig*.24));
         diffuseColor.rgb=mix(diffuseColor.rgb,
           diffuseColor.rgb*vec3(.53,.68,.60),creekWet*.51);
+        // Damp topsoil darkens and cools when the next wave washes ashore;
+        // no geometry, decals, arbitrary rings, or additional draw passes.
+        diffuseColor.rgb=mix(diffuseColor.rgb,
+          diffuseColor.rgb*vec3(.47,.62,.66),scPigSwash*.40);
       `);
+    shader.fragmentShader=shader.fragmentShader.replace(
+      '#include <roughnessmap_fragment>',
+      '#include <roughnessmap_fragment>\n' +
+      'roughnessFactor=mix(roughnessFactor,0.29,scPigSwash*.75);'
+    );
   };
 }
