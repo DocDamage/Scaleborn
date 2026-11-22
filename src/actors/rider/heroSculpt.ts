@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { taperedSpine, sculptFin } from '../dragon/organicSculpt';
+import { makeRiderFabricTextures } from './riderFabric';
 
 /**
  * Original adolescent dragon-human heroine. Her slender coastal-traveller
@@ -13,21 +14,41 @@ type Profile = readonly [height:number, width:number, depth:number, z:number];
 
 function shapedTorso(
   profile: readonly Profile[], material:THREE.Material, name:string,
-  samples=36, radial=24,
+  samples=36, radial=24, region:'plain'|'face'='plain',
 ):THREE.Mesh {
   const positions:number[]=[], uvs:number[]=[], index:number[]=[];
   const rising=profile[profile.length-1]![0]>=profile[0]![0];
   for(let i=0;i<=samples;i++){
     const t=i/samples;
     const f=t*(profile.length-1), k=Math.min(profile.length-2,Math.floor(f));
-    const u=f-k, ease=u*u*(3-2*u);
+    const u=f-k;
     const a=profile[k]!, b=profile[k+1]!;
-    const lerp=(channel:number):number=>a[channel]!+(b[channel]!-a[channel]!)*ease;
+    // Cubic cross-section interpolation gives cheeks, sleeves and boot shafts
+    // continuous tangents instead of the pinched bands of smoothstep rings.
+    const blend=(channel:number):number=>{
+      const prev=profile[Math.max(0,k-1)]![channel]!;
+      const next=profile[Math.min(profile.length-1,k+2)]![channel]!;
+      const m0=(b[channel]!-prev)*.5,m1=(next-a[channel]!)*.5;
+      const value=(2*u*u*u-3*u*u+1)*a[channel]!
+        +(u*u*u-2*u*u+u)*m0
+        +(-2*u*u*u+3*u*u)*b[channel]!
+        +(u*u*u-u*u)*m1;
+      return channel===1||channel===2?Math.max(.004,value):value;
+    };
+    const y=a[0]+(b[0]-a[0])*u;
+    const width=blend(1),depth=blend(2),centerZ=blend(3);
     for(let j=0;j<=radial;j++){
       const angle=j/radial*Math.PI*2;
-      const r=.004*Math.sin(angle*7+t*19);
-      positions.push(Math.cos(angle)*(lerp(1)+r),
-        lerp(0), lerp(3)+Math.sin(angle)*(lerp(2)+r));
+      const nx=Math.cos(angle),forward=Math.max(0,-Math.sin(angle));
+      const cheek=region==='face'
+        ? Math.exp(-Math.pow((y-1.303)/.072,2)*2)
+          *Math.exp(-Math.pow((Math.abs(nx)-.70)/.28,2)*2)*forward
+        : 0;
+      const jaw=region==='face'
+        ? Math.exp(-Math.pow((y-1.228)/.058,2)*2):0;
+      const r=region==='face'?0:.0022*Math.sin(angle*7+t*19);
+      positions.push(nx*(width+r)*(1-.033*jaw),
+        y,centerZ+Math.sin(angle)*(depth+r)-cheek*.013);
       uvs.push(j/radial,t);
       if(i<samples&&j<radial) {
         const base=i*(radial+1)+j,next=base+radial+1;
@@ -49,37 +70,47 @@ function material(color:number, roughness=.9):THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({color,roughness,metalness:0.0});
 }
 
+const fabric = makeRiderFabricTextures();
+function woven(color:number, roughness=.93):THREE.MeshStandardMaterial {
+  const mat = new THREE.MeshStandardMaterial({
+    color,roughness,metalness:0,
+    map:fabric.color, normalMap:fabric.normal, roughnessMap:fabric.roughness,
+  });
+  mat.normalScale.set(.16,.16);
+  return mat;
+}
+
 function smallEye(parent:THREE.Group,side:number,
   skin:THREE.Material,eye:THREE.Material,iris:THREE.Material):void {
   // Small almond-shaped eyes sit against the facial surface rather than
   // floating as round green toy-like globes in real close-up screenshots.
   const white = new THREE.Mesh(new THREE.SphereGeometry(1,18,14),eye);
   white.name=side<0?'rider.eye.left':'rider.eye.right';
-  white.position.set(side*.118,1.295,-.153);
-  white.scale.set(.038,.018,.0065);
+  white.position.set(side*.118,1.295,-.128);
+  white.scale.set(.038,.018,.006);
   parent.add(white);
   const jewel=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),iris);
   jewel.name=side<0?'rider.iris.left':'rider.iris.right';
-  jewel.position.set(side*.118,1.295,-.161);
+  jewel.position.set(side*.118,1.295,-.136);
   jewel.scale.set(.012,.014,.0045);
   parent.add(jewel);
   // Curved upper and lower eyelids partially enclose the thin almond eye.
   // They hide the exposed sphere edges that appeared googly in real WebGL QA.
   const upperLid = new THREE.Mesh(taperedSpine([
-    [side*.077,1.309,-.157],[side*.112,1.320,-.161],
-    [side*.151,1.306,-.153],
+    [side*.077,1.309,-.129],[side*.112,1.320,-.137],
+    [side*.151,1.306,-.124],
   ],.011,10,20),skin);
   upperLid.name=side<0?'rider.eyelid.upper.left':'rider.eyelid.upper.right';
   parent.add(upperLid);
   const lowerLid = new THREE.Mesh(taperedSpine([
-    [side*.079,1.280,-.156],[side*.112,1.277,-.159],
-    [side*.150,1.285,-.151],
+    [side*.079,1.280,-.129],[side*.112,1.277,-.136],
+    [side*.150,1.285,-.124],
   ],.008,10,20),skin);
   lowerLid.name=side<0?'rider.eyelid.lower.left':'rider.eyelid.lower.right';
   parent.add(lowerLid);
   const brow=new THREE.Mesh(taperedSpine([
-    [side*.060,1.357,-.172],[side*.110,1.366,-.192],
-    [side*.165,1.347,-.164],
+    [side*.060,1.349,-.134],[side*.110,1.359,-.149],
+    [side*.165,1.342,-.127],
   ],.018,8),skin);
   brow.name=side<0?'rider.brow.left':'rider.brow.right';
   parent.add(brow);
@@ -88,26 +119,35 @@ function smallEye(parent:THREE.Group,side:number,
 function createRiderArm(
   parent:THREE.Group,side:-1|1,
   coat:THREE.Material,skin:THREE.Material,trim:THREE.Material,
-):THREE.Group{
+):THREE.Group {
   const arm=new THREE.Group();
   arm.name=side<0?'rider.leftArm':'rider.rightArm';
-  arm.position.set(side*.255,1.107,-.018);
+  arm.position.set(side*.248,1.107,-.018);
   const sleeve=shapedTorso([
-    [.025,.072,.082,0],[0,.083,.092,-.008],
-    [-.11,.099,.104,-.025],[-.21,.085,.096,-.040],
-    [-.37,.072,.081,-.067],[-.52,.067,.074,-.085],
-  ],coat,'rider.sleeve');
+    [.025,.066,.077,0],[0,.073,.082,-.008],
+    [-.13,.083,.089,-.018],[-.25,.075,.084,-.032],
+    [-.355,.063,.073,-.044],
+  ],coat,'rider.sleeve',34);
   arm.add(sleeve);
-  const cuff=shapedTorso([
-    [-.48,.073,.079,-.08],[-.54,.071,.078,-.08],
-  ],trim,'rider.cuff',8);
-  arm.add(cuff);
-  const hand=shapedTorso([
-    [-.54,.055,.067,-.085],[-.64,.07,.068,-.08],
-    [-.70,.031,.046,-.079],
-  ],skin,'rider.hand',14);
-  arm.add(hand);
-  parent.add(arm);return arm;
+  // Separate elbow pivot allows hands to brace in mounted flight without
+  // turning the entire straight sleeve into a rigid diagonal plank.
+  const elbow=new THREE.Group();
+  elbow.name=side<0?'rider.leftElbow':'rider.rightElbow';
+  elbow.position.set(0,-.335,-.039);
+  elbow.add(shapedTorso([
+    [.005,.063,.069,0],[-.08,.068,.071,-.005],
+    [-.17,.060,.064,-.014],[-.235,.055,.059,-.021],
+  ],coat,'rider.forearm',26));
+  elbow.add(shapedTorso([
+    [-.22,.059,.067,-.021],[-.258,.057,.065,-.022],
+  ],trim,'rider.cuff',9));
+  elbow.add(shapedTorso([
+    [-.253,.052,.054,-.022],[-.31,.052,.053,-.024],
+    [-.359,.028,.040,-.027],
+  ],skin,'rider.hand',17));
+  arm.add(elbow);
+  parent.add(arm);
+  return arm;
 }
 
 function createRiderLeg(
@@ -116,22 +156,34 @@ function createRiderLeg(
 ):THREE.Group {
   const leg=new THREE.Group();
   leg.name=side<0?'rider.leftLeg':'rider.rightLeg';
-  leg.position.set(side*.155,.66,.035);
-  const trousers=shapedTorso([
-    [0,.107,.127,.02],[-.18,.116,.124,.05],
-    [-.35,.087,.101,.035],[-.47,.079,.087,.028],
-  ],cloth,'rider.trousers');
-  leg.add(trousers);
-  const shoe=shapedTorso([
-    [-.41,.086,.097,.034],[-.54,.086,.104,-.018],
-    [-.61,.093,.13,-.07],[-.64,.064,.105,-.08],
-  ],boot,'rider.boot');
-  leg.add(shoe);
-  const ankle=new THREE.Mesh(taperedSpine([
-    [0,-.49,.055],[0,-.48,.058],[0,-.47,.064],
-  ],.101,14,8),trim);
-  leg.add(ankle);
-  parent.add(leg);return leg;
+  leg.position.set(side*.151,.66,.035);
+  leg.add(shapedTorso([
+    [.01,.096,.111,.02],[-.14,.109,.116,.04],
+    [-.27,.096,.105,.044],[-.355,.083,.093,.034],
+  ],cloth,'rider.trousers',32));
+  // The true knee hinge solves the straight-legged mounted silhouette. Its
+  // overlapping cloth cuff hides the joint when walking or bent in the saddle.
+  const knee=new THREE.Group();
+  knee.name=side<0?'rider.leftKnee':'rider.rightKnee';
+  knee.position.set(0,-.33,.033);
+  knee.add(shapedTorso([
+    [.015,.082,.093,0],[-.075,.084,.094,-.005],
+    [-.17,.073,.083,-.016],[-.226,.069,.077,-.020],
+  ],cloth,'rider.shin',26));
+  const ankle=new THREE.Group();
+  ankle.name=side<0?'rider.leftAnkle':'rider.rightAnkle';
+  ankle.position.set(0,-.205,-.018);
+  ankle.add(shapedTorso([
+    [.01,.071,.077,0],[-.06,.076,.085,-.014],
+    [-.12,.077,.105,-.058],[-.152,.054,.080,-.074],
+  ],boot,'rider.boot',24));
+  ankle.add(shapedTorso([
+    [-.015,.076,.081,-.008],[-.033,.075,.080,-.010],
+  ],trim,'rider.boot-hem',8));
+  knee.add(ankle);
+  leg.add(knee);
+  parent.add(leg);
+  return leg;
 }
 
 /** Build original render geometry and standardized existing animation pivots. */
@@ -143,11 +195,10 @@ export function makeScalebornRider():THREE.Group {
 
   const warmSkin=material(0xbc947e,.86);
   const shadowSkin=material(0x987d7a,.89);
-  const cloakMat=new THREE.MeshStandardMaterial({
-    color:0x453d5f,roughness:.95,side:THREE.DoubleSide,
-  });
-  const coat=material(0x68536a,.88);
-  const cloth=material(0x3b6471,.94);
+  const cloakMat=woven(0x453d5f,.95);
+  cloakMat.side=THREE.DoubleSide;
+  const coat=woven(0x68536a,.90);
+  const cloth=woven(0x3b6471,.94);
   const boot=material(0x302d3e,.93);
   const trim=new THREE.MeshStandardMaterial({
     color:0xb4a585,roughness:.76,metalness:.08,
@@ -171,10 +222,11 @@ export function makeScalebornRider():THREE.Group {
   ],warmSkin,'rider.neck',12));
 
   group.add(shapedTorso([
-    [1.20,.104,.101,-.005],[1.24,.171,.139,-.018],
-    [1.33,.173,.156,-.005],[1.42,.147,.143,.019],
-    [1.48,.091,.108,.035],
-  ],warmSkin,'rider.face',42));
+    [1.20,.097,.095,-.005],[1.24,.136,.124,-.018],
+    [1.30,.173,.151,-.011],[1.352,.169,.156,.003],
+    [1.414,.149,.142,.019],[1.458,.116,.115,.035],
+    [1.48,.074,.082,.038],
+  ],warmSkin,'rider.face',48,30,'face'));
 
   // Hood-like angular hairline, parting in the middle to reveal the brows.
   group.add(shapedTorso([
@@ -226,9 +278,12 @@ export function makeScalebornRider():THREE.Group {
     const t=row/rows;
     for(let col=0;col<=cols;col++){
       const s=col/cols*2-1;
-      positions.push(s*(.22+t*.32),
-        1.12-t*.68+Math.sin(Math.abs(s)*3)*t*.03,
-        .135+Math.sin(Math.PI*t)*.18+.07*Math.cos(s*3)*t);
+      // Shoulder-fitted cloak with a narrower hem and natural vertical
+      // folds. Avoid the previous rectangular wing-like cape silhouette.
+      const pleat=Math.sin(s*Math.PI*3)*.016*t;
+      positions.push(s*(.215+t*.225),
+        1.12-t*.68+Math.sin(Math.abs(s)*3)*t*.019,
+        .142+Math.sin(Math.PI*t)*.13+.055*Math.cos(s*3)*t+pleat);
       if(row<rows&&col<cols){
         const k=row*(cols+1)+col,l=k+cols+1;
         indexes.push(k,k+1,l,l,k+1,l+1);
