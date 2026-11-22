@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { DragonVisual } from '../actors/dragon/visual';
+import { newCombatState, castDragonFire, castRiderSigil, castBondSurge, stepCombat, combatNearby, combatRemaining } from '../combat/combat';
+import { CombatVisual } from '../combat/visuals';
 import { newFlightState, stepFlight, requestDragonForm, toggleLanding, type InteractionResult } from '../actors/dragon/flight';
 import { FORMS, FORM_ORDER, type DragonForm } from '../actors/dragon/forms';
 import { assertManifestUnique } from '../data/assets';
@@ -47,6 +49,16 @@ export class Game {
   private readonly camera: THREE.PerspectiveCamera;
   private readonly coast: AzureCoast;
   private readonly dragon = new DragonVisual();
+  private readonly combat = newCombatState();
+  private readonly combatVisual: CombatVisual;
+  private combatNoticeSeen = 0;
+  private readonly combatHud = requireElement<HTMLElement>('#combat-hud');
+  private readonly combatHealth = requireElement<HTMLElement>('#combat-health-fill');
+  private readonly combatEmber = requireElement<HTMLElement>('#combat-ember-fill');
+  private readonly combatEnergyLabel = requireElement<HTMLElement>('#combat-energy-label');
+  private readonly combatHealthBar = requireElement<HTMLElement>('#combat-health-bar');
+  private readonly combatEmberBar = requireElement<HTMLElement>('#combat-ember-bar');
+  private readonly combatThreats = requireElement<HTMLElement>('#combat-threats');
   private readonly discoveries = new CoastDiscovery();
   private readonly tidegate = newTidegateState();
   private readonly echo = newTidalEchoState();
@@ -100,7 +112,7 @@ export class Game {
     // the same world seed; only GPU cost, vegetation density and shading change.
     const params=new URLSearchParams(window.location.search);
     this.quality = params.get('quality') === 'low' ? 'low' : 'high';
-    this.qaRender=params.get('qa')==='1';
+    this.qaRender=import.meta.env.DEV && params.get('qa')==='1';
     const requestedDpr=Math.min(window.devicePixelRatio||1,
       this.quality === 'low' ? 0.68 : 1.4);
     this.resolution=new AdaptiveResolution({
@@ -135,6 +147,16 @@ export class Game {
       this.flight.z = 100;
       this.flight.y = heightAt(-555, 100) + 18;
       this.flight.yaw = 0;
+    } else if (start === 'combat') {
+      // Repeatable ground-level combat without staging or fake enemy hits.
+      this.flight.x = -446;
+      this.flight.z = -52;
+      this.flight.y = heightAt(-446, -52) + FORMS.rideable.standHeight;
+      this.flight.yaw = Math.PI / 2;
+      this.flight.pitch = 0;
+      this.flight.roll = 0;
+      this.flight.speed = 0;
+      this.flight.mode = 'ground';
     } else if (start === 'water') {
       this.flight.x = 1900;
       this.flight.z = 1900;
@@ -151,6 +173,7 @@ export class Game {
     }
     this.coast = new AzureCoast(this.scene, this.quality);
     this.dragon.attach(this.scene);
+    this.combatVisual = new CombatVisual(this.scene, this.combat);
     this.coast.update(this.flight.x, this.flight.z);
     this.dragon.update(this.flight);
     this.input = new FlightInput(canvas);
@@ -175,6 +198,16 @@ export class Game {
         __scalebornQaImpactDive?: () => void;
         __scalebornQaShore?: () => void;
         __scalebornQaForest?: () => void;
+        __scalebornQaCombatSnapshot?: () => {
+          hp: number; ember: number; focus: number; respawns: number;
+          maxEmber: number; gloamCleared: boolean;
+          fireSequence: number; sigilSequence: number; bondSequence: number;
+          player: { x: number; y: number; z: number; yaw: number; form: DragonForm; mode: string };
+          lastFire: { origin: { x: number; y: number; z: number }; direction: { x: number; y: number; z: number } } | null;
+          hounds: Array<{ id: string; x: number; y: number; z: number; hp: number; maxHp: number; alert: boolean; windup: number }>;
+        };
+        __scalebornQaStageCombat?: (mode: 'dragon' | 'rider' | 'bond' | 'melee') => void;
+        __scalebornQaAdvanceCombat?: (frames: number) => void;
       };
       // Screenshot tests capture one fresh scene frame, then stop the CPU
       // renderer while Chromium copies its completed compositor surface.
@@ -486,6 +519,70 @@ export class Game {
         this.coast.updateAtmosphere(this.flight.time,this.camera.position);
         this.updateHud(.2);
       };
+      // Read-only combat diagnostics; no fake damage or enemy state changes.
+      host.__scalebornQaCombatSnapshot = () => ({
+        hp: this.combat.hp,
+        maxEmber: this.combat.maxEmber,
+        gloamCleared: this.combat.gloamCleared,
+        ember: this.combat.ember,
+        focus: this.combat.focus,
+        respawns: this.combat.respawns,
+        fireSequence: this.combat.fireSequence,
+        player: { x: this.flight.x, y: this.flight.y, z: this.flight.z,
+          yaw: this.flight.yaw, form: this.flight.form, mode: this.flight.mode },
+        lastFire: this.combat.lastFire ? { origin: this.combat.lastFire.origin,
+          direction: this.combat.lastFire.direction } : null,
+        sigilSequence: this.combat.sigilSequence,
+        bondSequence: this.combat.bondSequence,
+        hounds: this.combat.hounds.map((h) => ({
+          id: h.id, x: h.x, y: h.y, z: h.z,
+          hp: h.hp, maxHp: h.maxHp, alert: h.alert, windup: h.windup,
+        })),
+      });
+      host.__scalebornQaStageCombat = (mode): void => {
+        // Only actor placement is staged for screenshot speed. Every cast,
+        // AI reaction and damage change still passes through gameplay code.
+        const victim = mode === 'melee' ? this.combat.hounds[1]
+          : this.combat.hounds.find((hound) => hound.hp > 0);
+        if (!victim || victim.hp <= 0) {
+          throw new Error('QA target not alive for ' + mode);
+        }
+        const offset = mode === 'bond' ? 6 : mode === 'melee' ? 2.5
+          : mode === 'rider' ? 11 : 13;
+        const x = victim.x - offset, z = victim.z;
+        const form = mode === 'dragon' || mode === 'melee' ? 'rideable' : 'small';
+        this.flight.x = x; this.flight.z = z;
+        this.flight.y = heightAt(x, z) + FORMS[form].standHeight;
+        this.flight.yaw = Math.PI / 2;
+        this.flight.pitch = 0; this.flight.roll = 0; this.flight.speed = 0;
+        this.flight.mode = 'ground'; this.flight.form = form;
+        this.flight.transition = null;
+        this.flight.riderX = x + 1; this.flight.riderZ = z;
+        this.flight.riderY = heightAt(x + 1, z) + 0.05;
+        this.flight.riderTargetY = this.flight.riderY;
+        this.flight.riderYaw = Math.PI / 2;
+        this.flight.riderSpeed = 0; this.flight.riderMode = 'ground';
+        this.flight.controlTarget = mode === 'rider' ? 'rider' : 'dragon';
+        this.coast.update(x, z);
+        this.dragon.update(this.flight);
+        this.updateCamera(1, true);
+        this.updateHud(0.2);
+      };
+      host.__scalebornQaAdvanceCombat = (frames): void => {
+        if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
+          throw new Error('QA combat frames must be between 1 and 180');
+        }
+        const idle = { turn: 0, pitch: 0, bank: 0, boost: false, flap: false, move: 0 };
+        for (let i = 0; i < frames; i++) {
+          stepFlight(this.flight, idle, FIXED_DT);
+          stepCombat(this.combat, this.flight, FIXED_DT);
+          stepTidegate(this.tidegate, this.flight);
+        }
+        this.accumulator = 0;
+        this.dragon.update(this.flight);
+        this.combatVisual.update(this.combat, this.flight.time, frames * FIXED_DT);
+        this.updateHud(0.2);
+      };
       host.__scalebornQaAdvance = (frames: number): void => {
         if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
           throw new Error('QA frames must be an integer between 1 and 180');
@@ -504,6 +601,12 @@ export class Game {
           if (FORM_ORDER.includes(form)) this.setForm(form);
         }
       });
+    });
+    requireElement<HTMLButtonElement>('#fire-button').addEventListener('click', () => {
+      if (!this.paused) this.fireAction();
+    });
+    requireElement<HTMLButtonElement>('#bond-button').addEventListener('click', () => {
+      if (!this.paused) this.bondAction();
     });
     requireElement<HTMLButtonElement>('#land-button').addEventListener('click', () => {
       if (!this.paused) this.landAction();
@@ -564,6 +667,17 @@ export class Game {
 
   private setForm(form: DragonForm): void {
     this.notify(requestDragonForm(this.flight, form));
+  }
+
+  private fireAction(): void {
+    const result = this.flight.controlTarget === 'rider'
+      ? castRiderSigil(this.combat, this.flight) : castDragonFire(this.combat, this.flight);
+    if (!result.ok) this.notify(result);
+  }
+
+  private bondAction(): void {
+    const result = castBondSurge(this.combat, this.flight);
+    if (!result.ok) this.notify(result);
   }
 
   private landAction(): void {
@@ -692,6 +806,25 @@ export class Game {
       : swimming || (rider ? this.flight.riderMode === 'ground' : this.flight.mode === 'ground')
         ? '0' : String(Math.round(Math.max(0, current.y - Math.max(0, heightAt(current.x, current.z)))));
     this.speedText.textContent = Math.round(Math.abs(rider ? this.flight.riderSpeed : this.flight.speed)).toString();
+    const combatActive = combatNearby(this.combat, this.flight) ||
+      this.combat.hp < this.combat.maxHp || this.combat.ember < this.combat.maxEmber - 0.5 ||
+      this.combat.focus < this.combat.maxFocus - 0.5;
+    this.combatHud.hidden = !combatActive;
+    this.combatHud.dataset.actor = rider ? 'rider' : 'dragon';
+    this.combatEnergyLabel.textContent = rider ? 'RIDER FOCUS' : 'EMBER';
+    this.combatEmberBar.setAttribute('aria-label', rider ? 'Rider focus' : 'Dragon Ember');
+    const hpPercent = Math.round(100 * this.combat.hp / this.combat.maxHp);
+    const energy = rider ? this.combat.focus : this.combat.ember;
+    const energyMax = rider ? this.combat.maxFocus : this.combat.maxEmber;
+    const emberPercent = Math.round(100 * energy / energyMax);
+    this.combatHealth.style.width = hpPercent + '%';
+    this.combatEmber.style.width = emberPercent + '%';
+    this.combatHealthBar.setAttribute('aria-valuenow', String(this.combat.hp));
+    this.combatEmberBar.setAttribute('aria-valuenow', String(Math.round(energy)));
+    this.combatEmberBar.setAttribute('aria-valuemax', String(energyMax));
+    const enemiesLeft = combatRemaining(this.combat);
+    this.combatThreats.textContent = enemiesLeft === 0 ? 'GLOAM DEN CLEARED'
+      : 'GLOAM HOUNDS · ' + enemiesLeft + ' REMAIN';
     this.formName.textContent = FORMS[this.flight.form].label.toUpperCase();
     this.focusName.textContent = rider ? 'RIDER' : 'DRAGON';
     this.tidegatePanel.hidden = !tidegateNearby(this.flight);
@@ -750,6 +883,11 @@ export class Game {
       'RIDER ' + this.flight.riderMode,
       'TIDEGATE ' + (this.tidegate.solved ? 'AWAKENED' : this.tidegate.dragonAnchored ? 'ANCHORED' : 'INACTIVE'),
       'ECHO ' + echoPhase(this.echo, this.tidegate),
+      'BOND HP ' + this.combat.hp + '/' + this.combat.maxHp,
+      'EMBER ' + Math.round(this.combat.ember),
+      'RIDER FOCUS ' + Math.round(this.combat.focus),
+      'BOND READY ' + (this.flight.time >= this.combat.bondReadyAt),
+      'HOSTILES ' + combatRemaining(this.combat),
       'TERRAIN TILES ' + this.coast.tileCount(),
       'DISCOVERED ' + this.discoveries.count() + '/' + LANDMARKS.length,
       'DRAWS ' + render.calls,
@@ -757,7 +895,7 @@ export class Game {
       'WEBGL ' + this.renderer.capabilities.isWebGL2,
       'QUALITY ' + this.quality,
       'INTERNAL DPR ' + this.resolution.pixelRatio.toFixed(2),
-      'CURRENT GATE G3 WATER / RIDER PREVIEW',
+      'CURRENT GATE G4 COMBAT FOUNDATION (VISUAL HOLD)',
     ].join('\n');
   }
 
@@ -801,6 +939,8 @@ export class Game {
       if (this.input.take('switchFocus')) this.notify(toggleRiderControl(this.flight));
       if (this.input.take('submerge')) this.diveAction();
       if (this.input.take('interact')) this.interactWithRune();
+      if (this.input.take('fire')) this.fireAction();
+      if (this.input.take('bond')) this.bondAction();
       for (const form of FORM_ORDER) {
         if (this.input.take(form)) this.setForm(form);
       }
@@ -813,6 +953,7 @@ export class Game {
       let steps = 0;
       while (this.accumulator >= FIXED_DT && steps < MAX_STEPS) {
         stepFlight(this.flight, controls, FIXED_DT);
+        stepCombat(this.combat, this.flight, FIXED_DT);
         stepTidegate(this.tidegate, this.flight);
         this.accumulator -= FIXED_DT;
         steps++;
@@ -828,12 +969,17 @@ export class Game {
       this.revealTimer = Math.max(0, this.revealTimer - elapsed);
       this.reveal.hidden = this.revealTimer === 0;
     } else this.accumulator = 0;
+    if (this.combat.notice && this.combat.notice.sequence !== this.combatNoticeSeen) {
+      this.combatNoticeSeen = this.combat.notice.sequence;
+      this.notify({ ok: this.combat.notice.kind !== 'hurt', message: this.combat.notice.message });
+    }
     const focus = this.focusPosition();
     this.coast.setUnderwater(this.isWaterborne());
     // Resolve the real chase/wide/orbit camera before choosing visible
     // vegetation, so flight turns do not leave a whole world of leaf cards
     // behind the player in the CPU renderer or dedicated GPU draw pass.
     this.dragon.update(this.flight);
+    this.combatVisual.update(this.combat, this.flight.time, this.paused || this.menuOpen ? 0 : elapsed);
     this.updateCamera(elapsed);
     this.coast.animate(this.flight.time, focus.x, focus.y, focus.z, this.flight, this.camera);
     this.coast.updateTidegate(this.tidegate, this.flight.time, this.echo.attuned);

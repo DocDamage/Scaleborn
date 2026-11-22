@@ -67,7 +67,7 @@ describe('articulated rider silhouette', () => {
     const state = newFlightState();
     dragon.update(state);
     expect(dragon.rider.scale.x).toBe(1);
-    expect(dragon.rider.getObjectByName('rider.cloak')).toBeInstanceOf(THREE.Mesh);
+    expect(dragon.rider.getObjectByName('rider.travel-cloak')).toBeInstanceOf(THREE.Mesh);
     state.form = 'small';
     state.time = 1;
     dragon.update(state);

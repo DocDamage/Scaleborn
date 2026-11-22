@@ -372,3 +372,46 @@ button:focus-visible { outline: 3px solid white; outline-offset:3px; }
   pointer-events: auto;
 }
 #echo-panel { transition: opacity 380ms ease, transform 380ms ease; }
+
+
+/* G4: compact Elden Ring-inspired combat feedback. No permanent overlay. */
+#combat-hud {
+  position:absolute;z-index:5;left:27px;bottom:34px;width:215px;
+  color:#ecddc7;text-shadow:0 2px 9px rgba(0,0,0,.8);pointer-events:none;
+}
+#combat-hud #combat-threats {
+  display:block;margin-bottom:10px;font:600 10px/1.4 Georgia,serif;
+  letter-spacing:.17em;color:#ecd0af;
+}
+#combat-hud .combat-label {
+  margin:7px 0 4px;font:9px/1.1 Georgia,serif;letter-spacing:.2em;
+  color:#d9c6ac;
+}
+#combat-hud .combat-track {
+  height:6px;background:rgba(6,17,19,.76);
+  box-shadow:0 0 0 1px rgba(207,189,146,.33),0 2px 9px rgba(0,0,0,.25);
+  overflow:hidden;
+}
+#combat-hud .combat-track span {
+  display:block;height:100%;width:100%;transition:width 135ms linear;
+}
+#combat-health-fill {background:linear-gradient(90deg,#7a2b32,#c56556);}
+#combat-ember-fill {background:linear-gradient(90deg,#a66030,#e8b975);}
+.hud-menu-open #combat-hud {bottom:340px;}
+#dragon-panel #fire-button {
+  width:100%;margin-bottom:7px;background:#9a593a;color:#fff0d8;
+}
+#dragon-panel #fire-button:hover {background:#b97b50;}
+@media(max-width:660px) {
+  #combat-hud{left:10px;bottom:24px;width:166px;}
+  #combat-hud #combat-threats{font-size:9px;}
+  .hud-menu-open #combat-hud{bottom:385px;}
+}
+
+#combat-hud[data-actor="rider"] #combat-ember-fill {
+  background:linear-gradient(90deg,#357b80,#9be4d5);
+}
+#dragon-panel #bond-button {
+  width:100%;margin:0 0 7px;background:#356568;color:#e8f8eb;
+}
+#dragon-panel #bond-button:hover { background:#458284; }

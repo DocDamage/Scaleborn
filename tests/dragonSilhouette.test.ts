@@ -43,7 +43,7 @@ describe('continuous dragon silhouette geometry', () => {
 
   it('exposes continuous torso/tail surfaces instead of body bead chains', () => {
     const dragon=new DragonVisual();
-    for(const name of ['creature.dragon.torso','creature.dragon.tail-surface']){
+    for(const name of ['creature.dragon.onyx.anatomical-torso','creature.dragon.onyx.skinned-tail']){
       const mesh=dragon.root.getObjectByName(name);
       expect(mesh).toBeInstanceOf(THREE.Mesh);
       const geometry=(mesh as THREE.Mesh).geometry;

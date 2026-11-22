@@ -1,0 +1,27 @@
+# G4 combat foundation — first playable encounter
+
+**Status: implementation slice; G4 is not complete.** Preserve the visual-quality hold in `docs/VISUAL_QUALITY_GATE.md`. Original generated enemies and flame effects are a functional implementation, not approved final painterly combat art.
+
+## Try the encounter
+
+Open `/?start=combat` (optionally `&quality=low`) and click **Take flight**. This stages a mounted Onyx on safe land facing the three original Gloam hounds east of the Tidegate meadow. Normal play can reach the same hounds around **(-410, -45)**. Press **R** or primary mouse button with pointer lock for directional fire breath while controlling Onyx, or a narrower Tidal Sigil while controlling the rider. **X** triggers a short-range coordinated surge only when both companions are on dry land within 8 meters. Turn with A/D or mouse, watch the plume, and aim at the creatures; the cone has bounded width/range, respects actual terrain occlusion, and cannot hit behind the dragon. Fire and Tidal Sigil projectiles follow a modest upward arc and compensate for local terrain elevation while the caster is grounded, so gentle uphill slopes do not swallow an otherwise valid shot. Large terrain ridges still block line of fire. In flight, attacks retain strict pitch-based three-dimensional aiming; the pooled WebGL effects use the same lifted, ground-following behavior.
+
+- Breath consumes a regenerating **Ember** pool; attacks have a 0.78-second cooldown. Small, rideable and giant forms have different reach and damage. Swimming, rider focus and active traversal transitions cannot breathe fire.
+- The independent rider casts a directional **Tidal Sigil** with the same R input and a separate regenerating **Focus** pool. Both actors must be grounded and close (8 m) to perform **X · Bond Surge**, an area attack consuming both reserves with a 6.5-second cooldown. A shared HUD bar displays the active actor's energy without adding a third permanent panel.
+- Gloam hounds pursue ground/low-air targets inside a finite aggro radius, stop at terrain blockers, wind up before melee, recoil when hit and leash home. High flying or diving escapes melee; their hit reaction and deaths have visible feedback.
+- Clearing all three threats grants one permanent-for-session **+15 maximum Ember** improvement and a full Ember refill. The reward is awarded once and is not yet part of the G5 save format.
+- **Bond vitality** is shared between rider and dragon for this first slice. Repeated strikes can exhaust it. Defeat returns both safely to the Tidegate meadow with a short grace period, while preserving quest/discovery progress and already banished hounds. Encounter state is session-only until G5 save slots.
+- The minimal two-bar display appears only near living threats or when vitality/ember is below full. It does not resurrect cluttered old HUD panels.
+
+## Code boundaries and validation
+
+- `src/combat/combat.ts`: renderer-independent fixed-step combat, directional damage, terrain occlusion, cooldown/resource math, enemy AI, telegraph, hit immunity, checkpoint recovery.
+- `src/combat/visuals.ts`: original code-sculpted Three.js enemy and pooled fire-breath visuals, with stable enemy IDs and disposal. Meshes never determine gameplay hits.
+- `src/app/game.ts`: composition + input, HUD and pause alignment.
+- `src/combat/houndNavigation.ts`: deterministic local sidestepping with midpoint/end clearance, bounded step heights and pack separation; this is not full navmesh pathfinding.
+- `tests/combat.test.ts` and `tests/combatVisual.test.ts`: deterministic regression tests. Run `npm run check`.
+- `npm run test:combat-browser`: Playwright/SwiftShader battle QA against a running Vite server, using real combat keyboard input, read-only damage snapshots and dev-only actor placement. Captures Gloam Den, flame, rider sigil and bonded surge screenshots. GitHub Actions uploads the PNGs as `scaleborn-g4-webgl-combat`. **Software WebGL does not validate painterly production quality or target-GPU frame rate.**
+
+## Next G4 work (not yet delivered)
+
+Additional threat archetypes/behaviors, encounter reward and checkpoint migration, enemy navigation improvements, authored impact/sound/facial/animation sets, targeting/accessibility options, and real RTX 3060 profiling/screenshot acceptance. Initial rider sigil/bond burst logic is functional but still needs browser gameplay acceptance and animation polish.

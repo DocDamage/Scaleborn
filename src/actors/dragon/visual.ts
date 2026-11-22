@@ -2,24 +2,30 @@ import * as THREE from 'three';
 import type { FlightState } from './flight';
 import { FORMS } from './forms';
 import { createWingRig, poseWing } from './wingRig';
-import { makeOrganicLoft } from './organicLoft';
-import { createDragonLegSculpt } from './limbSculpt';
 import { dragonPose } from './animationPose';
 import { riderPose } from '../rider/pose';
-import { RiderVisual } from '../rider/visual';
 import { applyDragonScales, makeDragonScaleTextures } from './skinSurface';
+import { CHARACTER_MODEL_SOURCES, loadCharacterModel } from './characterSources';
+import { ImportedCharacterRig, type CharacterKind, type CharacterModelFile } from '../rider/importedCharacterRig';
+import { loftDragon, ONYX_TORSO, ONYX_HEAD, taperedSpine, sculptFin } from './organicSculpt';
+import { makeScalebornRider } from '../rider/heroSculpt';
+import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
+import { dragonExpression } from './dragonExpression';
+import { createDragonLegSculpt } from './limbSculpt';
 
 const scaleTextures=makeDragonScaleTextures();
 const skin = applyDragonScales(
-  new THREE.MeshStandardMaterial({ color: 0x263f4a, roughness: 0.65, metalness: 0.05 }),
+  new THREE.MeshStandardMaterial({ color: 0x212738, roughness: 0.52, metalness: 0.12 }),
   scaleTextures,
 );
+const bodySkin = skin.clone();
+bodySkin.vertexColors = true;
 const highlight = applyDragonScales(
-  new THREE.MeshStandardMaterial({ color: 0x426b74, roughness: 0.62, metalness: 0.06 }),
+  new THREE.MeshStandardMaterial({ color: 0x494265, roughness: 0.56, metalness: 0.11 }),
   scaleTextures,
 );
 const ridges = applyDragonScales(
-  new THREE.MeshStandardMaterial({ color: 0x1c313b, roughness: 0.80 }),
+  new THREE.MeshStandardMaterial({ color: 0x171f32, roughness: 0.74 }),
   scaleTextures,
 );
 const iris = new THREE.MeshStandardMaterial({
@@ -40,16 +46,12 @@ function ellipsoid(parent: THREE.Group, material: THREE.Material,
 }
 
 function tailFin(parent: THREE.Group): void {
-  const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.36, 1.4, 6), highlight);
-  leaf.rotation.x = Math.PI / 2;
-  leaf.position.set(0, -0.10, 2.9);
-  parent.add(leaf);
-  for (const sign of [-1, 1]) {
-    const sideFin = new THREE.Mesh(new THREE.ConeGeometry(0.32, 1.13, 6), skin);
-    sideFin.position.set(sign * 0.31, -0.08, 2.82);
-    sideFin.rotation.z = sign * 0.72;
-    sideFin.rotation.x = 0.6;
-    parent.add(sideFin);
+  parent.add(sculptFin([0,0,2.15],[0,.32,2.85],.42,
+    highlight,'creature.dragon.tail-fin.central',28));
+  for(const side of [-1,1] as const) {
+    parent.add(sculptFin([0,-.08,2.05],
+      [side*.63,-.07,2.68],.38,skin,
+      side<0?'creature.dragon.tail-fin.left':'creature.dragon.tail-fin.right',24));
   }
 }
 
@@ -60,15 +62,21 @@ function tailFin(parent: THREE.Group): void {
  */
 export class DragonVisual {
   readonly root = new THREE.Group();
-  private readonly riderVisual = new RiderVisual();
-  readonly rider = this.riderVisual.group;
+  readonly rider = makeScalebornRider();
   readonly body = new THREE.Group();
   private scene: THREE.Scene | null = null;
   private readonly wingL = createWingRig(-1);
   private readonly wingR = createWingRig(1);
-  private readonly tail = new THREE.Group();
+  private readonly tailRig = createDragonTailRig(skin);
+  private readonly tail = this.tailRig.root;
   private readonly head = new THREE.Group();
-  private readonly eyes: THREE.Mesh[] = [];
+  private readonly eyes: Array<{
+    iris:THREE.Mesh; pupil:THREE.Mesh; glint:THREE.Mesh;
+    lid:THREE.Mesh; brow:THREE.Group; side:number;
+  }> = [];
+  private readonly crests:THREE.Group[] = [];
+  private readonly jawPivot=new THREE.Group();
+  private readonly riderTail = this.rider.getObjectByName('rider.tail') as THREE.Group;
   private readonly riderLimbs = {
     leftArm: this.rider.getObjectByName('rider.leftArm') as THREE.Group,
     rightArm: this.rider.getObjectByName('rider.rightArm') as THREE.Group,
@@ -78,54 +86,100 @@ export class DragonVisual {
   private readonly legs: Array<{ group: THREE.Group; foot: THREE.Group; diagonal: boolean }> = [];
   private displayedScale = FORMS.rideable.visualScale;
   private previousTime = 0;
+  private importedDragon: ImportedCharacterRig | null = null;
+  private importedRider: ImportedCharacterRig | null = null;
+  private readonly legacyDragonNodes: THREE.Object3D[] = [];
+  private readonly legacyRiderNodes: THREE.Object3D[] = [];
+  private disposed = false;
+  readonly modelStatus: Record<CharacterKind, 'pending' | 'ready' | 'fallback'> = {
+    dragon: 'pending', rider: 'pending',
+  };
 
   constructor() {
     this.root.name = 'creature.dragon.onyx';
     this.root.userData.assetId = 'creature.dragon.onyx';
     this.body.name = 'creature.dragon.body';
-    // One smoothly tapered, UV-unwrapped torso replaces visibly intersecting
-    // oval primitives. Keep the same physical pivot and animation sockets.
-    const torso = new THREE.Mesh(makeOrganicLoft([
-      { z:-2.04, y:.38, width:.22, height:.25 },
-      { z:-1.67, y:.31, width:.46, height:.47 },
-      { z:-1.25, y:.17, width:.64, height:.59 },
-      { z:-.67, y:.06, width:.78, height:.67 },
-      { z:.22, y:.00, width:.79, height:.66 },
-      { z:.94, y:-.05, width:.59, height:.51 },
-      { z:1.43, y:-.07, width:.37, height:.35 },
-      { z:1.77, y:-.09, width:.22, height:.22 },
-    ], 32, 8), skin);
-    torso.name = 'creature.dragon.torso';
-    this.body.add(torso);
+    // One organic longitudinal torso/neck/tail silhouette; no stacked
+    // stretched sphere- or cube-shaped body parts remain.
+    const core = new THREE.Mesh(loftDragon(ONYX_TORSO,124,40),bodySkin);
+    core.name='creature.dragon.onyx.anatomical-torso';
+    core.castShadow=true;core.receiveShadow=true;
+    this.body.add(core);
     this.head.name = 'head';
-    this.head.position.set(0, 0.42, -1.83);
-    ellipsoid(this.head, skin, [0, 0.10, -0.19], [0.62, 0.44, 0.73], 20);
-    ellipsoid(this.head, highlight, [0, -0.12, -0.60], [0.48, 0.26, 0.65], 18);
+    this.head.position.set(0, 0.32, -1.54);
+    const skull=new THREE.Mesh(loftDragon(ONYX_HEAD,76,36),bodySkin);
+    skull.name='creature.dragon.onyx.sculpted-skull';
+    skull.castShadow=true;
+    this.head.add(skull);
+    const lowerJaw=new THREE.Mesh(loftDragon([
+      [-1.10,-.26,.08,.05],[-.85,-.29,.30,.115],
+      [-.56,-.24,.43,.14],[-.21,-.20,.39,.15],[.08,-.16,.18,.10],
+    ],42,26),highlight);
+    lowerJaw.name='creature.dragon.lower-jaw';
+    this.jawPivot.name='creature.dragon.onyx.jaw-hinge';
+    this.jawPivot.position.set(0,-.17,-.06);
+    // Keep the rest-sculpt coordinates while pivoting near the rear jaw.
+    lowerJaw.position.set(0,.17,.06);
+    this.jawPivot.add(lowerJaw);
+    this.head.add(this.jawPivot);
     for (const side of [-1, 1]) {
-      ellipsoid(this.head, iris, [side * 0.51, 0.20, -0.35], [0.165, 0.22, 0.10], 16);
-      const eye = ellipsoid(this.head, pupil, [side * 0.57, 0.21, -0.41], [0.065, 0.16, 0.05], 12);
-      this.eyes.push(eye);
-      ellipsoid(this.head, glimmer, [side * 0.60, 0.31, -0.45], [0.04, 0.047, 0.025], 8);
-      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.19, 0.79, 7), ridges);
-      horn.position.set(side * 0.40, 0.66, 0.28);
-      horn.rotation.set(0.43, 0, side * -0.24);
+      const irisMesh=ellipsoid(this.head,iris,
+        [side*.51,.20,-.35],[.165,.22,.10],18);
+      irisMesh.name='creature.dragon.eye.iris.'+(side<0?'left':'right');
+      const pupilMesh=ellipsoid(this.head,pupil,
+        [side*.57,.21,-.41],[.065,.16,.05],14);
+      pupilMesh.name='creature.dragon.eye.pupil.'+(side<0?'left':'right');
+      const glint=ellipsoid(this.head,glimmer,
+        [side*.60,.31,-.45],[.04,.047,.025],10);
+      glint.name='creature.dragon.eye.glint.'+(side<0?'left':'right');
+      // Painted brow and upper lid are independent, moveable anatomical
+      // surfaces. A blink no longer makes just the dark pupil disappear.
+      const brow=new THREE.Group();
+      brow.name='creature.dragon.brow.'+(side<0?'left':'right');
+      brow.add(new THREE.Mesh(taperedSpine([
+        [side*.35,.335,-.47],[side*.52,.375,-.43],
+        [side*.65,.305,-.31],
+      ],.090,12,26),ridges));
+      this.head.add(brow);
+      const lid=new THREE.Mesh(taperedSpine([
+        [side*.39,.385,-.41],[side*.52,.413,-.41],
+        [side*.65,.370,-.32],
+      ],.053,12,23),skin);
+      lid.name='creature.dragon.upper-lid.'+(side<0?'left':'right');
+      this.head.add(lid);
+      this.eyes.push({iris:irisMesh,pupil:pupilMesh,glint,lid,brow,side});
+      // Distinctive backward-swept paired horn and cartilage fin-crests.
+      const horn=new THREE.Mesh(taperedSpine([
+        [side*.37,.41,.33],[side*.46,.65,.44],
+        [side*.54,.88,.66],[side*.64,.93,.91],
+      ],.175,14),ridges);
+      horn.name=side<0?'creature.dragon.horn.left':'creature.dragon.horn.right';
       this.head.add(horn);
-      const ear = ellipsoid(this.head, highlight, [side * 0.68, 0.38, 0.07], [0.17, 0.31, 0.17]);
-      ear.rotation.z = side * -0.55;
+      const crestPivot=new THREE.Group();
+      crestPivot.name='creature.dragon.mobile-crest.'+(side<0?'left':'right');
+      crestPivot.position.set(side*.49,.23,.14);
+      const crestMesh=sculptFin([side*.49,.23,.14],
+        [side*1.02,.44,.83],.60,highlight,
+        side<0?'creature.dragon.crest.left':'creature.dragon.crest.right',30);
+      crestMesh.position.set(-side*.49,-.23,-.14);
+      crestPivot.add(crestMesh);
+      this.head.add(crestPivot);
+      this.crests.push(crestPivot);
+      // The broad eye-brow ridge reads when the creature banks at speed.
+      this.head.add(new THREE.Mesh(taperedSpine([
+        [side*.30,.30,-.78],[side*.51,.37,-.44],
+        [side*.62,.34,-.14],
+      ],.11,12),ridges));
     }
     this.body.add(this.head);
     // Original tapered ridge scales break up the smooth back silhouette
     // without adding a low-resolution box-like plate mesh.
     for (let i=0;i<9;i++) {
       const z=-1.13+i*.37;
-      const ridge=new THREE.Mesh(
-        new THREE.ConeGeometry(.14+i*.006,.34+Math.sin(i*.47)*.11,11),
-        ridges,
-      );
-      ridge.name='creature.dragon.dorsal-ridge.'+i;
-      ridge.position.set(0,.62-.05*(i/9),z);
-      ridge.rotation.x=-.23;
-      this.body.add(ridge);
+      const height=.55-.05*(i/9);
+      this.body.add(sculptFin([0,height,z-.11],
+        [0,height+.29+Math.sin(i*.47)*.12,z+.22],
+        .20,ridges,'creature.dragon.dorsal-ridge.'+i,16));
     }
     // Hinged procedural legs: diagonal pairs step in opposition on land.
     for (const side of [-1, 1]) {
@@ -140,30 +194,66 @@ export class DragonVisual {
       }
     }
     this.body.add(this.wingL.root, this.wingR.root);
-    this.tail.name = 'tailTip';
-    this.tail.position.set(0, 0, 1.38);
-    // Continuous tail surface preserves the existing articulated tail socket
-    // without segmented ball-joint gaps during swimming or banking.
-    const tailMesh = new THREE.Mesh(makeOrganicLoft([
-      { z:-.13, y:.00, width:.39, height:.34 },
-      { z:.36, y:-.03, width:.33, height:.30 },
-      { z:.90, y:-.08, width:.27, height:.24 },
-      { z:1.47, y:-.13, width:.19, height:.17 },
-      { z:2.02, y:-.16, width:.12, height:.11 },
-      { z:2.56, y:-.17, width:.065, height:.065 },
-      { z:3.02, y:-.13, width:.025, height:.034 },
-    ], 24, 7), skin);
-    tailMesh.name='creature.dragon.tail-surface';
-    this.tail.add(tailMesh);
-    tailFin(this.tail);
+    // A continuous skinned tail replaces the formerly rigid loft. Tail fins
+    // inherit the end-bone motion while retaining original authoring coords.
+    tailFin(this.tailRig.finSocket);
     this.body.add(this.tail);
     this.root.add(this.body, this.rider);
+    this.legacyDragonNodes.push(...this.body.children);
+    this.legacyRiderNodes.push(...this.rider.children);
     this.body.scale.setScalar(this.displayedScale);
   }
 
   attach(scene: THREE.Scene): void {
     this.scene = scene;
     scene.add(this.root);
+    // GLBLoader uses browser fetch/image APIs, not Node's unit-test runtime.
+    // Deterministic tests inject in-memory rigs with replaceCharacter().
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    // Model loading is independent of the deterministic fixed-step game.
+    // Keep collision and existing animation usable if either asset fails.
+    for (const kind of ['dragon', 'rider'] as const) {
+      // Until approved, authored GLBs are installed, the new original
+      // in-engine sculpts remain visible. No 404s and no donor skins.
+      if (!CHARACTER_MODEL_SOURCES[kind].installed) {
+        this.modelStatus[kind] = 'fallback';
+        continue;
+      }
+      void loadCharacterModel(kind)
+        .then((model) => {
+          if (this.disposed) {
+            // Avoid adding a stale async result after the game is torn down.
+            const unused = new ImportedCharacterRig(kind, model);
+            unused.dispose();
+          } else this.replaceCharacter(kind, model);
+        })
+        .catch((error: unknown) => {
+          this.modelStatus[kind] = 'fallback';
+          console.warn('Scaleborn character asset unavailable: ' + kind, error);
+        });
+    }
+  }
+
+  /**
+   * Replace rendered geometry without replacing actor/root objects, sockets,
+   * collision, form scale, rider control or scene ownership. Also exercised
+   * directly by deterministic tests without a network/WebGL context.
+   */
+  replaceCharacter(kind: CharacterKind, model: CharacterModelFile): void {
+    if (this.disposed) throw new Error('DragonVisual has been disposed');
+    const imported = new ImportedCharacterRig(kind, model);
+    if (kind === 'dragon') {
+      this.importedDragon?.dispose();
+      this.importedDragon = imported;
+      this.body.add(imported.root);
+      for (const child of this.legacyDragonNodes) child.visible = false;
+    } else {
+      this.importedRider?.dispose();
+      this.importedRider = imported;
+      this.rider.add(imported.root);
+      for (const child of this.legacyRiderNodes) child.visible = false;
+    }
+    this.modelStatus[kind] = 'ready';
   }
 
   update(state: FlightState): void {
@@ -191,26 +281,44 @@ export class DragonVisual {
           : state.mode === 'air' ? -0.19 : 0;
       leg.group.position.y = -0.45 + (pose.name === 'walk'
         ? Math.max(0, Math.sin(phase)) * pose.gaitAmount * 0.08 : 0);
-      // Toes pitch up with the lifting diagonal, but remain planted at rest.
+      // Keep the articulated toes grounded while the hock lifts.
       leg.foot.rotation.x = pose.name === 'walk'
         ? -Math.max(0, Math.sin(phase)) * pose.gaitAmount * 0.22
         : state.mode === 'underwater' || state.mode === 'surface'
           ? Math.sin(state.time * 4.4 + (leg.diagonal ? 0 : Math.PI)) * 0.09 : 0;
     }
-    this.tail.rotation.y = pose.tailAngle;
-    this.tail.rotation.x = Math.sin(state.time * 1.65) * 0.07;
+    poseDragonTail(this.tailRig,pose,state.time);
     this.head.rotation.x = pose.neckAngle;
     this.head.rotation.y = -state.roll * 0.15 + Math.sin(state.time * 0.7) * 0.028;
-    const blinking = (state.time % 7.3) > 7.08;
-    for (const eye of this.eyes) eye.scale.y = blinking ? 0.025 : 0.16;
+    const face=dragonExpression(state,pose);
+    this.jawPivot.rotation.x=-face.jawAngle;
+    for(const eye of this.eyes){
+      eye.iris.scale.y=.22*face.eyeOpen;
+      eye.pupil.scale.y=.16*face.eyeOpen;
+      eye.glint.scale.y=.047*face.eyeOpen;
+      eye.pupil.position.z=-.41+face.pupilShift*.09;
+      eye.glint.position.y=.31-(1-face.eyeOpen)*.038;
+      eye.lid.position.y=-(1-face.eyeOpen)*.10;
+      eye.brow.position.y=face.browLift;
+      eye.brow.rotation.z=eye.side*face.browLift*.48;
+    }
+    for(let i=0;i<this.crests.length;i++){
+      const crest=this.crests[i]!;
+      crest.rotation.x=-face.crestAngle;
+      crest.rotation.y=(i===0?-1:1)*face.crestAngle*.40;
+    }
 
+    this.importedDragon?.animateDragon(pose, dt);
     const riderMotion = riderPose(state);
-    this.riderVisual.updateCape(state.time,
-      state.form === 'small' ? state.riderSpeed : state.speed);
+    this.importedRider?.animateRider(riderMotion, Math.abs(state.riderSpeed), dt);
     this.riderLimbs.leftArm.rotation.x = riderMotion.leftArm;
     this.riderLimbs.rightArm.rotation.x = riderMotion.rightArm;
     this.riderLimbs.leftLeg.rotation.x = riderMotion.leftLeg;
     this.riderLimbs.rightLeg.rotation.x = riderMotion.rightLeg;
+    this.riderTail.rotation.y=Math.sin(state.time*2.15)*.12
+      +(state.form==='small' ? Math.sin(state.time*.66)*.08 : state.roll*.16);
+    this.riderTail.rotation.x=state.riderMode==='underwater'
+      ? Math.sin(state.time*4.1)*.22 : -.04;
     if (state.form === 'small') {
       if (this.scene && this.rider.parent !== this.scene) this.scene.add(this.rider);
       this.rider.position.set(
@@ -228,5 +336,26 @@ export class DragonVisual {
       this.rider.rotation.set(-state.pitch * 0.13, 0, pose.riderLean);
       this.rider.visible = true;
     }
+  }
+
+  dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.importedDragon?.dispose();
+    this.importedRider?.dispose();
+    // Each original sculpt/wing is a per-instance geometry, not a singleton.
+    // Deduplicate shared geometry in case two sockets reference one mesh.
+    const geometry=new Set<THREE.BufferGeometry>();
+    const disposeGeometry=(node:THREE.Object3D):void=>{
+      node.traverse(child=>{
+        if(child instanceof THREE.Mesh)geometry.add(child.geometry);
+      });
+    };
+    disposeGeometry(this.root);
+    disposeGeometry(this.rider); // Independent rider may be parented to Scene.
+    geometry.forEach(g=>g.dispose());
+    this.rider.removeFromParent();
+    this.root.removeFromParent();
+    this.scene = null;
   }
 }

@@ -1,0 +1,27 @@
+name: Combat WebGL playthrough
+on:
+  push:
+    branches: ["feat/g4-combat-foundation"]
+  workflow_dispatch:
+jobs:
+  chromium-combat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Start local Vite game
+        run: |
+          npm run dev -- --host 127.0.0.1 > /tmp/scaleborn-vite-combat.log 2>&1 &
+      - run: npm run test:combat-browser
+      - name: Upload actual combat screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scaleborn-g4-webgl-combat
+          path: artifacts/combat-*.png
+          if-no-files-found: warn

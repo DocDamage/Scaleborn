@@ -209,3 +209,24 @@ Procedural broadleaf branches now carry leaf planes that remain visible from low
 ### Adaptive rendering for live gameplay
 
 Scaleborn now samples its actual frame rate and uses hysteresis to lower internal rendering resolution when performance remains under 28 FPS, or gradually restore it above 56 FPS. This **does not** change controls, character speed, the world heightfield, collisions, saved quest progress, or the graphics material preset. The renderer reports its current internal pixel ratio under **F3**. Automated visual QA disables adaptation for comparable screenshots; integrated-GPU and RTX 3060 results must be measured in real gameplay.
+
+
+## Integrated visual, character, and combat preview (development branch)
+
+This branch retains the current Mirrorfall waterfall, headwater, lake,
+shoreline, vegetation, and QA work while combining the original Onyx and
+rider sculpts with the first G4 combat encounter. The latest visual branch
+is the source of truth for natural world rendering; the character/combat
+branch supplies the original character identities, skinned tail/face,
+Gloam hounds, combat simulation, and contextual HUD.
+
+Run `npm run dev` and open `/?start=combat` for the encounter.
+Dragon fire uses R or pointer-locked primary click; independent rider
+Tidal Sigil uses the same action, and X triggers Bond Surge when both
+companions are nearby on dry ground. Combat smoke: `npm run test:combat-browser`.
+Mirrorfall review: `/?start=lake&quality=high`.
+
+The merged source is an integration candidate, **not visually approved art**.
+The original high-detail wing, leg, coast, and underwater tests remain in
+place. No finalized GLB models, real RTX 3060 benchmarks, complete G4,
+full save slots, or Unreal gameplay port are claimed.
