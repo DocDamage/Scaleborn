@@ -479,3 +479,15 @@ These are **procedural environment assets, not the final approved art**.
 Actual browser waterline and underwater captures must be reviewed for
 plant height, color, overdraw and shoreline blend; RTX 3060 and integrated
 GPU benchmarks remain required before closing the visual quality gate.
+
+### Rider-height meadow mesh correction (groundcover visual pass)
+
+- Local meadow tufts now use continuously curved, indexed grass blades with
+  smooth vertex normals and gradient-painted blade colors instead of three
+  flat disconnected triangles per blade. The high preset has more profile
+  segments; low retains a smaller mesh. Both reuse a single instanced draw.
+- High/low distribution spacing is slightly denser, and grass geometry
+  shrinks smoothly over the final 14 m before the local view cutoff. This
+  addresses abrupt patch-radius popping without transparency sorting or new
+  draw calls. Quality screenshots at rider height and RTX 3060 profiling are
+  still required; this change does not establish final foliage quality.
