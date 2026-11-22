@@ -25,7 +25,8 @@ function paintTerrain(x: number, z: number, h: number, target: THREE.Color): voi
   else if (h < 8) target.copy(sand);
   else if (h < 32) target.copy(sand).lerp(grass, Math.min(1, (h - 8) / 24));
   else if (h < 88) target.copy(grass).lerp(forest, Math.min(1, (h - 32) / 56));
-  else target.copy(forest).lerp(stone, Math.min(1, (h - 88) / 45));
+  else target.copy(forest).lerp(stone,
+    Math.min(.72,Math.max(0,(h-118)/100)));
   // Freshwater lake and ocean have different bed color. The bathymetry
   // texture in waterSurface samples these same terrain heights.
   if (lakeContains(x,z) && h < GRAND_LAKE.surfaceY + 1) {
@@ -53,8 +54,10 @@ function paintTerrain(x: number, z: number, h: number, target: THREE.Color): voi
     const towardFall=Math.max(0,Math.min(1,(east-.38)/.39));
     const steep=Math.max(0,Math.min(1,(slope-.26)/.84));
     rockWeight=steep*towardFall;
+    // Do not paint *every* high bank gray. Expose schist where the
+    // actual local slope is steep, and leave walkable terraces grassy.
     if(h>GRAND_LAKE.surfaceY+9 && h<GRAND_LAKE.surfaceY+146) {
-      rockWeight=Math.max(rockWeight,towardFall*.85);
+      rockWeight=Math.max(rockWeight,towardFall*steep*.90);
     }
   }
   if(rockWeight>.005) {
