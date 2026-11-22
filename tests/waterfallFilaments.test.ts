@@ -34,11 +34,9 @@ describe('layered, flow-advected waterfall rope geometry',()=>{
   it('reuses the existing fog-safe animated waterfall material',()=>{
     const fall=new MirrorfallCascade('low');
     try{
-      const threads=fall.group.getObjectByName('water.azure.mirrorfall-filament-ropes')
-        as THREE.Mesh<THREE.BufferGeometry,THREE.ShaderMaterial>;
+      const threads=fall.group.getObjectByName('water.azure.mirrorfall-filament-ropes') as THREE.Mesh<THREE.BufferGeometry,THREE.ShaderMaterial>;
       expect(threads).toBeInstanceOf(THREE.Mesh);
-      const curtain=fall.group.getObjectByName('water.azure.mirrorfall-curtain')
-        as THREE.Mesh;
+      const curtain=fall.group.getObjectByName('water.azure.mirrorfall-curtain') as THREE.Mesh;
       expect(threads.material).toBe(curtain.material);
       expect(threads.material.uniforms.fogDensity?.value).toBeDefined();
       expect(fall.group.children.filter(o=>o.name==='water.azure.mirrorfall-filament-ropes'))
