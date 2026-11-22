@@ -39,6 +39,9 @@ try {
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('mounted-rideable'));
   await page.waitForTimeout(400);
   await captureQaScreenshot(page, {path:'artifacts/characters-rider-mounted-rideable.png',timeout:120000});
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('mounted-rideable-side'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-rider-mounted-rideable-side.png',timeout:120000});
 
   await page.keyboard.press('1');
   await page.evaluate(()=>window.__scalebornQaAdvance(8));
@@ -53,6 +56,9 @@ try {
     document.querySelector('#focus-name')?.textContent==='RIDER');
   await page.waitForTimeout(400);
   await captureQaScreenshot(page, {path:'artifacts/characters-hybrid-hero.png',timeout:120000});
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('rider-side'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-hybrid-hero-side.png',timeout:120000});
 
   await page.evaluate(()=>window.__scalebornQaLake());
   await page.keyboard.press('3');
@@ -66,6 +72,9 @@ try {
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('mounted-giant'));
   await page.waitForTimeout(450);
   await captureQaScreenshot(page, {path:'artifacts/characters-rider-mounted-giant.png',timeout:120000});
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('mounted-giant-side'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-rider-mounted-giant-side.png',timeout:120000});
 
   assert.deepEqual(errors,[],'Browser/shader errors during real character rendering');
   console.log('PASS: actual skinned wing, three form changes and hybrid rider rendered.');

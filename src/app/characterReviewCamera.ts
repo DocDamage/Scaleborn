@@ -2,8 +2,10 @@ import * as THREE from 'three';
 import type { FlightState } from '../actors/dragon/flight';
 import { FORMS, type DragonForm } from '../actors/dragon/forms';
 
-export type PortraitSubject = 'dragon' | 'rider' | 'mounted';
-export type PortraitPose = DragonForm | 'rider' | 'mounted-rideable' | 'mounted-giant';
+export type PortraitSubject = 'dragon' | 'rider' | 'mounted' | 'rider-side' | 'mounted-side';
+export type PortraitPose = DragonForm | 'rider' | 'rider-side'
+  | 'mounted-rideable' | 'mounted-giant'
+  | 'mounted-rideable-side' | 'mounted-giant-side';
 
 /**
  * Repeatable *development-only* character art review position. The open
@@ -15,15 +17,18 @@ export function stageCharacterPortrait(
   height: (x: number, z: number) => number,
 ): PortraitSubject {
   const x = -521, z = -104;
-  const form = pose === 'rider' ? 'small' : pose === 'mounted-rideable'
-    ? 'rideable' : pose === 'mounted-giant' ? 'giant' : pose;
+  const form = pose === 'rider' || pose === 'rider-side' ? 'small'
+    : pose === 'mounted-rideable' || pose === 'mounted-rideable-side'
+      ? 'rideable' : pose === 'mounted-giant' || pose === 'mounted-giant-side'
+        ? 'giant' : pose;
   state.x = x;
   state.z = z;
   state.form = form;
   state.y = height(x, z) + FORMS[form].standHeight;
   state.mode = 'ground';
   state.transition = null;
-  state.controlTarget = pose === 'rider' ? 'rider' : 'dragon';
+  state.controlTarget = pose === 'rider' || pose === 'rider-side'
+    ? 'rider' : 'dragon';
   state.speed = 0;
   state.pitch = 0;
   state.roll = 0;
@@ -35,6 +40,9 @@ export function stageCharacterPortrait(
   state.riderYaw = 0;
   state.riderSpeed = 0;
   state.riderMode = 'ground';
+  if (pose === 'rider-side') return 'rider-side';
+  if (pose === 'mounted-rideable-side' || pose === 'mounted-giant-side')
+    return 'mounted-side';
   return pose === 'mounted-rideable' || pose === 'mounted-giant'
     ? 'mounted' : state.controlTarget;
 }
@@ -49,8 +57,9 @@ export function poseCharacterPortraitCamera(
   state: FlightState, subject: PortraitSubject,
   height: (x: number, z: number) => number,
 ): void {
-  const rider = subject === 'rider';
-  const mounted = subject === 'mounted';
+  const rider = subject === 'rider' || subject === 'rider-side';
+  const mounted = subject === 'mounted' || subject === 'mounted-side';
+  const sideView = subject === 'rider-side' || subject === 'mounted-side';
   const yaw = rider ? state.riderYaw : state.yaw;
   const scale = rider ? 1 : FORMS[state.form].visualScale;
   const distance = mounted ? (state.form === 'giant' ? 8.2 : 3.8)
@@ -66,8 +75,12 @@ export function poseCharacterPortraitCamera(
     : rider ? 1.08 : .46 * scale);
   const forwardX = Math.sin(yaw), forwardZ = -Math.cos(yaw);
   const rightX = Math.cos(yaw), rightZ = Math.sin(yaw);
-  const x = originX + forwardX * distance + rightX * distance * .32;
-  const z = originZ + forwardZ * distance + rightZ * distance * .32;
+  // Side orthographic-like three-quarter view reveals pelvis, knees and wing
+  // clearance that frontal portraits hide. Still the actual gameplay scene.
+  const x = originX + forwardX * distance * (sideView ? .28 : 1)
+    + rightX * distance * (sideView ? 1.12 : .32);
+  const z = originZ + forwardZ * distance * (sideView ? .28 : 1)
+    + rightZ * distance * (sideView ? 1.12 : .32);
   const y = Math.max(focusY + rise, height(x,z) + (rider ? 1.25 : .55));
   camera.position.set(x,y,z);
   camera.up.set(0,1,0);

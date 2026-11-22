@@ -61,4 +61,19 @@ describe('real-character close-up visual acceptance cameras', () => {
         .every(Number.isFinite)).toBe(true);
     }
   });
+  it('captures genuine side views exposing original rider knee and saddle contact',()=>{
+    const state=newFlightState();
+    const camera=new THREE.PerspectiveCamera(71,16/9,.2,6500);
+    for(const pose of ['rider-side','mounted-rideable-side','mounted-giant-side'] as const){
+      const subject=stageCharacterPortrait(state,pose,heightAt);
+      expect(subject).toBe(pose==='rider-side'?'rider-side':'mounted-side');
+      poseCharacterPortraitCamera(camera,state,subject,heightAt);
+      const fromX=subject==='rider-side'?state.riderX:state.x;
+      const fromZ=subject==='rider-side'?state.riderZ:state.z;
+      expect(camera.position.x).toBeGreaterThan(fromX+1);
+      expect(camera.position.z).toBeLessThan(fromZ);
+      expect(camera.position.y).toBeGreaterThan(heightAt(camera.position.x,camera.position.z));
+      expect(camera.fov).toBe(subject==='rider-side'?40:45);
+    }
+  });
 });
