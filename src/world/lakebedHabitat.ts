@@ -2,50 +2,25 @@ import * as THREE from 'three';
 import { rng } from '../core/random';
 import { AZURE_SEED, heightAt } from './terrain';
 import { GRAND_LAKE, lakeBoundaryScale, lakeContains } from './highlandLake';
+import { InstanceVisibility } from './instanceVisibility';
+import { aquaticTuft } from './lakebedBotany';
+export { aquaticTuft } from './lakebedBotany';
 import { makeRockMaterial } from './materials';
 
 type Quality = 'high' | 'low';
 type Site = { x:number; y:number; z:number; scale:number; hue:number };
 
-function riverStone():THREE.BufferGeometry {
-  const geometry=new THREE.IcosahedronGeometry(1,2);
+function riverStone(quality:Quality):THREE.BufferGeometry {
+  // Water-polished pebbles retain a curved silhouette even at rider height.
+  // The original subdivided icosahedron exposed conspicuous triangular facets.
+  const geometry=new THREE.SphereGeometry(1,
+    quality==='high'?20:14,quality==='high'?14:10);
   const p=geometry.getAttribute('position');
   for(let i=0;i<p.count;i++){
     const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
-    const rough=1+.082*Math.sin(x*9+y*13+z*7)+.045*Math.sin(z*19-x*11);
+    const rough=1+.035*Math.sin(x*5+y*7+z*4)+.018*Math.sin(z*11-x*9);
     p.setXYZ(i,x*rough,y*rough*.77,z*rough);
   }
-  geometry.computeVertexNormals();
-  return geometry;
-}
-
-/** Segmented, gently bent ribbon fronds; no rectangular seaweed billboards. */
-export function aquaticTuft(quality:Quality='high'):THREE.BufferGeometry {
-  const blades=quality==='high'?9:6;
-  const steps=quality==='high'?10:6;
-  const vertices:number[]=[];
-  for(let k=0;k<blades;k++){
-    const angle=k*2*Math.PI/blades;
-    const dirX=Math.cos(angle),dirZ=Math.sin(angle);
-    const sideX=-dirZ,sideZ=dirX;
-    const length=1.45+(k%4)*.26;
-    const center=(t:number):[number,number,number]=>[
-      dirX*.36*t*t+.06*Math.sin(t*4+k),length*t,
-      dirZ*.36*t*t+.06*Math.cos(t*3+k),
-    ];
-    for(let j=0;j<steps;j++){
-      const t0=j/steps,t1=(j+1)/steps;
-      const a=center(t0),b=center(t1);
-      const w0=.11*(1-t0)+.006,w1=.11*(1-t1)+.006;
-      const aL=[a[0]-sideX*w0,a[1],a[2]-sideZ*w0];
-      const aR=[a[0]+sideX*w0,a[1],a[2]+sideZ*w0];
-      const bL=[b[0]-sideX*w1,b[1],b[2]-sideZ*w1];
-      const bR=[b[0]+sideX*w1,b[1],b[2]+sideZ*w1];
-      vertices.push(...aL,...aR,...bL,...aR,...bR,...bL);
-    }
-  }
-  const geometry=new THREE.BufferGeometry();
-  geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
   geometry.computeVertexNormals();
   return geometry;
 }
@@ -62,6 +37,7 @@ export class LakebedHabitat {
   private readonly stoneMaterial:THREE.MeshStandardMaterial;
   private readonly weedMaterial:THREE.MeshStandardMaterial;
   private readonly time={value:0};
+  private readonly visibility=new InstanceVisibility();
 
   constructor(scene:THREE.Scene,quality:Quality='high'){
     this.group.name='terrain.azure.mirrorfall-lakebed-habitat';
@@ -92,7 +68,7 @@ export class LakebedHabitat {
     const dummy=new THREE.Object3D();
     this.stoneMaterial=makeRockMaterial(quality);
     this.stones=new THREE.InstancedMesh(
-      riverStone(),this.stoneMaterial,stones.length);
+      riverStone(quality),this.stoneMaterial,stones.length);
     this.stones.name='terrain.azure.mirrorfall-submerged-stones';
     stones.forEach((p,i)=>{
       dummy.position.set(p.x,p.y+.09,p.z);
@@ -106,9 +82,10 @@ export class LakebedHabitat {
     });
     this.stones.receiveShadow=true;
     this.group.add(this.stones);
+    this.visibility.register(this.stones,stones,quality==='high'?380:260);
 
     this.weedMaterial=new THREE.MeshStandardMaterial({
-      color:0x91b4a0,roughness:.91,metalness:0,side:THREE.DoubleSide,
+      color:0xb4c8ac,vertexColors:true,roughness:.87,metalness:0,side:THREE.DoubleSide,
     });
     const anim=this.time;
     this.weedMaterial.customProgramCacheKey=()=> 'scaleborn-freshwater-plants-v1';
@@ -144,12 +121,14 @@ export class LakebedHabitat {
     });
     this.weeds.receiveShadow=true;
     this.group.add(this.weeds);
+    this.visibility.register(this.weeds,plants,quality==='high'?245:170);
   }
 
-  update(time:number,x:number,z:number):void {
-    this.time.value=time;
+  update(time:number,x:number,z:number,camera?:THREE.Camera):void {
+    if(Number.isFinite(time))this.time.value=time;
     if(!Number.isFinite(x)||!Number.isFinite(z))return;
     this.group.visible=Math.hypot(x-GRAND_LAKE.x,z-GRAND_LAKE.z)<1150;
+    if(this.group.visible)this.visibility.update(x,z,camera);
   }
 
   dispose():void {

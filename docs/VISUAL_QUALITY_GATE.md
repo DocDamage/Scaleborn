@@ -932,3 +932,22 @@ dragon and submerged viewpoints and visually inspect the dynamic wetline.
 high-PBR browser captures, target-hardware performance data, actual
 character-art acceptance, physically coupled volumetric water and
 final camera/shoreline polish.
+
+
+### Freshwater lakebed silhouette and draw-budget pass
+
+`lakebedBotany.ts` now builds indexed, non-rectangular pondweed with curved
+stems and distinct paired lanceolate leaves, using vertex-pigmented foliage
+and the existing animated current-driven material. Smooth waterworn pebble
+silhouettes replace the prior faceted lakebed icosahedrons. `LakebedHabitat`
+uses the same deterministic per-instance packing as surface foliage, but with
+shorter underwater visibility radii; distant lakebed props stop consuming
+shading/vertex work when a diver approaches the lake. The actual render
+camera is passed through `AzureCoast.animate` for broad behind-camera
+culling. No geometry, buffers or leaf materials are allocated during
+per-frame updates, and the two shared lakebed draw groups are retained.
+
+These are procedural approximations, not scanned natural assets, physical
+plant dynamics or accepted final art. Inspect the actual underwater browser
+capture for leaf silhouette/overdraw, distant cull transitions and sunlight
+transmission before closing the visual-quality gate.
