@@ -10,6 +10,7 @@ import { ImportedCharacterRig, type CharacterKind, type CharacterModelFile } fro
 import { loftDragon, ONYX_TORSO, ONYX_HEAD, taperedSpine, sculptFin } from './organicSculpt';
 import { makeScalebornRider } from '../rider/heroSculpt';
 import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
+import { dragonExpression } from './dragonExpression';
 
 const scaleTextures=makeDragonScaleTextures();
 const skin = applyDragonScales(
@@ -68,7 +69,12 @@ export class DragonVisual {
   private readonly tailRig = createDragonTailRig(skin);
   private readonly tail = this.tailRig.root;
   private readonly head = new THREE.Group();
-  private readonly eyes: THREE.Mesh[] = [];
+  private readonly eyes: Array<{
+    iris:THREE.Mesh; pupil:THREE.Mesh; glint:THREE.Mesh;
+    lid:THREE.Mesh; brow:THREE.Group; side:number;
+  }> = [];
+  private readonly crests:THREE.Group[] = [];
+  private readonly jawPivot=new THREE.Group();
   private readonly riderTail = this.rider.getObjectByName('rider.tail') as THREE.Group;
   private readonly riderLimbs = {
     leftArm: this.rider.getObjectByName('rider.leftArm') as THREE.Group,
@@ -109,12 +115,38 @@ export class DragonVisual {
       [-.56,-.24,.43,.14],[-.21,-.20,.39,.15],[.08,-.16,.18,.10],
     ],42,26),highlight);
     lowerJaw.name='creature.dragon.lower-jaw';
-    this.head.add(lowerJaw);
+    this.jawPivot.name='creature.dragon.onyx.jaw-hinge';
+    this.jawPivot.position.set(0,-.17,-.06);
+    // Keep the rest-sculpt coordinates while pivoting near the rear jaw.
+    lowerJaw.position.set(0,.17,.06);
+    this.jawPivot.add(lowerJaw);
+    this.head.add(this.jawPivot);
     for (const side of [-1, 1]) {
-      ellipsoid(this.head, iris, [side * 0.51, 0.20, -0.35], [0.165, 0.22, 0.10], 16);
-      const eye = ellipsoid(this.head, pupil, [side * 0.57, 0.21, -0.41], [0.065, 0.16, 0.05], 12);
-      this.eyes.push(eye);
-      ellipsoid(this.head, glimmer, [side * 0.60, 0.31, -0.45], [0.04, 0.047, 0.025], 8);
+      const irisMesh=ellipsoid(this.head,iris,
+        [side*.51,.20,-.35],[.165,.22,.10],18);
+      irisMesh.name='creature.dragon.eye.iris.'+(side<0?'left':'right');
+      const pupilMesh=ellipsoid(this.head,pupil,
+        [side*.57,.21,-.41],[.065,.16,.05],14);
+      pupilMesh.name='creature.dragon.eye.pupil.'+(side<0?'left':'right');
+      const glint=ellipsoid(this.head,glimmer,
+        [side*.60,.31,-.45],[.04,.047,.025],10);
+      glint.name='creature.dragon.eye.glint.'+(side<0?'left':'right');
+      // Painted brow and upper lid are independent, moveable anatomical
+      // surfaces. A blink no longer makes just the dark pupil disappear.
+      const brow=new THREE.Group();
+      brow.name='creature.dragon.brow.'+(side<0?'left':'right');
+      brow.add(new THREE.Mesh(taperedSpine([
+        [side*.35,.335,-.47],[side*.52,.375,-.43],
+        [side*.65,.305,-.31],
+      ],.090,12,26),ridges));
+      this.head.add(brow);
+      const lid=new THREE.Mesh(taperedSpine([
+        [side*.39,.385,-.41],[side*.52,.413,-.41],
+        [side*.65,.370,-.32],
+      ],.053,12,23),skin);
+      lid.name='creature.dragon.upper-lid.'+(side<0?'left':'right');
+      this.head.add(lid);
+      this.eyes.push({iris:irisMesh,pupil:pupilMesh,glint,lid,brow,side});
       // Distinctive backward-swept paired horn and cartilage fin-crests.
       const horn=new THREE.Mesh(taperedSpine([
         [side*.37,.41,.33],[side*.46,.65,.44],
@@ -122,9 +154,16 @@ export class DragonVisual {
       ],.175,14),ridges);
       horn.name=side<0?'creature.dragon.horn.left':'creature.dragon.horn.right';
       this.head.add(horn);
-      this.head.add(sculptFin([side*.49,.23,.14],
+      const crestPivot=new THREE.Group();
+      crestPivot.name='creature.dragon.mobile-crest.'+(side<0?'left':'right');
+      crestPivot.position.set(side*.49,.23,.14);
+      const crestMesh=sculptFin([side*.49,.23,.14],
         [side*1.02,.44,.83],.60,highlight,
-        side<0?'creature.dragon.crest.left':'creature.dragon.crest.right',30));
+        side<0?'creature.dragon.crest.left':'creature.dragon.crest.right',30);
+      crestMesh.position.set(-side*.49,-.23,-.14);
+      crestPivot.add(crestMesh);
+      this.head.add(crestPivot);
+      this.crests.push(crestPivot);
       // The broad eye-brow ridge reads when the creature banks at speed.
       this.head.add(new THREE.Mesh(taperedSpine([
         [side*.30,.30,-.78],[side*.51,.37,-.44],
@@ -260,8 +299,23 @@ export class DragonVisual {
     poseDragonTail(this.tailRig,pose,state.time);
     this.head.rotation.x = pose.neckAngle;
     this.head.rotation.y = -state.roll * 0.15 + Math.sin(state.time * 0.7) * 0.028;
-    const blinking = (state.time % 7.3) > 7.08;
-    for (const eye of this.eyes) eye.scale.y = blinking ? 0.025 : 0.16;
+    const face=dragonExpression(state,pose);
+    this.jawPivot.rotation.x=-face.jawAngle;
+    for(const eye of this.eyes){
+      eye.iris.scale.y=.22*face.eyeOpen;
+      eye.pupil.scale.y=.16*face.eyeOpen;
+      eye.glint.scale.y=.047*face.eyeOpen;
+      eye.pupil.position.z=-.41+face.pupilShift*.09;
+      eye.glint.position.y=.31-(1-face.eyeOpen)*.038;
+      eye.lid.position.y=-(1-face.eyeOpen)*.10;
+      eye.brow.position.y=face.browLift;
+      eye.brow.rotation.z=eye.side*face.browLift*.48;
+    }
+    for(let i=0;i<this.crests.length;i++){
+      const crest=this.crests[i]!;
+      crest.rotation.x=-face.crestAngle;
+      crest.rotation.y=(i===0?-1:1)*face.crestAngle*.40;
+    }
 
     this.importedDragon?.animateDragon(pose, dt);
     const riderMotion = riderPose(state);

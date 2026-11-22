@@ -111,3 +111,19 @@ without touching flight collision or rider-scale logic.
 **Still required:** reviewed, production-quality sculpt/skin detailing,
 rigged body and facial expressions, authored GLB and full animation clips,
 and actual game screenshot/frame-rate acceptance.
+
+## Onyx face and movable crests — visual continuation
+
+The static first-sculpt eyes now blink as one complete iris, vertical pupil
+and specular glint assembly; the former pupil-only blink exposed the entire
+glowing iris. The sculpted upper eyelids and paired brows follow a deterministic
+facial pose derived from flight/swim/landing/surge state. A real hinged jaw
+opens subtly during high-effort motion, and the distinctive backward swept
+fin crests flex with swimming and air speed. No new combat mechanics, donor
+faces, or unrelated elf-type geometry are used.
+
+The expression contract is in `src/actors/dragon/dragonExpression.ts`, with
+integration inside `DragonVisual.update` and focused tests for deterministic
+blinks, physical facial parts, crest motion and retained rider scale.
+Full face morph targets, lip/teeth animation, expressive voice/breath audio,
+and authored GLB facial rigging are still outstanding.
