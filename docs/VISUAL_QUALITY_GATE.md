@@ -653,3 +653,15 @@ This is a visible geometry-detail improvement and does not alter collision.
 Ledge protrusions are decorative; larger collidable rock formations and
 production-quality authored cliff assets remain required. Review the actual
 rider-height waterfall frame and GPU geometry workload before art signoff.
+
+### World-locked pigment and shoreline dampness
+
+Low-mode gameplay still showed mostly featureless green and grey terrain
+between grass tufts, even after adding instanced groundcover. The terrain's
+existing soil/mineral triplanar PBR materials now receive a low-cost,
+world-locked macro pigment pass: broad natural grass/litter tones, smaller
+earth washes and separate warm/cool rock bedding on steep slopes. Narrow
+lakebanks receive an irregular damp moss/clay tint aligned to the exact lake
+boundary equation and surface elevation via stable shader uniforms. No
+heightfield, collision, tile mesh, extra texture, or draw-call changes.
+These remain original painted approximations pending human visual review.

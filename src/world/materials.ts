@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GRAND_LAKE } from './highlandLake';
 import { makePaintedSurfaceTextures, type SurfaceKind } from './surfaceTextures';
 import { installTerrainTriplanar } from './terrainTriplanar';
+import { installTerrainPigment } from './terrainPigment';
 
 function attachPaintedMaps(
   material: THREE.MeshStandardMaterial, kind: SurfaceKind,
@@ -121,6 +122,7 @@ export function makeTerrainMaterial(quality: 'high' | 'low' = 'high'): THREE.Mes
   // Use the same world-space projections for BOTH texture families, on
   // every preset. Continuous slope weights eliminate material seams.
   installTerrainTriplanar(mat, 13, rockMaps);
+  installTerrainPigment(mat);
   return mat;
 }
 export function makeRockMaterial(quality: 'high' | 'low' = 'high'): THREE.MeshStandardMaterial {
