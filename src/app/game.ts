@@ -564,7 +564,6 @@ export class Game {
       requestAnimationFrame(this.frame);
       return;
     }
-    this.lastQaRenderTime = now;
     if (!this.lastTime) this.lastTime = now;
     const elapsed = Math.min(0.10, Math.max(0, (now - this.lastTime) / 1000));
     this.lastTime = now;
@@ -628,6 +627,9 @@ export class Game {
     this.dragon.update(this.flight);
     this.updateCamera(elapsed);
     this.renderer.render(this.scene, this.camera);
+    // Begin the QA cooldown *after* software rasterization. Measuring from
+    // frame entry fails to yield when one SwiftShader frame exceeds 125 ms.
+    if (this.qaRender) this.lastQaRenderTime = performance.now();
     this.updateHud(elapsed);
     requestAnimationFrame(this.frame);
   };
