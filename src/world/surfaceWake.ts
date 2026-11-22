@@ -82,7 +82,12 @@ export class SurfaceWake {
         event.mesh.visible=false;
       }
     }
-    if(state.mode==='surface' && Math.abs(state.speed)>1.2 &&
+    // During splashdown the logical mode is 'surface' before physical water
+    // contact. Never draw a moving wake while the dragon is still airborne.
+    const atWaterline=state.transition?.phase!=='splashdown'
+      || state.y <= waterSurfaceAt(state.x,state.z)
+        +waterWaveOffsetAt(state.x,state.z,time)+2.2;
+    if(state.mode==='surface' && atWaterline && Math.abs(state.speed)>1.2 &&
        time-this.lastDragonTime>.31) {
       this.spawn(state.x,state.z,state.yaw+(state.speed<0?Math.PI:0),
         state.form==='giant'?2.8:state.form==='small'?.65:1.25,time);

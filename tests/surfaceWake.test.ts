@@ -5,6 +5,8 @@ import { makeWakeCrestGeometry, makeWakeCrestTexture } from '../src/world/wakeCr
 import { waterSurfaceAt } from '../src/world/highlandLake';
 import { waterWaveOffsetAt } from '../src/world/waterWaves';
 import { newFlightState } from '../src/actors/dragon/flight';
+import { beginTraversal } from '../src/actors/dragon/traversalTransition';
+import { dragonSurfaceY } from '../src/world/waterPhysics';
 import { GRAND_LAKE } from '../src/world/highlandLake';
 describe('water-surface response to swimming',()=>{
   it('emits bounded ripples only when an actor actually moves on the water',()=>{
@@ -74,6 +76,21 @@ describe('water-surface response to swimming',()=>{
       expect(oldY).not.toBeCloseTo(trail.position.y,5);
       expect((trail.material as THREE.MeshBasicMaterial).map)
         .toBeInstanceOf(THREE.DataTexture);
+    }finally{wake.dispose();}
+  });
+  it('keeps airborne splashdown clear until the dragon contacts the water',()=>{
+    const wake=new SurfaceWake(new THREE.Scene(),'low');
+    try{
+      const state=newFlightState();
+      state.x=GRAND_LAKE.x;state.z=GRAND_LAKE.z;
+      state.y=GRAND_LAKE.surfaceY+11;
+      state.speed=13;
+      beginTraversal(state,'splashdown',dragonSurfaceY(state.form,state.x,state.z),0);
+      wake.update(state,.25);
+      expect(wake.group.children.every(c=>!c.visible)).toBe(true);
+      state.y=dragonSurfaceY(state.form,state.x,state.z)+.10;
+      wake.update(state,.35);
+      expect(wake.group.children.some(c=>c.visible)).toBe(true);
     }finally{wake.dispose();}
   });
 });

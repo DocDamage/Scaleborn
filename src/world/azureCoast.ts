@@ -12,6 +12,7 @@ import { LocalGroundcover } from './localGroundcover';
 import { PainterlyClouds } from './painterlyClouds';
 import { MirrorfallCliffs } from './mirrorfallCliffs';
 import { SurfaceWake } from './surfaceWake';
+import { CreatureSplash } from './creatureSplash';
 import type { FlightState } from '../actors/dragon/flight';
 import { makeTerrainMaterial } from './materials';
 import { PainterlySky } from './sky';
@@ -41,6 +42,7 @@ export class AzureCoast {
   private readonly clouds: PainterlyClouds;
   private readonly cliffs: MirrorfallCliffs;
   private readonly wake: SurfaceWake;
+  private readonly splash: CreatureSplash;
   private readonly sky = new PainterlySky();
   private readonly sun = new THREE.DirectionalLight(0xffd3a5, 2.1);
   private readonly hemisphere: THREE.HemisphereLight;
@@ -92,6 +94,7 @@ export class AzureCoast {
     this.clouds = new PainterlyClouds(scene, quality);
     this.cliffs = new MirrorfallCliffs(quality);
     this.wake = new SurfaceWake(scene,quality);
+    this.splash = new CreatureSplash(scene,quality);
     scene.add(this.cliffs.group);
     addCoastalDressing(scene, false);
     addMarineDressing(scene);
@@ -172,7 +175,10 @@ export class AzureCoast {
     this.lakeFoam.update(time);
     this.caustics.update(time);
     this.waterfall.update(time);
-    if(state)this.wake.update(state,time);
+    if(state){
+      this.wake.update(state,time);
+      this.splash.update(state,time);
+    }
     this.nature.update(time,x,z);
     this.nearGrass.update(x,z,time);
     this.clouds.update(time);
@@ -212,6 +218,7 @@ export class AzureCoast {
     this.clouds.dispose();
     this.cliffs.dispose();
     this.wake.dispose();
+    this.splash.dispose();
     this.sky.dispose();
     this.echoVisual.dispose();
     this.hemisphere.removeFromParent();

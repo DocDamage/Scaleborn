@@ -301,3 +301,16 @@ movement speed. Crests expand and fade behind each moving swimmer, with the
 wake root following the shared lake/ocean wave height every frame.
 These are simple painterly wave-edge visuals, not displaced fluid volume;
 tests enforce geometry bounds, texture alpha and direction/wave alignment.
+
+### Contact-triggered creature splash spray
+
+`CreatureSplash` adds a fixed-pool instanced ballistic spray, reusing the
+waterfall's original feathered streak geometry and texture. It responds
+to an actual dragon splashdown contact, the start of water launch and
+the separately controlled rider stepping from land into water. The
+existing swimming wake no longer triggers in midair merely because
+`beginTraversal` logically changed mode to surface. Particles obey
+bounded gravity and drag, stop at the shared animated water surface and
+are recycled without new per-frame geometry or texture allocation. This
+is visually driven contact splash, **not** dynamic fluid displacement
+or rigid-body buoyancy.
