@@ -12,6 +12,8 @@ import { toggleRiderControl, toggleRiderDive } from '../actors/rider/movement';
 import { LANDMARKS } from '../world/terrain';
 import { GRAND_LAKE, waterSurfaceAt } from '../world/highlandLake';
 import { AdaptiveResolution } from './adaptiveResolution';
+import { resolveCameraOcclusion } from './cameraOcclusion';
+import { OBSTACLES } from '../world/collision';
 import { TIDEGATE, newTidegateState, stepTidegate, interactTidegate, tidegateNearby, tidegateHint } from '../world/tidegate';
 import {
   ECHO_SHRINE, newTidalEchoState, echoPhase, echoObjective,
@@ -554,6 +556,15 @@ export class Game {
     desired.y = Math.max(desired.y, heightAt(desired.x, desired.z) + 1.25);
     this.camera.up.set(0, 1, 0);
     this.camera.position.lerp(desired, instant ? 1 : 1 - Math.exp(-dt * 4.5));
+    if (mode !== 'DRAGON EYE') {
+      // Terrain and landmark proxies can cut through the line between
+      // player and a smoothed chase camera even when its endpoint is clear.
+      const eye=root.clone().add(new THREE.Vector3(
+        0,rider?1.45:Math.max(1.5,scale*1.25),0));
+      this.camera.position.copy(resolveCameraOcclusion(
+        eye,this.camera.position,heightAt,OBSTACLES,submerged?.85:1.15,
+      ));
+    }
     this.camera.lookAt(mode === 'DRAGON EYE'
       ? target.clone().addScaledVector(forward, 80) : target);
   }

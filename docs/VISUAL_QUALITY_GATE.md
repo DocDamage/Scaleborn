@@ -334,3 +334,14 @@ varies with waterfall distance and height, with thin rivulets, broad damp
 patches and distance fade. The overlay has its own fog-safe uniforms and
 transparent no-depth-write shading; it does not allocate more rock triangles.
 This is painterly runoff approximation, not a groundwater or erosion solver.
+
+### Third-person terrain and landmark camera clearance
+
+The chase, orbit, wide and overhead cameras now clamp their actual smoothed
+view line against the gameplay heightfield and existing authored-structure
+proxy cylinders. A bounded segment test with short binary refinement pulls the
+camera ahead of occluding terrain instead of allowing hills, lighthouse walls
+or cliffs to cut between the rider/dragon and the viewpoint. First-person
+dragon-eye mode is unaffected. This is deterministic geometry-proxy
+occlusion, not full mesh-triangle raycasting or a cinematic camera system;
+verify framing near steep Mirrorfall banks and structures in the actual game.
