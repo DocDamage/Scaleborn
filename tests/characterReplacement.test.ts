@@ -38,7 +38,7 @@ describe('rigged GLB dragon and rider replacement',()=>{
       const asset=getAsset(CHARACTER_MODEL_SOURCES[kind].id);
       expect(asset.source).toBe('procedural');
       expect(asset.replacementPath).toBe(CHARACTER_MODEL_SOURCES[kind].file);
-      expect(asset.rigId).toMatch(/rig\.(dragon|rider)\.v2/);
+      expect(asset.rigId).toMatch(/rig\.(dragon|rider)\.v1/);
       expect(characterAssetUrl(kind,'/scaleborn/'))
         .toBe('/scaleborn/'+CHARACTER_MODEL_SOURCES[kind].file);
       expect(CHARACTER_MODEL_SOURCES[kind].design)
