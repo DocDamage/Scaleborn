@@ -4,7 +4,7 @@ import { FORMS } from '../src/actors/dragon/forms';
 import { heightAt } from '../src/world/terrain';
 import { steerGroundThreat } from '../src/combat/houndNavigation';
 import {
-  GLOAM_SPAWNS, castDragonFire, castRiderSigil, castMountedRiderSigil, castBondSurge, combatNearby, combatRemaining,
+  GLOAM_SPAWNS, castDragonFire, castRiderSigil, castMountedRiderSigil, castDragonClaw, castBondSurge, combatNearby, combatRemaining,
   newCombatState, restoreGloamVictory, stepCombat,
 } from '../src/combat/combat';
 
@@ -64,6 +64,45 @@ describe('G4 deterministic encounter and dragon breath', () => {
     const before = victim.hp;
     castDragonFire(c, s);
     expect(victim.hp).toBe(before);
+  });
+
+  it('sweeps grounded claws only forward with distinct cooldown and no Ember cost', () => {
+    const s = groundDragon(), c = newCombatState();
+    targetAhead(c, s, 3);
+    const front = c.hounds[0]!;
+    const behind = c.hounds[1]!;
+    behind.x = s.x - 3; behind.z = s.z; behind.y = s.y;
+    const far = c.hounds[2]!;
+    far.x = s.x + 30; far.z = s.z; far.y = s.y;
+    expect(castDragonClaw(c, s).ok).toBe(true);
+    expect(front.hp).toBeLessThan(front.maxHp);
+    expect(behind.hp).toBe(behind.maxHp);
+    expect(far.hp).toBe(far.maxHp);
+    expect(c.ember).toBe(100);
+    expect(c.lastClaw?.form).toBe('rideable');
+    expect(c.lastClaw?.direction.x).toBeCloseTo(1, 5);
+    expect(castDragonClaw(c, s).ok).toBe(false);
+    expect(c.clawSequence).toBe(1);
+    expect(castDragonFire(c, s).ok).toBe(true);
+    s.time = .96;
+    expect(castDragonClaw(c, s).ok).toBe(true);
+  });
+
+  it('rejects impossible claw attacks without consuming cooldowns', () => {
+    const s = groundDragon(), c = newCombatState();
+    s.controlTarget = 'rider';
+    expect(castDragonClaw(c, s).ok).toBe(false);
+    s.controlTarget = 'dragon'; s.mode = 'underwater';
+    expect(castDragonClaw(c, s).ok).toBe(false);
+    s.mode = 'air';
+    expect(castDragonClaw(c, s).ok).toBe(false);
+    s.mode = 'ground';
+    s.transition = { phase: 'landing', elapsed: 0, duration: 1.45,
+      startY: s.y, targetY: s.y, startSpeed: 0, targetSpeed: 0,
+      startPitch: 0, targetPitch: 0, startRoll: 0 };
+    expect(castDragonClaw(c, s).ok).toBe(false);
+    expect(c.clawSequence).toBe(0);
+    expect(c.clawReadyAt).toBe(0);
   });
 
   it('enforces cooldown, ember cost and regenerative resource', () => {

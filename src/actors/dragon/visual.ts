@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { FlightState } from './flight';
+import type { ClawCast } from '../../combat/combat';
 import { FORMS } from './forms';
 import { createWingRig, poseWing } from './wingRig';
 import { dragonPose } from './animationPose';
@@ -87,7 +88,10 @@ export class DragonVisual {
     leftLeg: this.rider.getObjectByName('rider.leftLeg') as THREE.Group,
     rightLeg: this.rider.getObjectByName('rider.rightLeg') as THREE.Group,
   };
-  private readonly legs: Array<{ group: THREE.Group; foot: THREE.Group; diagonal: boolean }> = [];
+  private readonly legs: Array<{
+    group: THREE.Group; foot: THREE.Group; diagonal: boolean;
+    front: boolean; side: -1 | 1;
+  }> = [];
   private displayedScale = FORMS.rideable.visualScale;
   private previousTime = 0;
   private importedDragon: ImportedCharacterRig | null = null;
@@ -211,7 +215,10 @@ export class DragonVisual {
         leg.name = 'leg.' + (front ? 'front' : 'hind') + (side < 0 ? 'Left' : 'Right');
         leg.position.set(side * 0.55, -0.45, z);
         this.body.add(leg);
-        this.legs.push({ group: leg, foot: sculpt.foot, diagonal: (side < 0) === front });
+        this.legs.push({
+          group: leg, foot: sculpt.foot, diagonal: (side < 0) === front,
+          front, side,
+        });
       }
     }
     this.body.add(this.wingL.root, this.wingR.root);
@@ -277,7 +284,7 @@ export class DragonVisual {
     this.modelStatus[kind] = 'ready';
   }
 
-  update(state: FlightState): void {
+  update(state: FlightState, lastClaw?: ClawCast | null): void {
     const dt = Math.min(0.1, Math.max(0, state.time - this.previousTime));
     this.previousTime = state.time;
     const targetScale = FORMS[state.form].visualScale;
@@ -293,23 +300,32 @@ export class DragonVisual {
 
     poseWing(this.wingL, -1, pose);
     poseWing(this.wingR, 1, pose);
+    // Cast metadata animates the original foreleg sockets; it never
+    // determines hits or modifies the fixed-step gameplay state.
+    const clawAge = lastClaw && lastClaw.form === state.form
+      ? state.time - lastClaw.time : -1;
+    const clawSwing = clawAge >= 0 && clawAge < .43
+      ? Math.sin(Math.PI * clawAge / .43) : 0;
     for (const leg of this.legs) {
       const phase = pose.gaitPhase + (leg.diagonal ? 0 : Math.PI);
       const stride = Math.sin(phase) * pose.gaitAmount;
-      leg.group.rotation.x = pose.name === 'walk' ? stride * 0.43
+      leg.group.rotation.x = (pose.name === 'walk' ? stride * 0.43
         : state.mode === 'underwater' || state.mode === 'surface'
           ? Math.sin(state.time * 4.4 + (leg.diagonal ? 0 : Math.PI)) * 0.13
-          : state.mode === 'air' ? -0.19 : 0;
+          : state.mode === 'air' ? -0.19 : 0)
+        - (leg.front ? clawSwing * (leg.side < 0 ? .66 : .44) : 0);
+      leg.group.rotation.z = leg.front ? leg.side * clawSwing * .15 : 0;
       leg.group.position.y = -0.45 + (pose.name === 'walk'
         ? Math.max(0, Math.sin(phase)) * pose.gaitAmount * 0.08 : 0);
       // Keep the articulated toes grounded while the hock lifts.
-      leg.foot.rotation.x = pose.name === 'walk'
+      leg.foot.rotation.x = (pose.name === 'walk'
         ? -Math.max(0, Math.sin(phase)) * pose.gaitAmount * 0.22
         : state.mode === 'underwater' || state.mode === 'surface'
-          ? Math.sin(state.time * 4.4 + (leg.diagonal ? 0 : Math.PI)) * 0.09 : 0;
+          ? Math.sin(state.time * 4.4 + (leg.diagonal ? 0 : Math.PI)) * 0.09 : 0)
+        + (leg.front ? clawSwing * .23 : 0);
     }
     poseDragonTail(this.tailRig,pose,state.time);
-    this.head.rotation.x = pose.neckAngle;
+    this.head.rotation.x = pose.neckAngle - clawSwing * .07;
     this.head.rotation.y = -state.roll * 0.15 + Math.sin(state.time * 0.7) * 0.028;
     const face=dragonExpression(state,pose);
     this.jawPivot.rotation.x=-face.jawAngle;

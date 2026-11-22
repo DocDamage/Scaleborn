@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { DragonVisual } from '../actors/dragon/visual';
-import { newCombatState, castDragonFire, castRiderSigil, castMountedRiderSigil, castBondSurge, stepCombat, combatNearby, combatRemaining, restoreGloamVictory } from '../combat/combat';
+import { newCombatState, castDragonFire, castRiderSigil, castMountedRiderSigil, castDragonClaw, castBondSurge, stepCombat, combatNearby, combatRemaining, restoreGloamVictory } from '../combat/combat';
 import { CombatVisual } from '../combat/visuals';
 import { newFlightState, stepFlight, requestDragonForm, toggleLanding, type InteractionResult } from '../actors/dragon/flight';
 import { FORMS, FORM_ORDER, type DragonForm } from '../actors/dragon/forms';
@@ -624,6 +624,9 @@ export class Game {
     requireElement<HTMLButtonElement>('#fire-button').addEventListener('click', () => {
       if (!this.paused) this.fireAction();
     });
+    requireElement<HTMLButtonElement>('#claw-button').addEventListener('click', () => {
+      if (!this.paused) this.clawAction();
+    });
     requireElement<HTMLButtonElement>('#mounted-sigil-button').addEventListener('click', () => {
       if (!this.paused) this.mountedSigilAction();
     });
@@ -704,6 +707,10 @@ export class Game {
     const result = this.flight.controlTarget === 'rider'
       ? castRiderSigil(this.combat, this.flight) : castDragonFire(this.combat, this.flight);
     this.finishCombatAction(result);
+  }
+
+  private clawAction(): void {
+    this.finishCombatAction(castDragonClaw(this.combat, this.flight));
   }
 
   private mountedSigilAction(): void {
@@ -981,6 +988,7 @@ export class Game {
       if (this.input.take('submerge')) this.diveAction();
       if (this.input.take('interact')) this.interactWithRune();
       if (this.input.take('fire')) this.fireAction();
+      if (this.input.take('claw')) this.clawAction();
       if (this.input.take('mountedSigil')) this.mountedSigilAction();
       if (this.input.take('bond')) this.bondAction();
       for (const form of FORM_ORDER) {
@@ -1020,7 +1028,7 @@ export class Game {
     // Resolve the real chase/wide/orbit camera before choosing visible
     // vegetation, so flight turns do not leave a whole world of leaf cards
     // behind the player in the CPU renderer or dedicated GPU draw pass.
-    this.dragon.update(this.flight);
+    this.dragon.update(this.flight, this.combat.lastClaw);
     this.combatVisual.update(this.combat, this.flight.time, this.paused || this.menuOpen ? 0 : elapsed);
     this.updateCamera(elapsed);
     this.coast.animate(this.flight.time, focus.x, focus.y, focus.z, this.flight, this.camera);

@@ -27,6 +27,12 @@ export interface GloamHound {
   flash: number;
   deathAge: number;
 }
+export interface ClawCast {
+  id: number; time: number; form: DragonForm;
+  origin: { x: number; y: number; z: number };
+  direction: { x: number; z: number };
+  reach: number;
+}
 export interface FireCast {
   id: number;
   origin: { x: number; y: number; z: number };
@@ -58,6 +64,9 @@ export interface CombatState {
   ember: number;
   maxEmber: number;
   fireReadyAt: number;
+  clawReadyAt: number;
+  clawSequence: number;
+  lastClaw: ClawCast | null;
   focus: number;
   maxFocus: number;
   sigilReadyAt: number;
@@ -81,6 +90,11 @@ const FIRE: Record<DragonForm, { range: number; damage: number; cost: number; wi
   rideable: { range: 42, damage: 38, cost: 22, width: 0.17 },
   giant: { range: 66, damage: 56, cost: 30, width: 0.20 },
 };
+const CLAW: Record<DragonForm, { reach: number; damage: number; width: number }> = {
+  small: { reach: 2.8, damage: 17, width: 1.1 },
+  rideable: { reach: 5.4, damage: 33, width: 1.95 },
+  giant: { reach: 11.6, damage: 50, width: 4.1 },
+};
 const HOUND_HP = 75;
 const AGGRO_RANGE = 68;
 const LEASH_RANGE = 88;
@@ -90,7 +104,8 @@ const ATTACK_DAMAGE = 12;
 export function newCombatState(): CombatState {
   return {
     hp: 100, maxHp: 100, ember: 100, maxEmber: 100,
-    fireReadyAt: 0, invulnerableUntil: 0,
+    fireReadyAt: 0, clawReadyAt: 0, clawSequence: 0,
+    lastClaw: null, invulnerableUntil: 0,
     focus: 100, maxFocus: 100, sigilReadyAt: 0, bondReadyAt: 0,
     sigilSequence: 0, lastSigil: null, bondSequence: 0, lastBond: null,
     fireSequence: 0, lastFire: null, noticeSequence: 0, notice: null,
@@ -219,6 +234,54 @@ export function castDragonFire(c: CombatState, s: FlightState): InteractionResul
   }
   if (landed > 0) grantGloamVictory(c);
   return { ok: true, message: landed > 0 ? 'Flame struck ' + landed + ' enemy.' : 'Onyx breathes fire.' };
+}
+
+/**
+ * Z: deterministic, directional ground claw sweep. Melee uses the same
+ * authentic hound health/stagger and one-time victory handling as fire.
+ * No Ember is spent; its cooldown is independent of dragon breath.
+ */
+export function castDragonClaw(c: CombatState, s: FlightState): InteractionResult {
+  if (s.controlTarget !== 'dragon') {
+    return { ok: false, message: 'Switch to Onyx to use his claws.' };
+  }
+  if (s.transition || s.mode !== 'ground') {
+    return { ok: false, message: 'Onyx must be grounded to strike with his claws.' };
+  }
+  if (s.time < c.clawReadyAt) {
+    return { ok: false, message: 'Onyx is recovering from the claw sweep.' };
+  }
+  const spec = CLAW[s.form];
+  const dir = { x: Math.sin(s.yaw), z: -Math.cos(s.yaw) };
+  c.lastClaw = {
+    id: ++c.clawSequence, time: s.time, form: s.form,
+    origin: { x: s.x, y: s.y, z: s.z }, direction: dir, reach: spec.reach,
+  };
+  c.clawReadyAt = s.time + .94;
+  let hit = 0;
+  for (const h of c.hounds) {
+    if (h.hp <= 0) continue;
+    const dx = h.x - s.x, dz = h.z - s.z;
+    const forward = dx * dir.x + dz * dir.z;
+    const lateral = Math.abs(dx * dir.z - dz * dir.x);
+    if (forward < .3 || forward > spec.reach ||
+      lateral > spec.width + forward * .12) continue;
+    if (Math.abs(h.y - heightAt(s.x, s.z)) >
+      1.15 + FORMS[s.form].standHeight) continue;
+    const target = { x: h.x, y: h.y + 1.2, z: h.z };
+    if (!fireLineClear({ x: s.x, y: s.y + .85, z: s.z },
+      target, .25 + FORMS[s.form].standHeight)) continue;
+    h.hp = Math.max(0, h.hp - spec.damage);
+    h.flash = .29; h.stagger = .73; h.windup = 0; h.alert = true;
+    hit++;
+    if (h.hp === 0) {
+      h.deathAge = 0;
+      notice(c, 'kill', 'Gloam hound cut down by Onyx.');
+    }
+  }
+  if (hit) grantGloamVictory(c);
+  return { ok: true, message: hit ? 'Claws struck ' + hit + ' enemy.'
+    : 'Onyx sweeps his claws forward.' };
 }
 
 /** Rider's focused tide sigil uses her own heading and reserve, not dragon Ember. */
@@ -353,7 +416,8 @@ function respawnAtMeadow(c: CombatState, s: FlightState): void {
   s.riderYaw = s.yaw; s.riderSpeed = 0; s.riderMode = 'ground'; s.riderTargetY = s.riderY;
   c.hp = c.maxHp; c.ember = c.maxEmber; c.focus = c.maxFocus;
   c.invulnerableUntil = s.time + 2.5;
-  c.fireReadyAt = s.time; c.sigilReadyAt = s.time; c.bondReadyAt = s.time;
+  c.fireReadyAt = s.time; c.clawReadyAt = s.time;
+  c.sigilReadyAt = s.time; c.bondReadyAt = s.time;
   c.respawns++;
   for (const h of c.hounds) {
     h.x = h.homeX; h.z = h.homeZ; h.y = heightAt(h.x, h.z);

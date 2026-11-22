@@ -90,3 +90,15 @@ storage is blocked, play continues and the write is retried on future actions.
 The existing Tidegate, Tidal Echo and discovery milestones retain their
 current key, schema version and validation behavior. This does not yet
 implement multiple save slots or equipment/inventory progression.
+
+### Ground claw swipe (G4 extension)
+
+Onyx now uses **Z**, or the existing controls menu, for a forward-facing
+melee claw sweep on the ground. Damage and reach scale by form; solid terrain,
+line-of-sight, cooldown, direction and target height gate actual damage.
+The strike uses the same hound damage/stagger/death pipeline and Gloam reward,
+with an independent 0.94-second recovery and no Ember cost. Onyx's existing
+front-leg/claw pivots perform a time-bounded swing without changing
+physics or the flight simulation. Airborne, submerged, rider-control and
+mid-transition strikes are rejected. This is a working first melee attack,
+not complete bite, tail-combo, boss combat or animation-matched hit windows.

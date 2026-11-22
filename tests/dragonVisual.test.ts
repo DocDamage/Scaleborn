@@ -20,6 +20,34 @@ describe('procedural dragon model', () => {
       }
     }
   });
+  it('animates an original Onyx foreleg claw sweep from combat metadata', () => {
+    const dragon = new DragonVisual();
+    const state = newFlightState();
+    try {
+      state.mode = 'ground'; state.speed = 0; state.pitch = 0; state.roll = 0;
+      state.time = 10;
+      dragon.update(state);
+      const left = dragon.root.getObjectByName('leg.frontLeft') as THREE.Group;
+      const right = dragon.root.getObjectByName('leg.frontRight') as THREE.Group;
+      expect(left).toBeInstanceOf(THREE.Group);
+      expect(right).toBeInstanceOf(THREE.Group);
+      const initial = left.rotation.x;
+      const cast = { id: 1, time: 10, form: 'rideable' as const,
+        origin: { x: state.x, y: state.y, z: state.z },
+        direction: { x: 0, z: -1 }, reach: 5.4 };
+      state.time = 10.2;
+      dragon.update(state, cast);
+      expect(left.rotation.x).toBeLessThan(initial - .4);
+      expect(right.rotation.x).toBeLessThan(initial - .2);
+      expect(left.rotation.z).toBeLessThan(0);
+      expect(right.rotation.z).toBeGreaterThan(0);
+      state.time = 10.8;
+      dragon.update(state, cast);
+      expect(left.rotation.x).toBeCloseTo(initial, 5);
+      expect(right.rotation.z).toBeCloseTo(0, 5);
+    } finally { dragon.dispose(); }
+  });
+
   it('keeps the rider normal-sized as the creature grows', () => {
     const dragon = new DragonVisual();
     const state = newFlightState();

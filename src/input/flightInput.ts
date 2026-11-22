@@ -20,6 +20,7 @@ const binding = {
   submerge: 'KeyC',
   interact: 'KeyG',
   fire: 'KeyR',
+  claw: 'KeyZ',
   mountedSigil: 'KeyT',
   bond: 'KeyX',
   menu: 'KeyM',
@@ -80,7 +81,7 @@ export class FlightInput {
     };
   }
 
-  take(action: 'camera' | 'help' | 'diagnostics' | 'land' | 'small' | 'rideable' | 'giant' | 'switchFocus' | 'submerge' | 'interact' | 'fire' | 'mountedSigil' | 'bond' | 'menu'): boolean {
+  take(action: 'camera' | 'help' | 'diagnostics' | 'land' | 'small' | 'rideable' | 'giant' | 'switchFocus' | 'submerge' | 'interact' | 'fire' | 'claw' | 'mountedSigil' | 'bond' | 'menu'): boolean {
     const code = binding[action];
     const found = this.toggles.has(code);
     this.toggles.delete(code);
