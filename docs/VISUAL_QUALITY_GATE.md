@@ -458,3 +458,24 @@ where high/low LOD boundaries meet without changing geometry, terrain height
 or collision, and without recomputing all interior vertex gradients. Focused
 regression tests cover both equal-LOD and mixed-LOD edges; validate actual
 lighting on the lake escarpment in a browser frame before acceptance.
+
+
+### Freshwater emergent bank vegetation (visual pass 7)
+
+ShorelineReeds adds deterministic wind-responsive sedge/cattail clusters with
+tapered stems, curved lit leaves and compact seed spikes. Plants are rooted to
+the same lakebed heightfield used by collision, water masking and caustics.
+Placement rejects dry land, deep water, steep slopes, sparse habitats and
+the main waterfall plunge corridor, instead of projecting flat strips across
+the bank. The high and low settings use different geometric/population budgets.
+
+A single opaque instanced draw group is repacked around the player with
+InstanceVisibility, preserving seed-stable site positions when revisiting.
+Only plant tips sway: roots remain stable on the physical lakebed.
+Tests check geometry validity, visible plant depths and heights, revisit
+determinism and bounded draw populations.
+
+These are **procedural environment assets, not the final approved art**.
+Actual browser waterline and underwater captures must be reviewed for
+plant height, color, overdraw and shoreline blend; RTX 3060 and integrated
+GPU benchmarks remain required before closing the visual quality gate.

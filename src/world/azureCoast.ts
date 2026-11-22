@@ -11,6 +11,7 @@ import { UnderwaterParticulates } from './underwaterParticulates';
 import { underwaterOpticsAt } from './underwaterOptics';
 import { PainterlyNature } from './painterlyNature';
 import { LocalGroundcover } from './localGroundcover';
+import { ShorelineReeds } from './shorelineReeds';
 import { PainterlyClouds } from './painterlyClouds';
 import { MirrorfallCliffs } from './mirrorfallCliffs';
 import { SurfaceWake } from './surfaceWake';
@@ -43,6 +44,7 @@ export class AzureCoast {
   private readonly waterfall: MirrorfallCascade;
   private readonly nature: PainterlyNature;
   private readonly nearGrass: LocalGroundcover;
+  private readonly reeds: ShorelineReeds;
   private readonly clouds: PainterlyClouds;
   private readonly cliffs: MirrorfallCliffs;
   private readonly wake: SurfaceWake;
@@ -97,6 +99,7 @@ export class AzureCoast {
       this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group);
     this.nature = new PainterlyNature(scene, quality);
     this.nearGrass = new LocalGroundcover(scene, quality);
+    this.reeds = new ShorelineReeds(scene, quality);
     this.clouds = new PainterlyClouds(scene, quality);
     this.cliffs = new MirrorfallCliffs(quality);
     this.wake = new SurfaceWake(scene,quality);
@@ -190,6 +193,7 @@ export class AzureCoast {
     }
     this.nature.update(time,x,z);
     this.nearGrass.update(x,z,time);
+    this.reeds.update(x,z,time);
     this.clouds.update(time);
     this.foamMaterial.uniforms.uTime!.value=time;
     this.sky.update(time);
@@ -226,6 +230,7 @@ export class AzureCoast {
     this.waterfall.dispose();
     this.nature.dispose();
     this.nearGrass.dispose();
+    this.reeds.dispose();
     this.clouds.dispose();
     this.cliffs.dispose();
     this.wake.dispose();
