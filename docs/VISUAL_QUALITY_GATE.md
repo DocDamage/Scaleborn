@@ -201,3 +201,60 @@ addition to ribbon back-face suppression), and the waterfall's transparent
 curtains opt into the scene's depth-aware fog. The resulting optical behavior
 is still an approximation; the next captured frames must be reviewed for
 readability and improved masking.
+
+### Visual pass 5 — forest silhouettes and understory
+
+The earlier prototype instanced four random variations of essentially one
+tree mesh. Rider-height captures showed skeletal, repeating canopies and large
+bare spaces. A new `treeCanopy.ts` now constructs four physically distinguishable
+profiles (broad oak, high birch, conical shore pine, waterside alder), including
+multi-segment tapered trunks, secondary twigs and thicker multi-angle leaf
+clusters. A generated four-region leaf atlas gives each species different
+individual alpha-tested shapes. These are still original procedural meshes,
+not scanned or downloaded PBR forest assets.
+
+`fernUnderstory.ts` supplies curved fronds with actual separate leaflets and
+the same instanced wind-responsive material as ground grass. Plants are placed
+only on suitable terrain heights and slopes; shoreline bank samples add
+undergrowth without obstructing the established lake overflight corridor.
+Meshes remain instanced by species/geometry with high/low detail budgets.
+
+Art and performance acceptance remains **open** until the actual rider-height
+captures are reviewed for canopy silhouette, groundcover coverage and
+triangle/overdraw cost on an RTX 3060.
+
+### Rider-height forest visual acceptance
+
+The visual-capture script now stages an independently controlled rider on
+real terrain twenty meters from an actual instanced lakeside oak. It saves
+`artifacts/mirrorfall-forest-browser.png` in addition to the aerial,
+shoreline and underwater renders. The scene uses normal game assets,
+physics geography and camera framing, not stock or fabricated artwork.
+Review canopy fullness, branch visibility, fern coverage and alpha cutouts
+at this viewpoint before describing the new forest as visually adequate.
+
+### Camera-local meadow grass (visual pass 5 follow-up)
+
+A fixed-size `LocalGroundcover` field anchors original curved grass-blade patches
+to deterministic world grid coordinates around the active rider/dragon, rather
+than allocating millions of grass props over 4 km. The field is updated only
+after a four-cell observer movement, rejects submerged/steep/built terrain,
+preserves leaf-wind variation, and uses exactly **one instanced draw group**.
+At the high setting the field covers a wider radius with finer spacing; low
+uses less geometry. The screenshot inspection must still check distant
+population fade/popping, foliage shading, frame rate and overdraw.
+
+### Per-instance forest visibility (visual pass 5 performance safety)
+
+Foliage formerly used one world-sized batch per species, causing every tree,
+grass patch and boulder across the 4 km region to be submitted even from a
+small shoreline camera view. `InstanceVisibility` records immutable instance
+matrices and tints at generation, then repacks only nearby specimens into
+the existing instanced mesh buffers when the player crosses a 48 m cell.
+Low-quality foliage has a smaller submission radius, while forest trees retain
+a longer distance than near-ground grass. One draw call per surviving batch;
+no per-frame new mesh creation, world-coordinate reseeding or gameplay changes.
+
+Known limitation: this is a CPU distance gate, not hardware occlusion culling,
+impostor LOD, or GPU-driven per-instance culling. Test distant pop-in and
+performance on the actual desktop GPU before visual release.
