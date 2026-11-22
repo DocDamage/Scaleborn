@@ -142,3 +142,29 @@ subtle narrower lower-jaw wedge. This replaces the large front elliptical
 opening without adding separate sphere/cone parts or changing the root
 physics/gameplay form dimensions. Require fresh real side/front screenshots
 in small/rideable/giant forms; no final art approval.
+
+
+### Real WebGL review — b2327cd, updated folding, rider hands and embedded legs
+
+The [actual 1280×720 character capture](https://github.com/DocDamage/Scaleborn/actions/runs/45080729284)
+completed successfully with all 11 independent/mounted/on-foot/dragon-form
+views. Compared against the prior giant and rideable side shots
+[45080194645](https://github.com/DocDamage/Scaleborn/actions/runs/45080194645):
+
+- **Verified improvement:** resting folded wing fingers now run roughly
+  horizontally along Onyx's mid-back, no longer towering above the rider or
+  stabbing down toward the ground.
+- **Verified improvement:** the distracting pale circular upper-leg cap
+  exposures are substantially reduced; the inward-rooted original limbs
+  transition more quietly into the body.
+- **Verified improvement but not production-ready:** the original heroine has
+  actual slender finger/thumb forms and the cloak now displays a shaped
+  draping silhouette rather than only a featureless hanging rectangle.
+- **Still blocking:** the flattened pale folded-wing ribs resemble long
+  mechanical strips rather than naturally folded biological cartilage;
+  Onyx's skull and pupils are still cartoonlike, and the girl's face, rigid
+  sleeve and full-body motion remain too procedural for acceptance.
+
+The next high-detail original source painting sample and revised cranial loft
+were authored as real code; actual subsequent WebGL snapshots, hardware
+performance and user sign-off remain necessary. **PR #15 stays draft.**
