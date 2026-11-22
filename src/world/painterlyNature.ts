@@ -6,6 +6,7 @@ import { rng, fbm } from '../core/random';
 import { AZURE_SEED, heightAt, LANDMARKS } from './terrain';
 import { GRAND_LAKE, MIRRORFALL, waterSurfaceAt, lakeShoreDistance } from './highlandLake';
 import { makeBarkMaterial, makeRockMaterial } from './materials';
+import { createStratifiedRockGeometry } from './stratifiedRock';
 
 interface PlantSite { x: number; y: number; z: number; scale: number; hue: number }
 const dummy = new THREE.Object3D();
@@ -34,18 +35,6 @@ function grassTuft(): THREE.BufferGeometry {
   geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
   geo.computeVertexNormals();
   return geo;
-}
-
-function irregularRock(): THREE.BufferGeometry {
-  const g = new THREE.IcosahedronGeometry(1,2);
-  const p=g.getAttribute('position');
-  for(let i=0;i<p.count;i++){
-    const x=p.getX(i), y=p.getY(i), z=p.getZ(i);
-    const perturb=1+0.09*Math.sin(x*12.9+y*17.3+z*7.2)+0.07*Math.sin(z*23.1-x*11.4);
-    p.setXYZ(i,x*perturb,y*perturb,z*perturb);
-  }
-  g.computeVertexNormals();
-  return g;
 }
 
 export class PainterlyNature {
@@ -273,14 +262,32 @@ export class PainterlyNature {
     this.root.add(fern);this.meshes.push(fern);
     this.visibility.register(fern,ferns,quality==='high'?350:235);
 
-    const rock=new THREE.InstancedMesh(irregularRock(),rockMat,rocks.length);
+    // Layered, eroded talus replaces identically shaped icosahedral stones.
+    // Reuse one indexed geometry and one PBR material across all instances.
+    rockMat.vertexColors=true;
+    const rock=new THREE.InstancedMesh(
+      createStratifiedRockGeometry(quality),rockMat,rocks.length);
+    const groundNormal=new THREE.Vector3(), up=new THREE.Vector3(0,1,0);
+    const sampleStep=2.5;
     rocks.forEach((p,i)=>{
-      dummy.position.set(p.x,p.y-p.scale*.11,p.z);
-      dummy.rotation.set(rand()*2,rand()*6.28,rand()*.8);
-      dummy.scale.set(p.scale,p.scale*(.27+rand()*.28),p.scale*(.55+rand()*.35));
+      // The base follows the collision heightfield instead of randomly
+      // tipping stones through rock faces or leaving them above steep soil.
+      const dx=(heightAt(p.x+sampleStep,p.z)-
+        heightAt(p.x-sampleStep,p.z))/(2*sampleStep);
+      const dz=(heightAt(p.x,p.z+sampleStep)-
+        heightAt(p.x,p.z-sampleStep))/(2*sampleStep);
+      groundNormal.set(-dx,1,-dz).normalize();
+      const heightScale=p.scale*(.30+rand()*.25);
+      dummy.position.set(p.x,p.y-heightScale*.34,p.z);
+      dummy.quaternion.setFromUnitVectors(up,groundNormal);
+      dummy.rotateY(rand()*Math.PI*2);
+      // Thin bedding tilt avoids a perfectly aligned row of stone slabs.
+      dummy.rotateX((rand()-.5)*.14);
+      dummy.rotateZ((rand()-.5)*.12);
+      dummy.scale.set(p.scale,heightScale,p.scale*(.68+rand()*.23));
       dummy.updateMatrix();rock.setMatrixAt(i,dummy.matrix);
       rock.setColorAt(i,new THREE.Color().setHSL(
-        .12+p.hue*.09,.09+p.hue*.14,.62+p.hue*.17));
+        .12+p.hue*.09,.09+p.hue*.14,.69+p.hue*.13));
     });
     rock.name='terrain.azure.rounded-pbr-boulders';
     rock.castShadow=quality==='high';

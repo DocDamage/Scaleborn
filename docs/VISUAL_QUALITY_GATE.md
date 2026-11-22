@@ -559,3 +559,20 @@ it is an art-directed breaking-surf approximation, not shallow-water CFD.
 Review actual moving browser coastline frames for land intersection,
 alpha-sorted wave overlap, and offshore ribbon continuity. Source and
 regression contracts do not replace screenshot inspection or GPU testing.
+
+### Layered boulder geometry and grounded talus (visual pass 7)
+
+The shared instanced scree/boulder mesh now has an indexed closed surface
+with sculpted asymmetric fracture shoulders, height-dependent bedding
+creases and per-vertex mineral stratigraphy. Both low and high budgets
+use UV-mapped triangles with welded meridian normals. Instances are
+aligned to local collision-heightfield gradients and partly embedded in
+the soil, rather than using arbitrary steep Euler rotations that can
+produce visibly hovering stones. Rendering still uses the existing PBR
+rock maps and one instanced draw group with the established distance gate.
+Tests cover normal/UV/strata validity, silhouette variation and footing.
+
+The boulders remain original procedural geology, not approved scanned
+production assets. Inspect actual rider-height scree and waterfall-cliff
+screenshots for repeating forms, scale, penetration and normal seams;
+dedicated GPU profiling is still required.
