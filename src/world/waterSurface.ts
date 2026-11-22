@@ -126,12 +126,32 @@ const frag=`
 `;
 
 const foamVert=`
+  uniform float uTime;
+  uniform float uLakeStrip;
+  uniform vec2 uImpactWorld;
   varying vec3 vWorld;
   varying vec2 vFoamUv;
   void main() {
-    vWorld=(modelMatrix*vec4(position,1.0)).xyz;
-    vFoamUv=uv;
-    gl_Position=projectionMatrix*viewMatrix*vec4(vWorld,1.0);
+    vec4 world = modelMatrix * vec4(position, 1.0);
+    if (uLakeStrip > 0.5) {
+      // Use exactly the freshwater surface's four wind waves, directional
+      // horizontal drift and localized waterfall displacement. Shore foam
+      // is a moving overlay, not a bright detached static white hoop.
+      vec2 q = world.xz;
+      float w1 = dot(q, normalize(vec2(.87,.49))) * .16 - uTime * .95;
+      float w2 = dot(q, normalize(vec2(-.23,.97))) * .37 - uTime * 1.47;
+      float w3 = dot(q, normalize(vec2(.64,-.76))) * .76 - uTime * 2.15;
+      float w4 = dot(q, normalize(vec2(.18,.98))) * .08 - uTime * .62;
+      world.y += .53*sin(w1) + .24*sin(w2) + .10*sin(w3) + .64*sin(w4);
+      float plungeD = length(q-uImpactWorld);
+      world.y += exp(-plungeD*.038)*.72*
+        sin(plungeD*.225-uTime*1.63);
+      world.x += .16*cos(w1) + .05*cos(w2);
+      world.z += .12*cos(w1) + .07*cos(w4);
+    }
+    vWorld = world.xyz;
+    vFoamUv = uv;
+    gl_Position = projectionMatrix * viewMatrix * world;
   }
 `;
 const foamFrag=`
@@ -155,7 +175,10 @@ const foamFrag=`
 
 export function makeFoamShader(lakeStrip = false): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms:{uTime:{value:0},uLakeStrip:{value:lakeStrip?1:0}},
+    uniforms:{
+      uTime:{value:0},uLakeStrip:{value:lakeStrip?1:0},
+      uImpactWorld:{value:new THREE.Vector2(MIRRORFALL_IMPACT.x,MIRRORFALL_IMPACT.z)},
+    },
     vertexShader:foamVert,fragmentShader:foamFrag,
     transparent:true,depthWrite:false,side:THREE.DoubleSide,
     blending:THREE.NormalBlending,
@@ -215,7 +238,7 @@ export class LakeShoreFoam {
       const a=(i/n)*Math.PI*2,b=((i+1)/n)*Math.PI*2;
       const point=(angle:number, inward:number):[number,number,number]=>[
         GRAND_LAKE.x+Math.cos(angle)*GRAND_LAKE.radiusX*(ring-inward)*lakeBoundaryScale(angle),
-        GRAND_LAKE.surfaceY+0.82,
+        GRAND_LAKE.surfaceY+0.10,
         GRAND_LAKE.z+Math.sin(angle)*GRAND_LAKE.radiusZ*(ring-inward)*lakeBoundaryScale(angle),
       ];
       const p0=point(a,0.0),p1=point(a,0.011),p2=point(b,0),p3=point(b,0.011);

@@ -4,6 +4,7 @@ import { makeTerrainTile, disposeTerrainTile } from './terrainTile';
 import { addCoastalDressing } from './dressing';
 import { PainterlyWaterSurface, LakeShoreFoam, makeFoamShader } from './waterSurface';
 import { MirrorfallCascade } from './mirrorfallCascade';
+import { LakeCaustics } from './lakeCaustics';
 import { PainterlyNature } from './painterlyNature';
 import { PainterlyClouds } from './painterlyClouds';
 import { MirrorfallCliffs } from './mirrorfallCliffs';
@@ -29,6 +30,7 @@ export class AzureCoast {
   private readonly water = new PainterlyWaterSurface('ocean');
   private readonly lake = new PainterlyWaterSurface('lake');
   private readonly lakeFoam = new LakeShoreFoam();
+  private readonly caustics: LakeCaustics;
   private readonly waterfall = new MirrorfallCascade();
   private readonly nature: PainterlyNature;
   private readonly clouds: PainterlyClouds;
@@ -72,7 +74,9 @@ export class AzureCoast {
     this.sun.target=this.sunTarget;
     scene.add(this.sun,this.sunTarget);
     this.ocean = this.water.mesh;
-    scene.add(this.sky.mesh, this.ocean, this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group);
+    this.caustics = new LakeCaustics(quality);
+    scene.add(this.sky.mesh, this.ocean, this.caustics.mesh,
+      this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group);
     this.nature = new PainterlyNature(scene, quality);
     this.clouds = new PainterlyClouds(scene, quality);
     this.cliffs = new MirrorfallCliffs(quality);
@@ -132,6 +136,7 @@ export class AzureCoast {
     this.water.update(time);
     this.lake.update(time);
     this.lakeFoam.update(time);
+    this.caustics.update(time);
     this.waterfall.update(time);
     if(state)this.wake.update(state,time);
     this.nature.update(time);
@@ -164,6 +169,7 @@ export class AzureCoast {
     this.water.dispose();
     this.lake.dispose();
     this.lakeFoam.dispose();
+    this.caustics.dispose();
     this.waterfall.dispose();
     this.nature.dispose();
     this.clouds.dispose();
