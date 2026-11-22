@@ -195,6 +195,9 @@ export class DragonVisual {
   attach(scene: THREE.Scene): void {
     this.scene = scene;
     scene.add(this.root);
+    // GLBLoader uses browser fetch/image APIs, not Node's unit-test runtime.
+    // Deterministic tests inject in-memory rigs with replaceCharacter().
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
     // Model loading is independent of the deterministic fixed-step game.
     // Keep collision and existing animation usable if either asset fails.
     for (const kind of ['dragon', 'rider'] as const) {
