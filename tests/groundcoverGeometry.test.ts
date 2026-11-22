@@ -18,6 +18,15 @@ describe('rider-height meadow blade rendering', () => {
       expect(color.getY(0)).toBeLessThan(color.getY(8));
       expect(pos.getY(0)).toBe(0);
       expect(pos.getY(8)).toBeGreaterThan(pos.getY(2));
+      // The prior wide triangular cards were >11 cm at the blade root.
+      const rootWidth=Math.hypot(pos.getX(0)-pos.getX(1),
+        pos.getZ(0)-pos.getZ(1));
+      expect(rootWidth).toBeLessThan(.08);
+      expect(rootWidth).toBeGreaterThan(.03);
+      // Per-blade twisting makes the midspan different from a flat root.
+      const middle=4;
+      expect(pos.getX(middle)-pos.getX(middle+1)).not.toBe(
+        pos.getX(0)-pos.getX(1));
       for (const attr of [pos, color, normal]) {
         for (let i = 0; i < attr.count; i++) {
           expect(Number.isFinite(attr.getX(i))).toBe(true);

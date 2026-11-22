@@ -1054,3 +1054,13 @@ filaments, spray, mist, collision and deterministic world seed remain.
 The latest texture/geometry changes still require fresh actual browser
 screenshots. This is a visual revision to an approximation of turbulent
 water, not proof of physical fluid simulation or visual-gate acceptance.
+
+### Meadow groundcover from actual WebGL artifact
+
+The character and forest screenshots still showed broad ivory grass
+triangles. The same bounded local InstancedMesh now uses finer curved
+blade width, slight growth-axis twist, green/dry-pigment variation and
+less overbright per-instance tint. Root anchoring, wind/trample shader,
+deterministic positions, near-camera density and high/low draw-call
+budget remain unchanged. A fresh real WebGL screenshot is required
+before claiming improvement or accepting the vegetation quality gate.

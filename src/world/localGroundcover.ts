@@ -21,27 +21,32 @@ export function makeGrassPatch(quality: Quality): THREE.BufferGeometry {
     const rootZ = Math.cos(i * 3.17) * .31;
     // Meadow grass should not grow taller than the dog-sized Onyx.
     const height = .36 + (i % 5) * .065;
-    const width = .056 + (i % 3) * .015;
+    const width = .023 + (i % 3) * .006;
     const hue = Math.sin(i * 2.61) * .055;
     const first = positions.length / 3;
     for (let j = 0; j <= sections; j++) {
       const t = j / sections;
       // Wind-curved blades grow vertically then fold outward toward the tip.
-      const forward = height * (.13 * t + .43 * t * t);
+      const forward = height * (.10 * t + .33 * t * t);
       const rise = height * (t - .11 * t * t);
       const halfWidth = width * Math.pow(1 - t, .78) + .0008;
+      // Subtle spiral, rooted in the soil: no perfectly planar paper cards.
+      const twist = .20 * Math.sin(t * 2.5 + i * .43) * t;
+      const bentSideX = sideX * Math.cos(twist) + dx * Math.sin(twist);
+      const bentSideZ = sideZ * Math.cos(twist) + dz * Math.sin(twist);
       // Instance tint, base material and vertex pigment multiply. The old
       // dark root-to-tip values were multiplied three times, producing a
       // nearly featureless dark-green field even at rider height.
       // Paint these blades in a lighter, still muted watercolour range.
-      const r = .72 + t * .21 + hue;
-      const g = .79 + t * .17 + hue * .40;
-      const b = .63 + t * .18 + (i % 4) * .018;
+      const dry = i % 7 === 0 ? .13 : 0;
+      const r = .55 + t * .16 + hue + dry;
+      const g = .67 + t * .17 + hue * .4 + dry * .45;
+      const b = .44 + t * .13 + (i % 4) * .014 + dry * .18;
       for (const sign of [-1, 1]) {
         positions.push(
-          rootX + dx * forward + sideX * halfWidth * sign,
+          rootX + dx * forward + bentSideX * halfWidth * sign,
           rise,
-          rootZ + dz * forward + sideZ * halfWidth * sign,
+          rootZ + dz * forward + bentSideZ * halfWidth * sign,
         );
         colors.push(r, g, b);
       }
@@ -177,7 +182,7 @@ export class LocalGroundcover {
         this.mesh.setMatrixAt(count,this.dummy.matrix);
         // Retain subtle plant-by-plant hue variation without multiplying
         // a dark instance tint into the already painted root colours.
-        this.color.setHSL(.24+tint*.055,.18+tint*.11,.73+tint*.10);
+        this.color.setHSL(.245+tint*.055,.20+tint*.12,.67+tint*.095);
         this.mesh.setColorAt(count,this.color);
         count++;
       }
