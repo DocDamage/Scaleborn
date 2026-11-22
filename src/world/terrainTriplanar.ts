@@ -80,11 +80,14 @@ export function installTerrainTriplanar(
          scY.xy *= normalScale;
          scZ.xy *= normalScale;
          vec3 scFace = normalize(vScTriNormal);
-         vec3 scWorldNormal = normalize(
-           vec3(sign(scFace.x) * scX.z, scX.y, scX.x) * scW.x +
-           vec3(scY.x, sign(scFace.y) * scY.z, scY.y) * scW.y +
-           vec3(scZ.x, scZ.y, sign(scFace.z) * scZ.z) * scW.z
-         );
+         // Preserve the true mesh normal when a painted map is flat.
+         // Reconstructing the entire axis normal from blend weights alone
+         // would over-sharpen diagonal faces and distort cliff lighting.
+         vec3 scPerturb =
+           vec3(0.0, scX.y, scX.x) * scW.x +
+           vec3(scY.x, 0.0, scY.y) * scW.y +
+           vec3(scZ.x, scZ.y, 0.0) * scW.z;
+         vec3 scWorldNormal = normalize(scFace + scPerturb);
          normal = normalize(mat3(viewMatrix) * scWorldNormal);
          #ifdef DOUBLE_SIDED
            normal *= faceDirection;
