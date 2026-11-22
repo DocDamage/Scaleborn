@@ -14,7 +14,8 @@
     "test:browser": "node scripts/browser-smoke.mjs",
     "test:visual": "node scripts/visual-capture.mjs",
     "test:headwaters": "node scripts/headwater-capture.mjs",
-    "test:visual:high": "node scripts/visual-capture.mjs --hardware"
+    "test:visual:high": "node scripts/visual-capture.mjs --hardware",
+    "benchmark:gpu": "node scripts/hardware-benchmark.mjs"
   },
   "dependencies": {
     "three": "0.175.0"
