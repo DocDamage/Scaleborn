@@ -4,9 +4,10 @@
 
 ## Try the encounter
 
-Open `/?start=combat` (optionally `&quality=low`) and click **Take flight**. This stages a mounted Onyx on safe land facing the three original Gloam hounds east of the Tidegate meadow. Normal play can reach the same hounds around **(-410, -45)**. Press **R** or primary mouse button with pointer lock for directional fire breath. Turn with A/D or mouse, watch the plume, and aim at the creatures; the cone has bounded width/range, respects actual terrain occlusion, and cannot hit behind the dragon.
+Open `/?start=combat` (optionally `&quality=low`) and click **Take flight**. This stages a mounted Onyx on safe land facing the three original Gloam hounds east of the Tidegate meadow. Normal play can reach the same hounds around **(-410, -45)**. Press **R** or primary mouse button with pointer lock for directional fire breath while controlling Onyx, or a narrower Tidal Sigil while controlling the rider. **X** triggers a short-range coordinated surge only when both companions are on dry land within 8 meters. Turn with A/D or mouse, watch the plume, and aim at the creatures; the cone has bounded width/range, respects actual terrain occlusion, and cannot hit behind the dragon.
 
-- Breath consumes a regenerating **Ember** pool; attacks have a 0.78-second cooldown. Small, rideable and giant forms have different reach and damage. Swimming, controlled rider and active traversal transitions cannot breathe fire.
+- Breath consumes a regenerating **Ember** pool; attacks have a 0.78-second cooldown. Small, rideable and giant forms have different reach and damage. Swimming, rider focus and active traversal transitions cannot breathe fire.
+- The independent rider casts a directional **Tidal Sigil** with the same R input and a separate regenerating **Focus** pool. Both actors must be grounded and close (8 m) to perform **X · Bond Surge**, an area attack consuming both reserves with a 6.5-second cooldown. A shared HUD bar displays the active actor's energy without adding a third permanent panel.
 - Gloam hounds pursue ground/low-air targets inside a finite aggro radius, stop at terrain blockers, wind up before melee, recoil when hit and leash home. High flying or diving escapes melee; their hit reaction and deaths have visible feedback.
 - **Bond vitality** is shared between rider and dragon for this first slice. Repeated strikes can exhaust it. Defeat returns both safely to the Tidegate meadow with a short grace period, while preserving quest/discovery progress and already banished hounds. Encounter state is session-only until G5 save slots.
 - The minimal two-bar display appears only near living threats or when vitality/ember is below full. It does not resurrect cluttered old HUD panels.
@@ -20,4 +21,4 @@ Open `/?start=combat` (optionally `&quality=low`) and click **Take flight**. Thi
 
 ## Next G4 work (not yet delivered)
 
-Rider magic (separate input/resource and casting), one genuinely coordinated dragon/rider bonded attack, additional threat archetypes/behaviors, encounter reward and checkpoint migration, enemy navigation improvements, properly authored impact/sound/facial/animation sets, targeting/accessibility options, and real RTX 3060 profiling/screenshot acceptance.
+Additional threat archetypes/behaviors, encounter reward and checkpoint migration, enemy navigation improvements, authored impact/sound/facial/animation sets, targeting/accessibility options, and real RTX 3060 profiling/screenshot acceptance. Initial rider sigil/bond burst logic is functional but still needs browser gameplay acceptance and animation polish.

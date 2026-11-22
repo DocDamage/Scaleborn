@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { DragonVisual } from '../actors/dragon/visual';
-import { newCombatState, castDragonFire, stepCombat, combatNearby, combatRemaining } from '../combat/combat';
+import { newCombatState, castDragonFire, castRiderSigil, castBondSurge, stepCombat, combatNearby, combatRemaining } from '../combat/combat';
 import { CombatVisual } from '../combat/visuals';
 import { newFlightState, stepFlight, requestDragonForm, toggleLanding, type InteractionResult } from '../actors/dragon/flight';
 import { FORMS, FORM_ORDER, type DragonForm } from '../actors/dragon/forms';
@@ -51,6 +51,7 @@ export class Game {
   private readonly combatHud = requireElement<HTMLElement>('#combat-hud');
   private readonly combatHealth = requireElement<HTMLElement>('#combat-health-fill');
   private readonly combatEmber = requireElement<HTMLElement>('#combat-ember-fill');
+  private readonly combatEnergyLabel = requireElement<HTMLElement>('#combat-energy-label');
   private readonly combatHealthBar = requireElement<HTMLElement>('#combat-health-bar');
   private readonly combatEmberBar = requireElement<HTMLElement>('#combat-ember-bar');
   private readonly combatThreats = requireElement<HTMLElement>('#combat-threats');
@@ -422,6 +423,9 @@ export class Game {
     requireElement<HTMLButtonElement>('#fire-button').addEventListener('click', () => {
       if (!this.paused) this.fireAction();
     });
+    requireElement<HTMLButtonElement>('#bond-button').addEventListener('click', () => {
+      if (!this.paused) this.bondAction();
+    });
     requireElement<HTMLButtonElement>('#land-button').addEventListener('click', () => {
       if (!this.paused) this.landAction();
     });
@@ -484,8 +488,14 @@ export class Game {
   }
 
   private fireAction(): void {
-    const fired = castDragonFire(this.combat, this.flight);
-    if (!fired.ok) this.notify(fired);
+    const result = this.flight.controlTarget === 'rider'
+      ? castRiderSigil(this.combat, this.flight) : castDragonFire(this.combat, this.flight);
+    if (!result.ok) this.notify(result);
+  }
+
+  private bondAction(): void {
+    const result = castBondSurge(this.combat, this.flight);
+    if (!result.ok) this.notify(result);
   }
 
   private landAction(): void {
@@ -615,14 +625,19 @@ export class Game {
         ? '0' : String(Math.round(Math.max(0, current.y - Math.max(0, heightAt(current.x, current.z)))));
     this.speedText.textContent = Math.round(Math.abs(rider ? this.flight.riderSpeed : this.flight.speed)).toString();
     const combatActive = combatNearby(this.combat, this.flight) ||
-      this.combat.hp < this.combat.maxHp || this.combat.ember < this.combat.maxEmber - 0.5;
+      this.combat.hp < this.combat.maxHp || this.combat.ember < this.combat.maxEmber - 0.5 ||
+      this.combat.focus < this.combat.maxFocus - 0.5;
     this.combatHud.hidden = !combatActive;
+    this.combatHud.dataset.actor = rider ? 'rider' : 'dragon';
+    this.combatEnergyLabel.textContent = rider ? 'RIDER FOCUS' : 'EMBER';
+    this.combatEmberBar.setAttribute('aria-label', rider ? 'Rider focus' : 'Dragon Ember');
     const hpPercent = Math.round(100 * this.combat.hp / this.combat.maxHp);
-    const emberPercent = Math.round(100 * this.combat.ember / this.combat.maxEmber);
+    const energy = rider ? this.combat.focus : this.combat.ember;
+    const emberPercent = Math.round(100 * energy / this.combat.maxEmber);
     this.combatHealth.style.width = hpPercent + '%';
     this.combatEmber.style.width = emberPercent + '%';
     this.combatHealthBar.setAttribute('aria-valuenow', String(this.combat.hp));
-    this.combatEmberBar.setAttribute('aria-valuenow', String(Math.round(this.combat.ember)));
+    this.combatEmberBar.setAttribute('aria-valuenow', String(Math.round(energy)));
     const enemiesLeft = combatRemaining(this.combat);
     this.combatThreats.textContent = enemiesLeft === 0 ? 'GLOAM DEN CLEARED'
       : 'GLOAM HOUNDS · ' + enemiesLeft + ' REMAIN';
@@ -686,6 +701,8 @@ export class Game {
       'ECHO ' + echoPhase(this.echo, this.tidegate),
       'BOND HP ' + this.combat.hp + '/' + this.combat.maxHp,
       'EMBER ' + Math.round(this.combat.ember),
+      'RIDER FOCUS ' + Math.round(this.combat.focus),
+      'BOND READY ' + (this.flight.time >= this.combat.bondReadyAt),
       'HOSTILES ' + combatRemaining(this.combat),
       'TERRAIN TILES ' + this.coast.tileCount(),
       'DISCOVERED ' + this.discoveries.count() + '/' + LANDMARKS.length,
@@ -735,6 +752,7 @@ export class Game {
       if (this.input.take('submerge')) this.diveAction();
       if (this.input.take('interact')) this.interactWithRune();
       if (this.input.take('fire')) this.fireAction();
+      if (this.input.take('bond')) this.bondAction();
       for (const form of FORM_ORDER) {
         if (this.input.take(form)) this.setForm(form);
       }

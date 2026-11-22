@@ -407,3 +407,11 @@ button:focus-visible { outline: 3px solid white; outline-offset:3px; }
   #combat-hud #combat-threats{font-size:9px;}
   .hud-menu-open #combat-hud{bottom:385px;}
 }
+
+#combat-hud[data-actor="rider"] #combat-ember-fill {
+  background:linear-gradient(90deg,#357b80,#9be4d5);
+}
+#dragon-panel #bond-button {
+  width:100%;margin:0 0 7px;background:#356568;color:#e8f8eb;
+}
+#dragon-panel #bond-button:hover { background:#458284; }

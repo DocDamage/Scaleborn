@@ -33,6 +33,15 @@ export interface FireCast {
   range: number;
   form: DragonForm;
 }
+export interface SigilCast {
+  id: number;
+  origin: { x: number; y: number; z: number };
+  direction: { x: number; y: number; z: number };
+  range: number;
+}
+export interface BondCast {
+  id: number; x: number; y: number; z: number; radius: number;
+}
 export interface CombatNotice {
   sequence: number;
   kind: 'hurt' | 'kill' | 'respawn';
@@ -44,6 +53,14 @@ export interface CombatState {
   ember: number;
   maxEmber: number;
   fireReadyAt: number;
+  focus: number;
+  maxFocus: number;
+  sigilReadyAt: number;
+  bondReadyAt: number;
+  sigilSequence: number;
+  lastSigil: SigilCast | null;
+  bondSequence: number;
+  lastBond: BondCast | null;
   invulnerableUntil: number;
   fireSequence: number;
   lastFire: FireCast | null;
@@ -68,6 +85,8 @@ export function newCombatState(): CombatState {
   return {
     hp: 100, maxHp: 100, ember: 100, maxEmber: 100,
     fireReadyAt: 0, invulnerableUntil: 0,
+    focus: 100, maxFocus: 100, sigilReadyAt: 0, bondReadyAt: 0,
+    sigilSequence: 0, lastSigil: null, bondSequence: 0, lastBond: null,
     fireSequence: 0, lastFire: null, noticeSequence: 0, notice: null,
     respawns: 0,
     hounds: GLOAM_SPAWNS.map((spawn, index) => ({
@@ -158,6 +177,83 @@ export function castDragonFire(c: CombatState, s: FlightState): InteractionResul
   return { ok: true, message: landed > 0 ? 'Flame struck ' + landed + ' enemy.' : 'Onyx breathes fire.' };
 }
 
+/** Rider's focused tide sigil uses her own heading and reserve, not dragon Ember. */
+export function castRiderSigil(c: CombatState, s: FlightState): InteractionResult {
+  if (s.controlTarget !== 'rider' || s.form !== 'small') {
+    return { ok: false, message: 'Switch to the dismounted rider to cast a sigil.' };
+  }
+  if (s.transition) return { ok: false, message: 'Finish the dragon maneuver first.' };
+  if (s.time < c.sigilReadyAt) return { ok: false, message: 'The sigil is still resonating.' };
+  if (c.focus < 23) return { ok: false, message: 'Rider focus must recover.' };
+
+  c.focus -= 23;
+  c.sigilReadyAt = s.time + 0.67;
+  const direction = { x: Math.sin(s.riderYaw), y: 0, z: -Math.cos(s.riderYaw) };
+  const origin = {
+    x: s.riderX + direction.x * 0.4,
+    y: s.riderY + 1.28,
+    z: s.riderZ + direction.z * 0.4,
+  };
+  c.lastSigil = { id: ++c.sigilSequence, origin, direction, range: 29 };
+  let hits = 0;
+  for (const h of c.hounds) {
+    if (h.hp <= 0) continue;
+    const target = { x: h.x, y: h.y + 1.2, z: h.z };
+    const dx = target.x - origin.x, dy = target.y - origin.y, dz = target.z - origin.z;
+    const projected = dx * direction.x + dy * direction.y + dz * direction.z;
+    if (projected < 0 || projected > 29) continue;
+    const radial = Math.sqrt(Math.max(0, dx * dx + dy * dy + dz * dz - projected * projected));
+    if (radial > 1.1 + projected * 0.065 || !fireLineClear(origin, target)) continue;
+    h.hp = Math.max(0, h.hp - 31);
+    h.flash = 0.28; h.stagger = 0.53; h.windup = 0; h.alert = true;
+    hits++;
+    if (h.hp === 0) {
+      h.deathAge = 0;
+      notice(c, 'kill', 'Gloam hound dispelled by the rider.');
+    }
+  }
+  if (hits && c.hounds.every((h) => h.hp === 0)) {
+    notice(c, 'kill', 'The Gloam Den falls silent.');
+  }
+  return { ok: true, message: hits ? 'Tidal sigil struck ' + hits + ' enemy.' : 'The sigil flies forward.' };
+}
+
+/** X: both companions must cooperate on dry land for a close-range bond surge. */
+export function castBondSurge(c: CombatState, s: FlightState): InteractionResult {
+  if (s.form !== 'small' || s.mode !== 'ground' || s.riderMode !== 'ground' ||
+      s.transition || Math.hypot(s.x - s.riderX, s.z - s.riderZ) > 8) {
+    return { ok: false, message: 'Bring the small dragon and rider together on land.' };
+  }
+  if (s.time < c.bondReadyAt) return { ok: false, message: 'The bond surge is recharging.' };
+  if (c.ember < 32 || c.focus < 32) {
+    return { ok: false, message: 'Both Ember and rider focus are needed.' };
+  }
+  c.ember -= 32;
+  c.focus -= 32;
+  c.bondReadyAt = s.time + 6.5;
+  const x = (s.x + s.riderX) * 0.5, z = (s.z + s.riderZ) * 0.5;
+  const y = Math.max(s.y, s.riderY) + 1.35;
+  const radius = 15;
+  c.lastBond = { id: ++c.bondSequence, x, y, z, radius };
+  let hits = 0;
+  for (const h of c.hounds) {
+    if (h.hp <= 0 || Math.hypot(h.x - x, h.z - z) > radius ||
+        Math.abs(h.y + 1.2 - y) > 5) continue;
+    if (!fireLineClear({ x, y, z }, { x: h.x, y: h.y + 1.2, z: h.z })) continue;
+    h.hp = Math.max(0, h.hp - 53);
+    h.flash = 0.4; h.stagger = 1.0; h.windup = 0; h.alert = true;
+    hits++;
+    if (h.hp === 0) {
+      h.deathAge = 0;
+      notice(c, 'kill', 'Gloam hound scattered by the bond.');
+    }
+  }
+  if (hits && c.hounds.every((h) => h.hp === 0)) {
+    notice(c, 'kill', 'The Gloam Den falls silent.');
+  }
+  return { ok: true, message: hits ? 'Bond surge struck ' + hits + ' enemy.' : 'The bond surge blossoms.' };
+}
+
 function moveHound(h: GloamHound, targetX: number, targetZ: number, speed: number, dt: number): void {
   const dx = targetX - h.x, dz = targetZ - h.z;
   const distance = Math.hypot(dx, dz);
@@ -178,9 +274,9 @@ function respawnAtMeadow(c: CombatState, s: FlightState): void {
   s.form = 'rideable'; s.mode = 'air'; s.transition = null; s.controlTarget = 'dragon';
   s.riderX = x + 2; s.riderZ = z; s.riderY = heightAt(x + 2, z) + 0.05;
   s.riderYaw = s.yaw; s.riderSpeed = 0; s.riderMode = 'ground'; s.riderTargetY = s.riderY;
-  c.hp = c.maxHp; c.ember = c.maxEmber;
+  c.hp = c.maxHp; c.ember = c.maxEmber; c.focus = c.maxFocus;
   c.invulnerableUntil = s.time + 2.5;
-  c.fireReadyAt = s.time;
+  c.fireReadyAt = s.time; c.sigilReadyAt = s.time; c.bondReadyAt = s.time;
   c.respawns++;
   for (const h of c.hounds) {
     h.x = h.homeX; h.z = h.homeZ; h.y = heightAt(h.x, h.z);
@@ -193,6 +289,7 @@ function respawnAtMeadow(c: CombatState, s: FlightState): void {
 export function stepCombat(c: CombatState, s: FlightState, dt: number): void {
   if (!Number.isFinite(dt) || dt <= 0 || dt > 0.1) return;
   c.ember = clamp(c.ember + dt * 15, 0, c.maxEmber);
+  c.focus = clamp(c.focus + dt * 13, 0, c.maxFocus);
   const player = actorPosition(s);
   const vulnerable = s.controlTarget === 'rider'
     ? s.riderMode === 'ground'

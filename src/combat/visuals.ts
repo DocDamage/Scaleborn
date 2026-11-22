@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { CombatState, FireCast, GloamHound } from './combat';
+import type { CombatState, FireCast, GloamHound, SigilCast, BondCast } from './combat';
 
 interface HoundRig {
   root: THREE.Group;
@@ -8,6 +8,8 @@ interface HoundRig {
   eyes: THREE.MeshStandardMaterial;
 }
 const FLAME_COUNT = 54;
+const SIGIL_COUNT = 21;
+const BOND_COUNT = 36;
 const UP = new THREE.Vector3(0, 1, 0);
 
 /**
@@ -20,6 +22,17 @@ export class CombatVisual {
   private readonly plume: THREE.InstancedMesh;
   private readonly flameMaterial: THREE.MeshBasicMaterial;
   private readonly flameLight: THREE.PointLight;
+  private readonly sigil: THREE.InstancedMesh;
+  private readonly sigilMaterial: THREE.MeshBasicMaterial;
+  private readonly bond: THREE.InstancedMesh;
+  private readonly bondMaterial: THREE.MeshBasicMaterial;
+  private readonly bondLight: THREE.PointLight;
+  private magic: SigilCast | null = null;
+  private magicAge = 1;
+  private seenMagic = 0;
+  private bondCast: BondCast | null = null;
+  private bondAge = 1;
+  private seenBond = 0;
   private fire: FireCast | null = null;
   private fireAge = 1;
   private seenFire = 0;
@@ -53,7 +66,29 @@ export class CombatVisual {
     if (this.plume.instanceColor) this.plume.instanceColor.needsUpdate = true;
     this.flameLight = new THREE.PointLight(0xff9b53, 0, 29, 2);
     this.flameLight.name = 'fx.dragon.fire-light';
-    this.root.add(this.plume, this.flameLight);
+    this.sigilMaterial = new THREE.MeshBasicMaterial({
+      color: 0x8ddcdd, transparent: true, opacity: 0.8,
+      depthWrite: false, blending: THREE.AdditiveBlending, fog: true,
+    });
+    this.sigil = new THREE.InstancedMesh(
+      new THREE.SphereGeometry(1, 12, 10), this.sigilMaterial, SIGIL_COUNT,
+    );
+    this.sigil.name = 'fx.rider.tidal-sigil';
+    this.sigil.visible = false;
+    this.sigil.frustumCulled = false;
+
+    this.bondMaterial = new THREE.MeshBasicMaterial({
+      color: 0xa5e9e1, transparent: true, opacity: 0.75,
+      depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: true,
+    });
+    this.bond = new THREE.InstancedMesh(
+      new THREE.ConeGeometry(0.2, 1.5, 9), this.bondMaterial, BOND_COUNT,
+    );
+    this.bond.name = 'fx.bond.surge';
+    this.bond.visible = false;
+    this.bond.frustumCulled = false;
+    this.bondLight = new THREE.PointLight(0x7fe5dc, 0, 22, 2);
+    this.root.add(this.plume, this.flameLight, this.sigil, this.bond, this.bondLight);
     scene.add(this.root);
   }
 
@@ -157,6 +192,20 @@ export class CombatVisual {
       this.fireAge = 0;
     } else if (this.fire) this.fireAge += Math.max(0, dt);
     this.updateFlame();
+    const sigil = combat.lastSigil;
+    if (sigil && sigil.id !== this.seenMagic) {
+      this.seenMagic = sigil.id;
+      this.magic = sigil;
+      this.magicAge = 0;
+    } else if (this.magic) this.magicAge += Math.max(0, dt);
+    const bond = combat.lastBond;
+    if (bond && bond.id !== this.seenBond) {
+      this.seenBond = bond.id;
+      this.bondCast = bond;
+      this.bondAge = 0;
+    } else if (this.bondCast) this.bondAge += Math.max(0, dt);
+    this.updateMagic();
+    this.updateBond();
   }
 
   private updateFlame(): void {
@@ -195,6 +244,66 @@ export class CombatVisual {
       cast.origin.z + this.forward.z * Math.min(14, cast.range * 0.34) * progress,
     );
     this.flameLight.intensity = 2.9 * fade;
+  }
+
+  private updateMagic(): void {
+    const cast = this.magic;
+    const duration = 0.48;
+    this.sigil.visible = cast !== null && this.magicAge < duration;
+    if (!cast || !this.sigil.visible) return;
+    this.forward.set(cast.direction.x, cast.direction.y, cast.direction.z).normalize();
+    this.side.set(this.forward.z, 0, -this.forward.x).normalize();
+    this.vertical.crossVectors(this.side, this.forward).normalize();
+    this.orientation.setFromUnitVectors(UP, this.forward);
+    const progress = Math.min(1, (this.magicAge + 0.02) / 0.3);
+    const distance = cast.range * progress;
+    const fade = Math.max(0, 1 - this.magicAge / duration);
+    this.sigilMaterial.opacity = 0.80 * fade;
+    for (let i = 0; i < SIGIL_COUNT; i++) {
+      const t = i / SIGIL_COUNT;
+      const trail = Math.max(0, distance - t * 6.8);
+      const spiral = i * 2.39996 + cast.id * 0.45;
+      const spread = (0.13 + t * 0.35) * fade;
+      this.position.set(
+        cast.origin.x + this.forward.x * trail,
+        cast.origin.y + this.forward.y * trail,
+        cast.origin.z + this.forward.z * trail,
+      ).addScaledVector(this.side, Math.cos(spiral) * spread)
+        .addScaledVector(this.vertical, Math.sin(spiral) * spread);
+      const radius = (0.16 + (1 - t) * 0.23) * fade;
+      this.scale.set(radius, (0.63 + (1 - t) * 1.9) * fade, radius);
+      this.matrix.compose(this.position, this.orientation, this.scale);
+      this.sigil.setMatrixAt(i, this.matrix);
+    }
+    this.sigil.instanceMatrix.needsUpdate = true;
+  }
+
+  private updateBond(): void {
+    const cast = this.bondCast;
+    const duration = 0.64;
+    this.bond.visible = cast !== null && this.bondAge < duration;
+    this.bondLight.intensity = 0;
+    if (!cast || !this.bond.visible) return;
+    const progress = Math.min(1, (this.bondAge + 0.01) / 0.35);
+    const fade = Math.max(0, 1 - this.bondAge / duration);
+    this.bondMaterial.opacity = 0.75 * fade;
+    this.bondLight.position.set(cast.x, cast.y, cast.z);
+    this.bondLight.intensity = 3.4 * fade;
+    for (let i = 0; i < BOND_COUNT; i++) {
+      // Uneven radial spokes instead of the perfect white torus rings used
+      // in the original waterfall prototype.
+      const angle = i * 2.39996 + cast.id * 0.13;
+      const r = (0.35 + i / BOND_COUNT * 0.65) * cast.radius * progress;
+      const rx = Math.cos(angle), rz = Math.sin(angle);
+      this.position.set(cast.x + rx * r, cast.y - 0.5 + Math.sin(i * 1.9) * 0.6, cast.z + rz * r);
+      this.forward.set(rx, 0.1 + Math.sin(angle * 3) * 0.23, rz).normalize();
+      this.orientation.setFromUnitVectors(UP, this.forward);
+      const width = (0.25 + i % 3 * 0.11) * fade;
+      this.scale.set(width, (2.0 + i % 5 * 0.6) * fade, width);
+      this.matrix.compose(this.position, this.orientation, this.scale);
+      this.bond.setMatrixAt(i, this.matrix);
+    }
+    this.bond.instanceMatrix.needsUpdate = true;
   }
 
   dispose(): void {

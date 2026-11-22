@@ -3,7 +3,7 @@ import { newFlightState, type FlightState } from '../src/actors/dragon/flight';
 import { FORMS } from '../src/actors/dragon/forms';
 import { heightAt } from '../src/world/terrain';
 import {
-  GLOAM_SPAWNS, castDragonFire, combatNearby, combatRemaining,
+  GLOAM_SPAWNS, castDragonFire, castRiderSigil, castBondSurge, combatNearby, combatRemaining,
   newCombatState, stepCombat,
 } from '../src/combat/combat';
 
@@ -169,4 +169,61 @@ describe('G4 deterministic encounter and dragon breath', () => {
     stepCombat(c, s, 0.3);
     expect(c).toEqual(before);
   });
+  it('lets the unmounted rider cast a focused directional tidal sigil', () => {
+    const s = groundDragon(), c = newCombatState();
+    s.form = 'small';
+    s.controlTarget = 'rider';
+    s.riderX = s.x; s.riderZ = s.z;
+    s.riderY = heightAt(s.riderX, s.riderZ) + 0.05;
+    s.riderYaw = Math.PI / 2;
+    s.riderMode = 'ground';
+    targetAhead(c, s, 13);
+    const foe = c.hounds[0]!;
+    const result = castRiderSigil(c, s);
+    expect(result.ok).toBe(true);
+    expect(foe.hp).toBeLessThan(foe.maxHp);
+    expect(c.focus).toBe(77);
+    expect(c.ember).toBe(100);
+    expect(c.lastSigil?.direction.x).toBeCloseTo(1, 5);
+    expect(castRiderSigil(c, s).ok).toBe(false);
+    s.time = 0.8;
+    expect(castRiderSigil(c, s).ok).toBe(true);
+    expect(c.sigilSequence).toBe(2);
+  });
+
+  it('requires a real grounded dragon/rider pairing to spend both bond resources', () => {
+    const s = groundDragon(), c = newCombatState();
+    expect(castBondSurge(c, s).ok).toBe(false); // Still mounted.
+    s.form = 'small'; s.y = heightAt(s.x, s.z) + FORMS.small.standHeight;
+    s.riderMode = 'ground'; s.riderX = s.x + 2; s.riderZ = s.z;
+    s.riderY = heightAt(s.riderX, s.riderZ) + 0.05;
+    const h = c.hounds[0]!;
+    h.x = s.x + 9; h.z = s.z; h.y = heightAt(h.x, h.z);
+    const result = castBondSurge(c, s);
+    expect(result.ok).toBe(true);
+    expect(h.hp).toBeLessThan(h.maxHp);
+    expect(c.ember).toBe(68);
+    expect(c.focus).toBe(68);
+    expect(c.lastBond?.radius).toBe(15);
+    expect(castBondSurge(c, s).ok).toBe(false);
+    s.time = 7;
+    s.riderX += 30;
+    expect(castBondSurge(c, s).ok).toBe(false);
+    s.riderX = s.x + 2;
+    c.focus = 2;
+    expect(castBondSurge(c, s).ok).toBe(false);
+    expect(c.bondSequence).toBe(1);
+  });
+
+  it('recovers independent rider focus while preserving the Ember budget', () => {
+    const c = newCombatState(), s = groundDragon();
+    c.ember = 10; c.focus = 25;
+    step(c, s, 2);
+    expect(c.ember).toBeCloseTo(40, 4);
+    expect(c.focus).toBeCloseTo(51, 4);
+    s.controlTarget = 'dragon';
+    expect(castRiderSigil(c, s).ok).toBe(false);
+    expect(c.focus).toBeCloseTo(51, 4);
+  });
+
 });
