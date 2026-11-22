@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { DragonPose } from './animationPose';
 import { makeWingMembraneMaterial } from './wingSurface';
+import { taperedSpine } from './organicSculpt';
 
 /**
  * Original code-built deforming dragon wing.
@@ -9,7 +10,7 @@ import { makeWingMembraneMaterial } from './wingSurface';
  */
 const membraneMaterial = makeWingMembraneMaterial();
 const sparMaterial = new THREE.MeshStandardMaterial({
-  color: 0x504a79, roughness: 0.63, metalness: 0.07,
+  color: 0x292e4b, roughness: 0.78, metalness: 0.025,
 });
 
 export interface WingMembraneSection {
@@ -48,19 +49,50 @@ export interface WingRig {
   tip: THREE.Bone;
 }
 
-function spar(parent: THREE.Bone, length: number, side: -1 | 1): void {
-  const rod = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.05, 0.11, length, 7), sparMaterial,
-  );
-  rod.position.x = side * length / 2;
-  rod.rotation.z = -side * Math.PI / 2;
-  parent.add(rod);
+/**
+ * An original, tapered phalange follows the wing's cartilage leading edge.
+ * The existing Bone owns its bend and all attachment names remain unchanged.
+ * Curved lofts replace straight 7-sided cylinders with hard end caps.
+ */
+function spar(parent: THREE.Bone, length: number, side: -1 | 1,
+  radius: number, index: number): void {
+  const points: Array<readonly [number, number, number]> = [
+    [0, 0, 0],
+    [side * length * .23, .042, -.023],
+    [side * length * .55, .082, -.075],
+    [side * length * .83, .032, -.13],
+    [side * length, -.024, -.16],
+  ];
+  const mesh = new THREE.Mesh(
+    taperedSpine(points, radius, 14, 34), sparMaterial);
+  mesh.name='creature.dragon.wing-finger.'+index;
+  // Preserve outward-sided attachment semantics for legacy authored rigs.
+  mesh.position.x=side*.006;
+  mesh.castShadow=true;
+  parent.add(mesh);
+}
+
+/** Exposed musculature blends each wing into the scapula and ribs. */
+function rootTendon(side:-1|1):THREE.Mesh {
+  const mesh=new THREE.Mesh(taperedSpine([
+    [-side*.23,-.105,.22],
+    [-side*.08,-.015,.11],
+    [side*.18,.09,-.01],
+    [side*.39,.135,-.095],
+    [side*.61,.095,-.17],
+  ],.205,16,40),sparMaterial);
+  mesh.name=side<0?'creature.dragon.wing-root.left'
+    :'creature.dragon.wing-root.right';
+  mesh.castShadow=true;
+  mesh.receiveShadow=true;
+  return mesh;
 }
 
 export function createWingRig(side: -1 | 1): WingRig {
   const root=new THREE.Group();
   root.name=side<0?'leftWing':'rightWing';
   root.position.set(side*.56,.40,-.20);
+  root.add(rootTendon(side));
 
   // Dense, organically curved membrane surface. Five broad finger-lobes
   // interrupt the rear edge rather than a single eleven-vertex triangle fan.
@@ -137,9 +169,9 @@ export function createWingRig(side: -1 | 1): WingRig {
 
   // Vein spars are attached to deforming bones and kept narrow enough to
   // preserve the arched painted-skin silhouette in flight and landing.
-  spar(shoulder,1.65,side);
-  spar(elbow,1.63,side);
-  spar(tip,.72,side);
+  spar(shoulder,1.65,side,.145,0);
+  spar(elbow,1.63,side,.108,1);
+  spar(tip,.72,side,.072,2);
   return {root,mesh,shoulder,elbow,tip};
 }
 
@@ -150,9 +182,14 @@ export function poseWing(rig: WingRig, side: -1 | 1, pose: DragonPose): void {
   const openShoulder = side * (0.11 + Math.sin(phase) * pose.flapAmount);
   const openElbow = side * (0.15 + Math.sin(phase - 0.55) * pose.flapAmount * 0.85);
   const openTip = side * (0.08 + Math.sin(phase - 1.0) * pose.flapAmount * 0.50);
-  rig.shoulder.rotation.z = openShoulder * (1 - fold) - side * 0.76 * fold;
-  rig.elbow.rotation.z = openElbow * (1 - fold) - side * 0.46 * fold;
-  rig.tip.rotation.z = openTip * (1 - fold) - side * 0.22 * fold;
+  // Hinge the phalanges backward along Onyx's torso when grounded.
+  // Pure downward rotation previously made long wings dangle through terrain.
+  rig.shoulder.rotation.y = -side * 1.02 * fold;
+  rig.elbow.rotation.y = -side * .43 * fold;
+  rig.tip.rotation.y = -side * .21 * fold;
+  rig.shoulder.rotation.z = openShoulder * (1 - fold) - side * .31 * fold;
+  rig.elbow.rotation.z = openElbow * (1 - fold) - side * .24 * fold;
+  rig.tip.rotation.z = openTip * (1 - fold) - side * .12 * fold;
   rig.shoulder.rotation.x = Math.sin(phase + 0.3) * 0.065 * (1 - fold)
     + Math.sin(phase * 0.6) * 0.025 * fold;
 }

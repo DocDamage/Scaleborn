@@ -218,3 +218,13 @@ albedo texture and applied to Onyx's original torso/skull materials while
 preserving normal and roughness maps. It is not an unrelated model and is not a
 concept screenshot. The high-resolution original art is still required in a
 production UV atlas, and this low-resolution sample is **not visual acceptance**.
+
+### Scapular wing attachment and phalange fold
+The original three-bone membrane rig is preserved, with dedicated curved
+cartilage phalanges replacing flat-shaded seven-sided cylinder rods.
+New original scapular tendon surfaces sit underneath the fold at each wing
+root; ground animation folds the entire wing backward over the torso in
+addition to a slight downward tuck. This affects rendering only — all
+three form dimensions, wing sockets, movement and collision remain as before.
+Actual screenshot review must determine whether any folded wing intersects
+Onyx's rear legs or rider. The quality gate remains BLOCKING.
