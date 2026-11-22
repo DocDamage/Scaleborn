@@ -1064,3 +1064,13 @@ less overbright per-instance tint. Root anchoring, wind/trample shader,
 deterministic positions, near-camera density and high/low draw-call
 budget remain unchanged. A fresh real WebGL screenshot is required
 before claiming improvement or accepting the vegetation quality gate.
+
+### Mirrorfall escarpment shoulder erosion
+
+Actual WebGL snapshots continued to show a hard rectangular near-waterfall
+cliff edge even after sheet improvements. `sculptMirrorfallTerrain` now uses
+a deterministic, asymmetric, smoothly warped central rock core rather than
+a fixed-width fourth-power wall, with relief fissures confined to the
+shoulders. The lakebed, water lip, shared world height/collision interface,
+seed, river carving, and ongoing waterfall trajectory validation remain.
+This must be compared with new real screenshots before approval.

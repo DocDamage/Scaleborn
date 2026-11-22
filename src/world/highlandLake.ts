@@ -108,6 +108,19 @@ export function lakeShoreDistance(x: number, z: number): number {
 }
 
 /**
+ * Smoothly wandering central cliff width replaces the old rectangular
+ * fourth-power superellipse. The midpoint remains at the same waterfall lip,
+ * and both terrain collision and rendering still sample this heightfield.
+ */
+export function mirrorfallEscarpmentCoreAt(x:number,z:number):number {
+  if(![x,z].every(Number.isFinite))return 0;
+  const drift=14*Math.sin(z*.035+x*.019)
+    +7*Math.sin(z*.071-x*.014+1.1);
+  const width=Math.max(58,92+drift);
+  return Math.exp(-Math.pow(Math.abs((z-GRAND_LAKE.z)/width),2.6));
+}
+
+/**
  * Replaces the local heightfield with a smooth bowl, rocky high banks and
  * horseshoe summit; blends into the existing world without a rectangular cut.
  */
@@ -139,12 +152,14 @@ export function sculptMirrorfallTerrain(
   // The previous 20 m cliff step produced a single giant vertical polygon
   // wall in actual browser screenshots. Preserve the waterfall's steep core
   // while spreading the side banks into layered, eroded rock slopes.
-  const core = Math.exp(-Math.pow((z - GRAND_LAKE.z) / 92, 4));
+  const core = mirrorfallEscarpmentCoreAt(x,z);
   const cliffStep = smoothstep(1.006, 1.177 - core * 0.099, r);
   const erosion = fbm(x * 0.031, z * 0.037, seed + 2401, 4);
   const rockFolds = Math.sin((z - GRAND_LAKE.z) * .069
     + r * 21.0 + erosion * 3.3) * 4.8;
-  const gullyRelief = (erosion * 8.8 + rockFolds)
+  const shoulderFissures=(1-core)*Math.sin(x*.054+z*.031+
+    erosion*.7)*5.6;
+  const gullyRelief = (erosion * 8.8 + rockFolds + shoulderFissures)
     * Math.sin(Math.PI * cliffStep) * easternFace * canyonBand;
   const escarpment = GRAND_LAKE.surfaceY
     + (111 + lap * 14) * cliffStep * easternFace * canyonBand
