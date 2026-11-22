@@ -10,10 +10,10 @@ export type AssetManifestEntry = {
 
 /** Stable IDs are owned by game data, never by the renderer or by GLB paths. */
 export const ASSETS: readonly AssetManifestEntry[] = [
-  { id: 'creature.dragon.onyx', type: 'creature', source: 'glb',
+  { id: 'creature.dragon.onyx', type: 'creature', source: 'procedural',
     replacementPath: 'models/characters/onyx-scaleborn-original.glb', rigId: 'rig.dragon.v2',
     sockets: ['seat', 'head', 'leftWing', 'rightWing', 'tailTip'], dimensionsMeters: [8, 2.5, 7] },
-  { id: 'character.rider.hero', type: 'character', source: 'glb',
+  { id: 'character.rider.hero', type: 'character', source: 'procedural',
     replacementPath: 'models/characters/hero-hybrid-original.glb', rigId: 'rig.rider.v2',
     sockets: ['root', 'leftHand', 'rightHand'], dimensionsMeters: [0.6, 1.52, 0.4] },
   { id: 'structure.azure.cottage', type: 'structure', source: 'procedural' },
