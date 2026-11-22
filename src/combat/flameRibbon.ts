@@ -32,7 +32,7 @@ export function makeDragonFlameRibbonTexture(size=64): THREE.DataTexture {
     const width=(.24+.75*Math.pow(1-v,.85))
       * (.88+.12*Math.sin(v*19+u*3.2));
     const edge=Math.max(0,1-Math.abs(u)/width);
-    const tip=Math.pow(Math.sin(Math.PI*v),.67);
+    const tip=Math.pow(Math.sin(Math.PI*v),.9);
     const variation=.78+.22*Math.sin(10.4*v+u*4.2);
     const alpha=Math.round(255*Math.pow(edge,1.8)*tip*variation);
     const k=(y*size+x)*4;
