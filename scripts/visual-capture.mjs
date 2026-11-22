@@ -85,8 +85,20 @@ async function main() {
     await page.screenshot({
       path: 'artifacts/mirrorfall-underwater-browser.png', timeout: 120000,
     });
+    // Second dive camera actually looks across a planted, terrain-following
+    // freshwater shelf; the deep midwater view is kept separately.
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaLakebed !== 'function') {
+        throw new Error('Shallow lakebed QA hook missing');
+      }
+      window.__scalebornQaLakebed();
+    });
+    await page.waitForTimeout(500);
+    await page.screenshot({
+      path: 'artifacts/mirrorfall-lakebed-browser.png', timeout: 120000,
+    });
     assert.deepEqual(errors, [], 'WebGL/JavaScript renderer errors');
-    console.log('PASS: Mirrorfall aerial, shoreline, ground-level forest and underwater WebGL screenshots rendered without console errors.');
+    console.log('PASS: Mirrorfall aerial, shoreline, forest, midwater and planted lakebed WebGL screenshots rendered without console errors.');
   } finally {
     await browser.close();
   }

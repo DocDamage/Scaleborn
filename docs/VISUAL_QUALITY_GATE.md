@@ -678,3 +678,14 @@ The waterfall plunge corridor and steep walls remain clear. Terrain and
 swimming collision, wave height and lake boundary are unchanged. A real
 rider-height shoreline image and GPU benchmark are still required before
 art acceptance.
+
+### Real shallow lakebed visual capture
+
+Earlier `mirrorfall-underwater-browser.png` captured a dive through empty
+midwater, far above the lake floor; it did not test the decorative shallow
+rocks, aquatic plants, sediment and caustics. A second QA-only scene camera
+now follows a safe western Mirrorfall shelf at 8–25 metres depth,
+approximately 4 metres above the collision terrain, facing into the planted
+shallows. `scripts/visual-capture.mjs` saves its actual WebGL output as
+`artifacts/mirrorfall-lakebed-browser.png` alongside the deep midwater
+frame. No gameplay or production camera behavior was changed.

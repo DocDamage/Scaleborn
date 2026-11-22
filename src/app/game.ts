@@ -164,6 +164,7 @@ export class Game {
         __scalebornQaStageEchoReturn?: () => void;
         __scalebornQaLake?: () => void;
         __scalebornQaLakeDive?: () => void;
+        __scalebornQaLakebed?: () => void;
         __scalebornQaShore?: () => void;
         __scalebornQaForest?: () => void;
       };
@@ -377,6 +378,37 @@ export class Game {
         this.updateCamera(1, true);
         this.coast.updateAtmosphere(this.flight.time, this.camera.position);
         this.updateHud(0.2);
+      };
+      host.__scalebornQaLakebed = (): void => {
+        // A shallow bed-level camera is needed to verify that lake rocks,
+        // vegetation, caustics and sediments actually render. The older
+        // midwater capture could only show fog over the 148m-deep basin.
+        const x = GRAND_LAKE.x - GRAND_LAKE.radiusX * .905;
+        const z = GRAND_LAKE.z;
+        const bed = heightAt(x,z);
+        const depth = GRAND_LAKE.surfaceY - bed;
+        if (depth < 8 || depth > 25) {
+          throw new Error('Lakebed visual QA site is not a safe planted shelf');
+        }
+        this.flight.x=x;
+        this.flight.z=z;
+        this.flight.y=bed+4.0;
+        this.flight.waterTargetY=this.flight.y;
+        this.flight.yaw=-Math.PI/2;
+        this.flight.pitch=-.16;
+        this.flight.roll=0;
+        this.flight.speed=0;
+        this.flight.form='rideable';
+        this.flight.mode='underwater';
+        this.flight.controlTarget='dragon';
+        this.flight.transition=null;
+        this.cameraIndex=0;
+        this.coast.update(x,z);
+        this.coast.setUnderwater(true);
+        this.dragon.update(this.flight);
+        this.updateCamera(1,true);
+        this.coast.updateAtmosphere(this.flight.time,this.camera.position);
+        this.updateHud(.2);
       };
       host.__scalebornQaAdvance = (frames: number): void => {
         if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
