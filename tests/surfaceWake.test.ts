@@ -54,6 +54,11 @@ describe('water-surface response to swimming',()=>{
       const alpha=(x:number,y:number):number=>data[(y*64+x)*4+3]??0;
       expect(alpha(31,31)).toBeGreaterThan(130);
       expect(alpha(0,0)).toBe(0);
+      expect(alpha(63,0)).toBe(0);
+      expect(alpha(0,63)).toBe(0);
+      expect(alpha(63,63)).toBe(0);
+      expect(alpha(31,0)).toBe(0);
+      expect(alpha(0,31)).toBe(0);
       expect(()=>makeWakeCrestTexture(4)).toThrow();
     }finally{low.dispose();high.dispose();tex.dispose();}
   });
