@@ -415,3 +415,19 @@ button:focus-visible { outline: 3px solid white; outline-offset:3px; }
   width:100%;margin:0 0 7px;background:#356568;color:#e8f8eb;
 }
 #dragon-panel #bond-button:hover { background:#458284; }
+
+/* Combat target marker exists only while a living enemy is locked and
+   projected on screen. Keep the view unobstructed during exploration. */
+#combat-lock-marker{
+  position:absolute;z-index:6;pointer-events:none;
+  width:26px;height:26px;transform:translate(-50%,-50%);
+  border:1px solid rgba(226,208,167,.85);
+  border-radius:50%;box-shadow:0 0 9px rgba(10,23,27,.7),
+    inset 0 0 7px rgba(211,187,139,.14);
+}
+#combat-lock-marker[hidden]{display:none;}
+#combat-lock-marker span{
+  position:absolute;top:50%;left:50%;
+  width:7px;height:7px;border:1px solid rgba(237,211,172,.95);
+  transform:translate(-50%,-50%) rotate(45deg);
+}

@@ -102,3 +102,15 @@ front-leg/claw pivots perform a time-bounded swing without changing
 physics or the flight simulation. Airborne, submerged, rider-control and
 mid-transition strikes are rejected. This is a working first melee attack,
 not complete bite, tail-combo, boss combat or animation-matched hit windows.
+
+### Contextual Gloam target lock
+
+**L** toggles a living Gloam hound lock when an enemy is in front
+and within 76m (or through the existing M/Controls panel button).
+Targets retain stable encounter IDs through movement, and the selection
+expires on death, excessive distance or underwater travel. The chase
+camera subtly favors the actual moving locked target, and a small
+screen-space marker is projected only while a valid target is in view.
+The system does **not** auto-hit, alter facing/flight physics, bypass
+cover, or show permanent HUD panels. This is a foundation for future
+form-specific assisted aim and lock cycling, not a completed boss lock-on.

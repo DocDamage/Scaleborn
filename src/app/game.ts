@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { DragonVisual } from '../actors/dragon/visual';
 import { newCombatState, castDragonFire, castRiderSigil, castMountedRiderSigil, castDragonClaw, castBondSurge, stepCombat, combatNearby, combatRemaining, restoreGloamVictory } from '../combat/combat';
 import { CombatVisual } from '../combat/visuals';
+import { CombatTargetLock } from '../combat/targetLock';
 import { newFlightState, stepFlight, requestDragonForm, toggleLanding, type InteractionResult } from '../actors/dragon/flight';
 import { FORMS, FORM_ORDER, type DragonForm } from '../actors/dragon/forms';
 import { assertManifestUnique } from '../data/assets';
@@ -52,6 +53,8 @@ export class Game {
   private readonly coast: AzureCoast;
   private readonly dragon = new DragonVisual();
   private readonly combat = newCombatState();
+  private readonly targetLock = new CombatTargetLock();
+  private readonly lockMarker = requireElement<HTMLDivElement>('#combat-lock-marker');
   private readonly combatVisual: CombatVisual;
   private combatNoticeSeen = 0;
   private readonly combatHud = requireElement<HTMLElement>('#combat-hud');
@@ -207,7 +210,8 @@ export class Game {
         __scalebornQaCombatSnapshot?: () => {
           hp: number; ember: number; focus: number; respawns: number;
           maxEmber: number; gloamCleared: boolean;
-          fireSequence: number; clawSequence: number; sigilSequence: number; bondSequence: number;
+          fireSequence: number; clawSequence: number; lockedTargetId:string|null;
+          sigilSequence: number; bondSequence: number;
           player: { x: number; y: number; z: number; yaw: number; form: DragonForm; mode: string };
           lastFire: { origin: { x: number; y: number; z: number }; direction: { x: number; y: number; z: number } } | null;
           hounds: Array<{ id: string; x: number; y: number; z: number; hp: number; maxHp: number; alert: boolean; windup: number }>;
@@ -548,6 +552,7 @@ export class Game {
         respawns: this.combat.respawns,
         fireSequence: this.combat.fireSequence,
         clawSequence: this.combat.clawSequence,
+        lockedTargetId: this.targetLock.current(this.combat,this.flight)?.id ?? null,
         player: { x: this.flight.x, y: this.flight.y, z: this.flight.z,
           yaw: this.flight.yaw, form: this.flight.form, mode: this.flight.mode },
         lastFire: this.combat.lastFire ? { origin: this.combat.lastFire.origin,
@@ -628,6 +633,9 @@ export class Game {
     requireElement<HTMLButtonElement>('#fire-button').addEventListener('click', () => {
       if (!this.paused) this.fireAction();
     });
+    requireElement<HTMLButtonElement>('#lockon-button').addEventListener('click', () => {
+      if (!this.paused) this.lockTargetAction();
+    });
     requireElement<HTMLButtonElement>('#claw-button').addEventListener('click', () => {
       if (!this.paused) this.clawAction();
     });
@@ -707,6 +715,7 @@ export class Game {
     if (this.input.take('interact')) this.interactWithRune();
     if (this.input.take('fire')) this.fireAction();
     if (this.input.take('claw')) this.clawAction();
+    if (this.input.take('lockOn')) this.lockTargetAction();
     if (this.input.take('mountedSigil')) this.mountedSigilAction();
     if (this.input.take('bond')) this.bondAction();
     for (const form of FORM_ORDER) {
@@ -731,6 +740,10 @@ export class Game {
     const result = this.flight.controlTarget === 'rider'
       ? castRiderSigil(this.combat, this.flight) : castDragonFire(this.combat, this.flight);
     this.finishCombatAction(result);
+  }
+
+  private lockTargetAction(): void {
+    this.notify(this.targetLock.toggle(this.combat,this.flight));
   }
 
   private clawAction(): void {
@@ -821,6 +834,13 @@ export class Game {
     const rise = rider ? (submerged ? 0.45 : 2.1) : submerged ? 0.75 :
       state.form === 'small' ? 2 : state.form === 'giant' ? 13 : 4.5;
     const target = root.clone().addScaledVector(forward, rider ? 2.5 : 7);
+    // Only chase camera subtly tracks a live selected opponent. It does
+    // not rotate Onyx or alter player aim, hit tests, or other camera modes.
+    const locked = this.qaPortraitSubject ? null
+      : this.targetLock.current(this.combat,state);
+    if (locked && (cameraModes[this.cameraIndex] ?? 'CHASE') === 'CHASE') {
+      target.lerp(new THREE.Vector3(locked.x,locked.y+1.25,locked.z),.32);
+    }
     let desired: THREE.Vector3;
     if (mode === 'WIDE') desired = root.clone().addScaledVector(forward, -distance * 1.9)
       .add(new THREE.Vector3(0, rise * 1.6, 0));
@@ -859,6 +879,24 @@ export class Game {
     if (this.qaPortraitSubject) {
       poseCharacterPortraitCamera(this.camera,state,this.qaPortraitSubject,heightAt);
     }
+  }
+
+  private updateLockMarker(): void {
+    const h = this.targetLock.current(this.combat,this.flight);
+    if (!h || this.paused || this.menuOpen || this.qaPortraitSubject) {
+      this.lockMarker.hidden=true;
+      return;
+    }
+    const point=new THREE.Vector3(h.x,h.y+1.8,h.z).project(this.camera);
+    if (![point.x,point.y,point.z].every(Number.isFinite) ||
+      point.z<=-1 || point.z>=1 || Math.abs(point.x)>1 ||
+      Math.abs(point.y)>1) {
+      this.lockMarker.hidden=true;
+      return;
+    }
+    this.lockMarker.hidden=false;
+    this.lockMarker.style.left=((point.x+1)*.5*window.innerWidth)+'px';
+    this.lockMarker.style.top=((1-point.y)*.5*window.innerHeight)+'px';
   }
 
   private updateHud(dt: number): void {
@@ -1043,6 +1081,7 @@ export class Game {
     this.dragon.update(this.flight, this.combat.lastClaw);
     this.combatVisual.update(this.combat, this.flight.time, this.paused || this.menuOpen ? 0 : elapsed);
     this.updateCamera(elapsed);
+    this.updateLockMarker();
     this.coast.animate(this.flight.time, focus.x, focus.y, focus.z, this.flight, this.camera);
     this.coast.updateTidegate(this.tidegate, this.flight.time, this.echo.attuned);
     this.coast.updateEcho(echoPhase(this.echo, this.tidegate), this.flight.time);

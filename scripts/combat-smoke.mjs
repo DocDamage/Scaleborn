@@ -55,6 +55,13 @@ try {
   // Stage only the player's position after slow screenshot capture; attacks
   // still hit the unchanged real moving enemy through normal keyboard input.
   await page.evaluate(() => window.__scalebornQaStageCombat('dragon'));
+  await page.keyboard.press('l');
+  await page.evaluate(() => window.__scalebornQaAdvanceCombat(1));
+  const lock=await snapshot();
+  assert.ok(lock.lockedTargetId,
+    'L must lock an actual, living forward Gloam hound');
+  assert.equal(alive(lock),alive(first),
+    'Target lock must not cause enemy damage or auto-hit');
   await page.keyboard.press('r');
   await page.evaluate(() => window.__scalebornQaAdvanceCombat(1));
   await page.waitForFunction(() =>
