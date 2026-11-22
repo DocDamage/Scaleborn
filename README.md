@@ -130,3 +130,7 @@ The existing asset-independent design remains unchanged. All new effects use gen
 ## Mirrorfall visual test location
 
 `http://localhost:5173/?start=lake` places the rider above Mirrorfall Lake looking toward the waterfall. It is a real in-game camera, not a concept image. The lake and ocean use their own surface elevations; the game supports swimming and diving into the lake basin. M opens the control palette; F3 toggles diagnostic statistics. Existing keyboard and clickable actions remain wired. See `docs/VISUAL_QUALITY_GATE.md` for the accuracy limitations of the water simulation and the next visual quality acceptance checks.
+
+### Graphics quality
+
+The game runs **high** painterly PBR shaders by default. Add `?quality=low` to reduce foliage density, internal pixel ratio and shader cost on integrated GPUs or software renderers. The lake shape, collision, traversal and quest data are identical. `?start=lake&quality=high` is the dedicated visual acceptance view. CI tests lower-resolution software WebGL; high-mode screenshots require real-GPU review.

@@ -33,6 +33,7 @@ function requireElement<T extends HTMLElement>(selector: string): T {
 
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
+  private readonly quality: 'high' | 'low';
   private readonly scene = new THREE.Scene();
   private readonly camera: THREE.PerspectiveCamera;
   private readonly coast: AzureCoast;
@@ -84,6 +85,10 @@ export class Game {
 
   constructor(canvas: HTMLCanvasElement) {
     assertManifestUnique();
+    // Low-quality rendering retains functionality, collision, water physics and
+    // the same world seed; only GPU cost, vegetation density and shading change.
+    this.quality = new URLSearchParams(window.location.search).get('quality') === 'low'
+      ? 'low' : 'high';
     let browserStorage: ProgressStorage | null = null;
     try { browserStorage = window.localStorage; } catch { /* Private mode may deny access. */ }
     this.progressStorage = browserStorage;
@@ -96,7 +101,7 @@ export class Game {
     this.renderer = new THREE.WebGLRenderer({
       canvas, antialias: true, powerPreference: 'high-performance',
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.4));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.quality === 'low' ? 0.68 : 1.4));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -123,7 +128,7 @@ export class Game {
       this.flight.pitch = -0.07;
       this.flight.speed = 25;
     }
-    this.coast = new AzureCoast(this.scene);
+    this.coast = new AzureCoast(this.scene, this.quality);
     this.dragon.attach(this.scene);
     this.coast.update(this.flight.x, this.flight.z);
     this.dragon.update(this.flight);
@@ -489,6 +494,7 @@ export class Game {
       'DRAWS ' + render.calls,
       'TRIANGLES ' + render.triangles,
       'WEBGL ' + this.renderer.capabilities.isWebGL2,
+      'QUALITY ' + this.quality,
       'CURRENT GATE G3 WATER / RIDER PREVIEW',
     ].join('\n');
   }

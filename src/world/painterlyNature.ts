@@ -140,14 +140,15 @@ export class PainterlyNature {
   private readonly meshes: THREE.InstancedMesh[] = [];
   private readonly textures: THREE.Texture[] = [];
   private grassWind: { value: number } | null = null;
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, quality: 'high' | 'low' = 'high') {
     this.root.name='vegetation.azure.painterly-nature';
     scene.add(this.root);
     const rand=rng(AZURE_SEED+181);
     const trees: PlantSite[][]=[[],[],[],[]];
     const grasses: PlantSite[] = [], rocks: PlantSite[] = [];
 
-    for(let i=0;i<19500;i++){
+    const candidates = quality === 'low' ? 2600 : 15500;
+    for(let i=0;i<candidates;i++){
       const x=(rand()-.5)*3750, z=(rand()-.5)*3750;
       const y=heightAt(x,z);
       const water=waterSurfaceAt(x,z);
@@ -163,8 +164,8 @@ export class PainterlyNature {
         if(rand()<.052)rocks.push({x,y,z,scale:1+rand()*5,hue:rand()});
       }
     }
-    const woodMat=makeBarkMaterial();
-    const rockMat=makeRockMaterial();
+    const woodMat=makeBarkMaterial(quality);
+    const rockMat=makeRockMaterial(quality);
     const leafTex=leafTexture();
     const leafMat=new THREE.MeshStandardMaterial({
       color:0xd4e7cd,map:leafTex,roughness:.88,metalness:0,

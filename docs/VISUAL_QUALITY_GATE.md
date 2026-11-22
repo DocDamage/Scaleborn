@@ -45,6 +45,15 @@ evaluation. The waterfall visual is not an interactable current yet.
 Keep the world self-contained and asset IDs renderer-neutral so future Fab
 content and Unreal replacements remain possible.
 
+## Render budgets
+- **High (default):** full procedural surface shaders, denser geometry,
+  higher pixel ratio; target dedicated desktop GPU.
+- **Low (`?quality=low`):** uses the same terrain and water simulation with
+  a reduced internal resolution and vegetation population and cheaper
+  standard-material surface passes. Supports software-WebGL smoke tests.
+  A successful low-mode test is NOT proof of high-mode fps, which must be
+  measured on the user's GPU.
+
 ## Quality checks to unblock a playable review build
 
 1. `npm run check` green, existing gameplay and save tests still green.

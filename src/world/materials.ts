@@ -65,21 +65,21 @@ function installSurfaceDetail(material: THREE.MeshStandardMaterial, kind: 'land'
   };
 }
 
-export function makeTerrainMaterial(): THREE.MeshStandardMaterial {
+export function makeTerrainMaterial(quality: 'high' | 'low' = 'high'): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({
     vertexColors: true, color: 0xffffff, roughness: 0.93, metalness: 0,
     side: THREE.DoubleSide,
   });
-  installSurfaceDetail(mat, 'land');
+  if (quality === 'high') installSurfaceDetail(mat, 'land');
   return mat;
 }
-export function makeRockMaterial(): THREE.MeshStandardMaterial {
+export function makeRockMaterial(quality: 'high' | 'low' = 'high'): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0xa6a6a3, roughness: 0.87, metalness: 0 });
-  installSurfaceDetail(mat, 'rock');
+  if (quality === 'high') installSurfaceDetail(mat, 'rock');
   return mat;
 }
-export function makeBarkMaterial(): THREE.MeshStandardMaterial {
+export function makeBarkMaterial(quality: 'high' | 'low' = 'high'): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0x716057, roughness: 0.95, metalness: 0 });
-  installSurfaceDetail(mat, 'bark');
+  if (quality === 'high') installSurfaceDetail(mat, 'bark');
   return mat;
 }

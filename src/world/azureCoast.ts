@@ -20,7 +20,7 @@ export class AzureCoast {
   private tiles = new Map<string, TerrainTile>();
   private lastTileX = Number.NaN;
   private lastTileZ = Number.NaN;
-  private readonly terrainMaterial = makeTerrainMaterial();
+  private readonly terrainMaterial: THREE.MeshStandardMaterial;
   private readonly foamMaterial = makeFoamShader();
   private readonly water = new PainterlyWaterSurface('ocean');
   private readonly lake = new PainterlyWaterSurface('lake');
@@ -38,7 +38,8 @@ export class AzureCoast {
   readonly scene: THREE.Scene;
   readonly ocean: THREE.Mesh;
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, quality: 'high' | 'low' = 'high') {
+    this.terrainMaterial = makeTerrainMaterial(quality);
     this.scene = scene;
     scene.background = this.airBackground;
     scene.fog = this.airFog;
@@ -48,7 +49,7 @@ export class AzureCoast {
     scene.add(sun);
     this.ocean = this.water.mesh;
     scene.add(this.sky.mesh, this.ocean, this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group);
-    this.nature = new PainterlyNature(scene);
+    this.nature = new PainterlyNature(scene, quality);
     addCoastalDressing(scene, false);
     addMarineDressing(scene);
     scene.add(this.tidegate.root, this.echoVisual.root);

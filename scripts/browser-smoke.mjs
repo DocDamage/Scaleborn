@@ -22,10 +22,12 @@ async function main() {
       if (message.type() === 'error') errors.push('console: ' + message.text());
     });
     const url = process.env.SCALEBORN_URL ?? 'http://127.0.0.1:5173';
+    // SwiftShader CPU rendering must not be mistaken for a dedicated GPU.
+    const lowUrl = url + '?quality=low';
     let connected = false;
     for (let attempt = 0; attempt < 12; attempt++) {
       try {
-        const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 6000 });
+        const response = await page.goto(lowUrl, { waitUntil: 'networkidle', timeout: 10000 });
         assert.equal(response?.status(), 200);
         connected = true;
         break;
@@ -39,7 +41,7 @@ async function main() {
     await page.waitForFunction(() => Number(document.querySelector('#speed')?.textContent) > 0, null, { timeout: 15000 });
     await page.waitForTimeout(800);
     await mkdir('artifacts', { recursive: true });
-    await page.screenshot({ path: 'artifacts/azure-coast-chase.png' });
+    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-chase.png' });
     const formName = page.locator('#form-name');
     await formName.waitFor({ state: 'visible' });
     assert.match(await formName.textContent() ?? '', /RIDEABLE/);
@@ -50,7 +52,7 @@ async function main() {
       const notice = document.querySelector('#action-toast')?.textContent;
       return text?.includes('GIANT') || notice?.includes('Climb higher');
     }, null, { timeout: 6000 });
-    await page.screenshot({ path: 'artifacts/azure-coast-giant.png' });
+    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-giant.png' });
     await page.keyboard.press('2');
     await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'RIDEABLE', null, { timeout: 6000 });
     await page.keyboard.press('1');
@@ -69,11 +71,11 @@ async function main() {
       Boolean(canvas.getContext('webgl2')),
     );
     assert.ok(hasWebGL, 'No WebGL2 context on game canvas');
-    await page.screenshot({ path: 'artifacts/azure-coast-smoke.png' });
+    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-smoke.png' });
     // Extended QA uses the actual on-screen action handlers. SwiftShader sometimes
     // stalls RAF, so dev-only bounded simulation steps refresh HUD deterministically.
     // Exercise a complete animated landing/size change/takeoff in a deterministic meadow.
-    const meadowResponse = await page.goto(url + '?start=meadow&qa=1', { waitUntil: 'networkidle' });
+    const meadowResponse = await page.goto(url + '?start=meadow&qa=1&quality=low', { waitUntil: 'networkidle' });
     assert.equal(meadowResponse?.status(), 200);
     await page.locator('#start').click();
     await page.evaluate(() => {
@@ -100,7 +102,7 @@ async function main() {
     });
     await page.locator('#tidegate-action').evaluate((button) => button.click());
     await page.waitForFunction(() => document.querySelector('#tidegate-status')?.textContent === 'TIDEBOUND SIGIL AWAKENED', null, { timeout: 12000 });
-    await page.screenshot({ path: 'artifacts/azure-coast-small-meadow.png' });
+    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-small-meadow.png' });
     await page.locator('#focus-button').evaluate((button) => button.click());
     await page.evaluate(() => window.__scalebornQaAdvance(1));
     await page.waitForFunction(() => document.querySelector('#focus-name')?.textContent === 'DRAGON', null, { timeout: 12000 });
@@ -144,10 +146,10 @@ async function main() {
       window.__scalebornQaStageShrine();
     });
     await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'DIVING', null, { timeout: 12000 });
-    await page.screenshot({ path: 'artifacts/azure-coast-tidal-echo-before.png', timeout: 60000 });
+    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-tidal-echo-before.png', timeout: 60000 });
     await page.locator('#echo-action').evaluate((button) => button.click());
     await page.waitForFunction(() => document.querySelector('#echo-stage')?.textContent === 'ECHO COLLECTED', null, { timeout: 12000 });
-    await page.screenshot({ path: 'artifacts/azure-coast-tidal-echo.png', timeout: 60000 });
+    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-tidal-echo.png', timeout: 60000 });
     await page.evaluate(() => {
       if (typeof window.__scalebornQaStageEchoReturn !== 'function') throw new Error('Echo return QA hook missing');
       window.__scalebornQaStageEchoReturn();
@@ -167,7 +169,7 @@ async function main() {
       window.__scalebornQaLake();
     });
     await page.waitForTimeout(850);
-    await page.screenshot({ path: 'artifacts/mirrorfall-lake-visual.png', timeout: 60000 });
+    await page.screenshot({ path: 'artifacts/mirrorfall-lake-visual.png', timeout: 120000 });
     assert.deepEqual(errors, [], 'Browser reported runtime or shader errors');
     console.log('PASS: WebGL2, dragon/rider controls, ocean diving, quest progress and Mirrorfall Lake visual screenshot.');
   } finally {
