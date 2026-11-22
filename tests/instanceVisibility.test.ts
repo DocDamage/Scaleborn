@@ -9,8 +9,7 @@ describe('deterministic foliage instance visibility',()=>{
     const scene=new THREE.Scene();
     const nature=new PainterlyNature(scene,'low');
     try{
-      const tree=scene.getObjectByName('vegetation.azure.pbr-tree-leaves.0')
-        as THREE.InstancedMesh;
+      const tree=scene.getObjectByName('vegetation.azure.pbr-tree-leaves.0') as THREE.InstancedMesh;
       expect(tree).toBeInstanceOf(THREE.InstancedMesh);
       const fullCount=tree.count;
       expect(fullCount).toBeGreaterThan(100);
