@@ -42,10 +42,8 @@ describe('synchronized forest wind and alpha-tested shadow rendering',()=>{
     const scene=new THREE.Scene();
     const nature=new PainterlyNature(scene,'high');
     try{
-      const wood=scene.getObjectByName('vegetation.azure.pbr-tree-wood.0')
-        as THREE.InstancedMesh;
-      const leaves=scene.getObjectByName('vegetation.azure.pbr-tree-leaves.0')
-        as THREE.InstancedMesh;
+      const wood=scene.getObjectByName('vegetation.azure.pbr-tree-wood.0') as THREE.InstancedMesh;
+      const leaves=scene.getObjectByName('vegetation.azure.pbr-tree-leaves.0') as THREE.InstancedMesh;
       expect(wood.customDepthMaterial).toBeInstanceOf(THREE.MeshDepthMaterial);
       expect(leaves.customDepthMaterial).toBeInstanceOf(THREE.MeshDepthMaterial);
       const leafColor=leaves.material as THREE.MeshStandardMaterial;
@@ -73,10 +71,8 @@ describe('synchronized forest wind and alpha-tested shadow rendering',()=>{
     const scene=new THREE.Scene();
     const nature=new PainterlyNature(scene,'low');
     try{
-      const wood=scene.getObjectByName('vegetation.azure.pbr-tree-wood.0')
-        as THREE.InstancedMesh;
-      const leaves=scene.getObjectByName('vegetation.azure.pbr-tree-leaves.0')
-        as THREE.InstancedMesh;
+      const wood=scene.getObjectByName('vegetation.azure.pbr-tree-wood.0') as THREE.InstancedMesh;
+      const leaves=scene.getObjectByName('vegetation.azure.pbr-tree-leaves.0') as THREE.InstancedMesh;
       expect(wood.customDepthMaterial).toBeUndefined();
       expect(leaves.customDepthMaterial).toBeUndefined();
       expect(compileWind(wood.material as THREE.Material).vertexShader)
