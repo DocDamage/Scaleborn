@@ -2,52 +2,51 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { CharacterKind, CharacterModelFile } from '../rider/importedCharacterRig';
 
 /**
- * CC0 source assets installed by scripts/vendor-characters.mjs into the
- * public/models folder. Runtime uses the local, committed copies first.
+ * Scaleborn's protagonists are original characters, not third-party sample
+ * dragon/elf skins. These paths are reserved for authored assets that satisfy
+ * docs/CHARACTER_ART_DIRECTION.md. An imported rig or animation donor cannot
+ * be displayed as the approved final character.
  *
- * Fallback URLs preserve gameplay on an unvendored development checkout.
- * They are explicit licensed origins, never arbitrary user-supplied URLs.
+ * Until an authored GLB exists, DragonVisual retains its existing source
+ * fallback rather than silently showing an unrelated third-party character.
  */
 export const CHARACTER_MODEL_SOURCES: Readonly<Record<CharacterKind, {
   readonly id: string;
   readonly file: string;
-  readonly original: string;
-  readonly license: string;
+  readonly design: string;
 }>> = {
   dragon: {
     id: 'creature.dragon.onyx',
-    file: 'models/characters/onyx-rigged.glb',
-    original: 'https://afk.ai/auto-rig-models/dragon.glb',
-    license: 'CC0-1.0',
+    file: 'models/characters/onyx-scaleborn-original.glb',
+    design: 'scaleborn.onyx.design.v1',
   },
   rider: {
     id: 'character.rider.hero',
-    file: 'models/characters/hero-rigged.glb',
-    original: 'https://grab3d.com/dl/elf-rigged/elf-rigged.glb',
-    license: 'CC0-1.0',
+    file: 'models/characters/hero-hybrid-original.glb',
+    design: 'scaleborn.hero.design.v1',
   },
 };
 
 export function characterAssetUrl(
   kind: CharacterKind, base = import.meta.env.BASE_URL || '/',
 ): string {
-  const relative = CHARACTER_MODEL_SOURCES[kind].file;
-  return base.replace(/\/?$/, '/') + relative;
+  return base.replace(/\/?$/, '/') + CHARACTER_MODEL_SOURCES[kind].file;
 }
 
+/**
+ * Only authored and explicitly designated character files are ever loaded.
+ * The GLB exporter must put its design ID into glTF scene extras/userData.
+ */
 export async function loadCharacterModel(
   kind: CharacterKind,
   loader = new GLTFLoader(),
 ): Promise<CharacterModelFile> {
   const source = CHARACTER_MODEL_SOURCES[kind];
-  try {
-    return await loader.loadAsync(characterAssetUrl(kind));
-  } catch (localError) {
-    // Local copy should always exist for release. Permit a remote fallback
-    // only for development while assets are being acquired for a checkout.
-    if (!import.meta.env.DEV) {
-      throw new Error('Missing vendored character model: ' + source.file, { cause: localError });
-    }
-    return loader.loadAsync(source.original);
+  const asset = await loader.loadAsync(characterAssetUrl(kind));
+  const actual = asset.scene.userData.scalebornDesign;
+  if (actual !== source.design) {
+    throw new Error('Character asset lacks the approved Scaleborn design identity: '
+      + source.file);
   }
+  return asset;
 }
