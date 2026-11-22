@@ -65,7 +65,7 @@ describe('Mirrorfall impact foam and spray rendering',()=>{
       expect((lowMesh.material as THREE.MeshBasicMaterial).map).toBeInstanceOf(THREE.DataTexture);
       const pool=low.group.getObjectByName('water.azure.mirrorfall-impact-foam');
       expect(pool).toBeInstanceOf(THREE.Mesh);
-      expect(low.group.children.some(o=>o.geometry instanceof THREE.TorusGeometry)).toBe(false);
+      expect(low.group.children.some(o=>o instanceof THREE.Mesh && o.geometry instanceof THREE.TorusGeometry)).toBe(false);
       low.update(1);low.update(1.05);
       const m=new THREE.Matrix4(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3(),center=new THREE.Vector3();
       lowMesh.getMatrixAt(0,m);
