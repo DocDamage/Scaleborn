@@ -55,14 +55,28 @@ function smallEye(parent:THREE.Group,side:number,
   // floating as round green toy-like globes in real close-up screenshots.
   const white = new THREE.Mesh(new THREE.SphereGeometry(1,18,14),eye);
   white.name=side<0?'rider.eye.left':'rider.eye.right';
-  white.position.set(side*.118,1.295,-.156);
-  white.scale.set(.046,.026,.012);
+  white.position.set(side*.118,1.295,-.153);
+  white.scale.set(.038,.018,.0065);
   parent.add(white);
   const jewel=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),iris);
   jewel.name=side<0?'rider.iris.left':'rider.iris.right';
-  jewel.position.set(side*.118,1.295,-.168);
-  jewel.scale.set(.016,.019,.008);
+  jewel.position.set(side*.118,1.295,-.161);
+  jewel.scale.set(.012,.014,.0045);
   parent.add(jewel);
+  // Curved upper and lower eyelids partially enclose the thin almond eye.
+  // They hide the exposed sphere edges that appeared googly in real WebGL QA.
+  const upperLid = new THREE.Mesh(taperedSpine([
+    [side*.077,1.309,-.157],[side*.112,1.320,-.161],
+    [side*.151,1.306,-.153],
+  ],.011,10,20),skin);
+  upperLid.name=side<0?'rider.eyelid.upper.left':'rider.eyelid.upper.right';
+  parent.add(upperLid);
+  const lowerLid = new THREE.Mesh(taperedSpine([
+    [side*.079,1.280,-.156],[side*.112,1.277,-.159],
+    [side*.150,1.285,-.151],
+  ],.008,10,20),skin);
+  lowerLid.name=side<0?'rider.eyelid.lower.left':'rider.eyelid.lower.right';
+  parent.add(lowerLid);
   const brow=new THREE.Mesh(taperedSpine([
     [side*.060,1.357,-.172],[side*.110,1.366,-.192],
     [side*.165,1.347,-.164],
@@ -77,14 +91,15 @@ function createRiderArm(
 ):THREE.Group{
   const arm=new THREE.Group();
   arm.name=side<0?'rider.leftArm':'rider.rightArm';
-  arm.position.set(side*.285,1.107,-.018);
+  arm.position.set(side*.255,1.107,-.018);
   const sleeve=shapedTorso([
-    [.01,.102,.104,0],[-.12,.122,.124,-.024],
-    [-.34,.093,.092,-.066],[-.52,.077,.083,-.085],
+    [.025,.072,.082,0],[0,.083,.092,-.008],
+    [-.11,.099,.104,-.025],[-.21,.085,.096,-.040],
+    [-.37,.072,.081,-.067],[-.52,.067,.074,-.085],
   ],coat,'rider.sleeve');
   arm.add(sleeve);
   const cuff=shapedTorso([
-    [-.48,.084,.091,-.08],[-.54,.08,.09,-.08],
+    [-.48,.073,.079,-.08],[-.54,.071,.078,-.08],
   ],trim,'rider.cuff',8);
   arm.add(cuff);
   const hand=shapedTorso([
@@ -103,13 +118,13 @@ function createRiderLeg(
   leg.name=side<0?'rider.leftLeg':'rider.rightLeg';
   leg.position.set(side*.155,.66,.035);
   const trousers=shapedTorso([
-    [0,.112,.132,.02],[-.18,.126,.132,.05],
-    [-.35,.090,.106,.035],[-.47,.082,.092,.028],
+    [0,.107,.127,.02],[-.18,.116,.124,.05],
+    [-.35,.087,.101,.035],[-.47,.079,.087,.028],
   ],cloth,'rider.trousers');
   leg.add(trousers);
   const shoe=shapedTorso([
-    [-.41,.09,.10,.034],[-.54,.094,.11,-.018],
-    [-.61,.11,.16,-.07],[-.64,.07,.12,-.08],
+    [-.41,.086,.097,.034],[-.54,.086,.104,-.018],
+    [-.61,.093,.13,-.07],[-.64,.064,.105,-.08],
   ],boot,'rider.boot');
   leg.add(shoe);
   const ankle=new THREE.Mesh(taperedSpine([
@@ -137,8 +152,8 @@ export function makeScalebornRider():THREE.Group {
   const trim=new THREE.MeshStandardMaterial({
     color:0xb4a585,roughness:.76,metalness:.08,
   });
-  const eyes=material(0xc2c9bf,.4);
-  const irises=material(0x6ec8aa,.32);
+  const eyes=material(0xadb7af,.68);
+  const irises=material(0x4d9a83,.57);
   const hair=material(0x252937,.93);
   const scale=new THREE.MeshStandardMaterial({
     color:0x354d67,metalness:.19,roughness:.52,
@@ -199,7 +214,7 @@ export function makeScalebornRider():THREE.Group {
   group.add(shapedTorso([
     [.685,.178,.15,.009],[.715,.180,.150,.008],
   ],trim,'rider.belt',8));
-  const pendant=new THREE.Mesh(new THREE.OctahedronGeometry(.045,1),irises);
+  const pendant=new THREE.Mesh(new THREE.OctahedronGeometry(.030,1),irises);
   pendant.name='rider.bond-pendant';
   pendant.position.set(0,1.01,-.149);
   group.add(pendant);

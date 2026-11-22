@@ -182,3 +182,17 @@ full quest state remain unchanged.
 
 This is a first procedural mounting correction. Authored knee/ankle IK
 and saddle/grip animations remain future visual-quality work.
+
+### Screenshot-driven adolescent rider correction — November 22, 2026
+
+Review of the actual 1280×720 WebGL character artifact showed overly
+prominent rounded eyes, squared oversize sleeves, swollen boot toe boxes
+and an attention-grabbing gem. The procedural child-hybrid identity, horns,
+tail, cloak, fixed adult/child scale relationship and mount sockets remain.
+The original sculpt is refined with thin, partly embedded almond eyes,
+curved eyelid lofts, muted iris pigments, shaped tapered sleeves, less
+bulky boots and a smaller bond pendant. No donor/elf character was added.
+
+The updated artwork requires a fresh head-and-shoulders screenshot review.
+This is a localized correction, **not** acceptance of final rider identity,
+facial animation quality, cinematics or the overall visual-quality gate.

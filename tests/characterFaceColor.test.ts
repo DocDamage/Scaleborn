@@ -18,12 +18,29 @@ describe('approved child-scale hybrid features and restrained Onyx pigments',()=
         expect(eye).toBeInstanceOf(THREE.Mesh);
         expect(iris).toBeInstanceOf(THREE.Mesh);
         expect(horn).toBeInstanceOf(THREE.Mesh);
-        expect(eye.scale.y).toBeLessThan(.03);
+        expect(eye.scale.y).toBeLessThan(.02);
+        expect(eye.scale.x).toBeLessThan(.042);
+        expect(eye.scale.z).toBeLessThan(.008);
+        expect(iris.scale.z).toBeLessThan(.006);
+        for (const lid of ['upper','lower']) {
+          const eyelid=rider.getObjectByName('rider.eyelid.'+lid+'.'+side);
+          expect(eyelid).toBeInstanceOf(THREE.Mesh);
+          expect((eyelid as THREE.Mesh).geometry.getAttribute('position').count)
+            .toBeGreaterThan(100);
+        }
         expect(iris.scale.x).toBeLessThan(eye.scale.x*.5);
         expect(iris.position.z).toBeLessThan(eye.position.z);
         expect(Math.abs(iris.position.z-eye.position.z)).toBeLessThan(.02);
         expect(horn.geometry).not.toBeInstanceOf(THREE.ConeGeometry);
       }
+      const leftArm=rider.getObjectByName('rider.leftArm') as THREE.Group;
+      const rightArm=rider.getObjectByName('rider.rightArm') as THREE.Group;
+      expect(Math.abs(leftArm.position.x)).toBeLessThan(.27);
+      expect(Math.abs(rightArm.position.x)).toBeLessThan(.27);
+      const talisman=rider.getObjectByName('rider.bond-pendant') as THREE.Mesh;
+      expect(talisman.geometry).toBeInstanceOf(THREE.OctahedronGeometry);
+      talisman.geometry.computeBoundingSphere();
+      expect(talisman.geometry.boundingSphere!.radius).toBeLessThan(.07);
       expect(rider.getObjectByName('rider.elf-ear')).toBeUndefined();
     }finally{
       rider.traverse(x=>{
