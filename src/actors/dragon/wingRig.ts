@@ -216,9 +216,12 @@ export function poseWing(rig: WingRig, side: -1 | 1, pose: DragonPose): void {
   rig.shoulder.rotation.y = -side * 1.02 * fold;
   rig.elbow.rotation.y = -side * .43 * fold;
   rig.tip.rotation.y = -side * .21 * fold;
-  rig.shoulder.rotation.z = openShoulder * (1 - fold) - side * .31 * fold;
-  rig.elbow.rotation.z = openElbow * (1 - fold) - side * .24 * fold;
-  rig.tip.rotation.z = openTip * (1 - fold) - side * .12 * fold;
+  // At full fold the phalanges must rest along Onyx's raised back.
+  // Negative sign formerly swept their tips below the shoulder and created
+  // spear-like silhouettes in genuine giant/rideable side WebGL captures.
+  rig.shoulder.rotation.z = openShoulder * (1 - fold) + side * .29 * fold;
+  rig.elbow.rotation.z = openElbow * (1 - fold) + side * .15 * fold;
+  rig.tip.rotation.z = openTip * (1 - fold) + side * .07 * fold;
   rig.shoulder.rotation.x = Math.sin(phase + 0.3) * 0.065 * (1 - fold)
     + Math.sin(phase * 0.6) * 0.025 * fold;
 }

@@ -43,6 +43,10 @@ describe('Onyx original shoulder tendons and arched finger-bone wings',()=>{
         expect(rig.elbow.rotation.y*side).toBeLessThan(-.4);
         expect(rig.tip.rotation.y*side).toBeLessThan(-.2);
         expect(Math.abs(rig.shoulder.rotation.z)).toBeLessThan(.38);
+        // Left and right wings rise toward the same dorsal shelf.
+        expect(rig.shoulder.rotation.z*side).toBeGreaterThan(.25);
+        expect(rig.elbow.rotation.z*side).toBeGreaterThan(.12);
+        expect(rig.tip.rotation.z*side).toBeGreaterThan(.06);
       }finally{
         rig.root.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose();});
       }

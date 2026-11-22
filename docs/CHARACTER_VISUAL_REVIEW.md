@@ -85,3 +85,15 @@ appear disconnected, and the child and creature remain visibly procedural.
 The next wing pass contracts the posed rib projection in tandem with pleated
 membranes, with embedded tail-fin bases, no physics changes and dedicated
 bounds/attachment regressions. Requires fresh actual screenshots to verify.
+
+### Screenshot-directed dorsal wing tuck correction — 2026-11-22
+
+The actual, successful `46f8674` WebGL [character run](https://github.com/DocDamage/Scaleborn/actions/runs/45079475750)
+showed shorter folded finger bars, but they still aimed downward like
+rigid spears beside Onyx, particularly in the giant-form side camera. The
+`wingRig.ts` resting shoulder/elbow/tip Z rotations have been changed to
+lift the already-pleated, contracted bone chain onto the back while keeping
+the named three-bone skinned mesh and all open-flight angles unchanged.
+Mirrored left/right joint assertions prevent regression. Next real WebGL
+side-view captures must confirm both sides sit above the flank without
+intersecting the fixed-scale rider or actual terrain; quality gate BLOCKING.
