@@ -439,3 +439,22 @@ rigged production character or evidence of the user's exact character design.
 Replace with approved art and skeletal GLB/Unreal assets before final visual
 acceptance. Validate close-range rider-height screenshots, face readability,
 cape clipping during mounts, transparent fabric overdraw and frame cost.
+
+
+### Rock-specific triplanar PBR and LOD-boundary lighting (visual pass 7)
+
+Terrain now blends a dedicated seeded mineral albedo, normal and roughness
+texture set into steep faces in the fragment shader on BOTH graphic presets.
+The blend follows the interpolated terrain slope and elevation, uses the same
+world-coordinate triplanar sampling on neighboring tiles and includes resource
+cleanup for the additional textures. It is procedural PBR detail, not a scanned
+rock material or proof of cinematic-quality cliffs. Slope masks and mip
+behavior still require real-browser screenshot inspection.
+
+Each streamed tile now derives a shared border normal from the authoritative
+collision heightfield at fixed world-meter offsets. Two interior vertex rings
+fade toward its original triangle-computed normals. This reduces shading seams
+where high/low LOD boundaries meet without changing geometry, terrain height
+or collision, and without recomputing all interior vertex gradients. Focused
+regression tests cover both equal-LOD and mixed-LOD edges; validate actual
+lighting on the lake escarpment in a browser frame before acceptance.

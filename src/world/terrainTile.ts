@@ -4,6 +4,7 @@ import { fbm } from '../core/random';
 import { GRAND_LAKE, lakeContains, lakeRadius, lakeShoreDistance } from './highlandLake';
 import { stitchedHeight, TILE_METERS, type TileSpec } from './tileLod';
 import { terrainUvAt } from './terrainUv';
+import { heightfieldNormalAt, seamNormalWeight } from './terrainNormals';
 
 const sand = new THREE.Color(0xc5b698);
 const grass = new THREE.Color(0x668d61);
@@ -176,6 +177,31 @@ export function makeTerrainTile(
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   texCoords.needsUpdate = true;
   geometry.computeVertexNormals();
+  // A per-tile triangle average cannot see neighboring triangles. That
+  // creates hard lighting seams where the camera streams a different LOD.
+  // Preserve triangle-derived interior normals, but converge to the same
+  // collision-heightfield gradient at every shared tile boundary. The two
+  // interior rings smooth the shading transition without extra geometry.
+  const tileNormals = geometry.getAttribute('normal');
+  for (let row = 0; row <= n; row++) {
+    for (let col = 0; col <= n; col++) {
+      const weight = seamNormalWeight(col, row, n);
+      if (weight === 0) continue;
+      const index = row * (n + 1) + col;
+      const wx = (tx + col / n) * TILE_METERS;
+      const wz = (tz + row / n) * TILE_METERS;
+      const [nx, ny, nz] = heightfieldNormalAt(wx, wz);
+      const ox = tileNormals.getX(index), oy = tileNormals.getY(index);
+      const oz = tileNormals.getZ(index);
+      const dx = ox * (1 - weight) + nx * weight;
+      const dy = oy * (1 - weight) + ny * weight;
+      const dz = oz * (1 - weight) + nz * weight;
+      const inverseLength = 1 / Math.hypot(dx, dy, dz);
+      tileNormals.setXYZ(index, dx * inverseLength,
+        dy * inverseLength, dz * inverseLength);
+    }
+  }
+  tileNormals.needsUpdate = true;
   // Alpine escarpments must remain stone even on the inexpensive renderer.
   // Shader-based slope blending covers high mode, vertex color acts as a
   // cheaper but physically grounded fallback for low / software WebGL.
