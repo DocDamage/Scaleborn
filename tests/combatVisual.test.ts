@@ -27,6 +27,7 @@ describe('Gloam combat scene adapter', () => {
       expect(castDragonFire(state, flight).ok).toBe(true);
       visual.update(state, 0, 1 / 60);
       expect(plume.visible).toBe(true);
+      expect(state.lastFire?.groundFollowing).toBe(false);
       expect(state.lastFire?.arcHeight).toBeGreaterThan(0);
       for (let i = 0; i < plume.count; i++) {
         const matrix = new THREE.Matrix4();

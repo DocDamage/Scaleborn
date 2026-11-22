@@ -34,6 +34,7 @@ export interface FireCast {
   range: number;
   form: DragonForm;
   arcHeight: number;
+  groundFollowing: boolean;
 }
 export interface SigilCast {
   id: number;
@@ -41,6 +42,7 @@ export interface SigilCast {
   direction: { x: number; y: number; z: number };
   range: number;
   arcHeight: number;
+  groundFollowing: boolean;
 }
 export interface BondCast {
   id: number; x: number; y: number; z: number; radius: number;
@@ -165,16 +167,22 @@ export function castDragonFire(c: CombatState, s: FlightState): InteractionResul
     z: s.z + direction.z * muzzle,
   };
   const arcHeight = 1 + FORMS[s.form].standHeight;
-  c.lastFire = { id: ++c.fireSequence, origin, direction, range: spec.range, form: s.form, arcHeight };
+  c.lastFire = { id: ++c.fireSequence, origin, direction, range: spec.range, form: s.form,
+    arcHeight, groundFollowing: s.mode === 'ground' };
 
   let landed = 0;
   for (const hound of c.hounds) {
     if (hound.hp <= 0) continue;
     const target = { x: hound.x, y: hound.y + 1.25, z: hound.z };
     const dx = target.x - origin.x, dy = target.y - origin.y, dz = target.z - origin.z;
-    const projected = dx * direction.x + dy * direction.y + dz * direction.z;
+    // Grounded breath rides the land contour. Otherwise a mild uphill slope
+    // makes a level, forward-facing attack miss a ground enemy entirely.
+    // Airborne attacks retain strict 3D pitch-based aiming.
+    const rise = s.mode === 'ground' ? heightAt(hound.x, hound.z) - heightAt(s.x, s.z) : 0;
+    const localDy = dy - rise;
+    const projected = dx * direction.x + localDy * direction.y + dz * direction.z;
     if (projected < 0 || projected > spec.range) continue;
-    const radial = Math.sqrt(Math.max(0, dx * dx + dy * dy + dz * dz - projected * projected));
+    const radial = Math.sqrt(Math.max(0, dx * dx + localDy * localDy + dz * dz - projected * projected));
     if (radial > 1.05 + projected * spec.width) continue;
     if (!fireLineClear(origin, target, arcHeight)) continue;
     const damage = Math.max(1, Math.round(spec.damage * (1 - projected / spec.range * 0.16)));
@@ -211,15 +219,19 @@ export function castRiderSigil(c: CombatState, s: FlightState): InteractionResul
     z: s.riderZ + direction.z * 0.4,
   };
   const arcHeight = 1.15;
-  c.lastSigil = { id: ++c.sigilSequence, origin, direction, range: 29, arcHeight };
+  c.lastSigil = { id: ++c.sigilSequence, origin, direction, range: 29, arcHeight,
+    groundFollowing: s.riderMode === 'ground' };
   let hits = 0;
   for (const h of c.hounds) {
     if (h.hp <= 0) continue;
     const target = { x: h.x, y: h.y + 1.2, z: h.z };
     const dx = target.x - origin.x, dy = target.y - origin.y, dz = target.z - origin.z;
-    const projected = dx * direction.x + dy * direction.y + dz * direction.z;
+    const terrainRise = s.riderMode === 'ground'
+      ? heightAt(h.x, h.z) - heightAt(s.riderX, s.riderZ) : 0;
+    const localDy = dy - terrainRise;
+    const projected = dx * direction.x + localDy * direction.y + dz * direction.z;
     if (projected < 0 || projected > 29) continue;
-    const radial = Math.sqrt(Math.max(0, dx * dx + dy * dy + dz * dz - projected * projected));
+    const radial = Math.sqrt(Math.max(0, dx * dx + localDy * localDy + dz * dz - projected * projected));
     if (radial > 1.1 + projected * 0.065 || !fireLineClear(origin, target, arcHeight)) continue;
     h.hp = Math.max(0, h.hp - 31);
     h.flash = 0.28; h.stagger = 0.53; h.windup = 0; h.alert = true;

@@ -193,7 +193,9 @@ export class Game {
           hp: number; ember: number; focus: number; respawns: number;
           maxEmber: number; gloamCleared: boolean;
           fireSequence: number; sigilSequence: number; bondSequence: number;
-          hounds: Array<{ id: string; hp: number; maxHp: number; alert: boolean; windup: number }>;
+          player: { x: number; y: number; z: number; yaw: number; form: DragonForm; mode: string };
+          lastFire: { origin: { x: number; y: number; z: number }; direction: { x: number; y: number; z: number } } | null;
+          hounds: Array<{ id: string; x: number; y: number; z: number; hp: number; maxHp: number; alert: boolean; windup: number }>;
         };
         __scalebornQaStageCombat?: (mode: 'dragon' | 'rider' | 'bond' | 'melee') => void;
         __scalebornQaAdvanceCombat?: (frames: number) => void;
@@ -418,10 +420,15 @@ export class Game {
         focus: this.combat.focus,
         respawns: this.combat.respawns,
         fireSequence: this.combat.fireSequence,
+        player: { x: this.flight.x, y: this.flight.y, z: this.flight.z,
+          yaw: this.flight.yaw, form: this.flight.form, mode: this.flight.mode },
+        lastFire: this.combat.lastFire ? { origin: this.combat.lastFire.origin,
+          direction: this.combat.lastFire.direction } : null,
         sigilSequence: this.combat.sigilSequence,
         bondSequence: this.combat.bondSequence,
         hounds: this.combat.hounds.map((h) => ({
-          id: h.id, hp: h.hp, maxHp: h.maxHp, alert: h.alert, windup: h.windup,
+          id: h.id, x: h.x, y: h.y, z: h.z,
+          hp: h.hp, maxHp: h.maxHp, alert: h.alert, windup: h.windup,
         })),
       });
       host.__scalebornQaStageCombat = (mode): void => {

@@ -324,4 +324,27 @@ describe('G4 deterministic encounter and dragon breath', () => {
     expect(c.lastSigil?.arcHeight).toBeGreaterThan(1);
   });
 
+
+  it('aims grounded fire along the terrain elevation without auto-aiming in flight', () => {
+    const c = newCombatState();
+    const h = c.hounds[0]!;
+    h.x = -414; h.z = -54; h.y = heightAt(h.x, h.z);
+    const s = groundDragon(h.x - 13, h.z);
+    expect(h.y - heightAt(s.x, s.z)).toBeGreaterThan(3);
+    expect(castDragonFire(c, s).ok).toBe(true);
+    expect(h.hp).toBeLessThan(h.maxHp);
+    expect(c.lastFire?.groundFollowing).toBe(true);
+
+    const air = newCombatState();
+    air.hounds[0]!.x = h.x;
+    air.hounds[0]!.z = h.z;
+    air.hounds[0]!.y = h.y;
+    const f = groundDragon(h.x - 13, h.z);
+    f.mode = 'air';
+    f.y += 20;
+    expect(castDragonFire(air, f).ok).toBe(true);
+    expect(air.hounds[0]!.hp).toBe(air.hounds[0]!.maxHp);
+    expect(air.lastFire?.groundFollowing).toBe(false);
+  });
+
 });

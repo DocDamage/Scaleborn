@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { CombatState, FireCast, GloamHound, SigilCast, BondCast } from './combat';
+import { heightAt } from '../world/terrain';
 
 interface HoundRig {
   root: THREE.Group;
@@ -257,6 +258,10 @@ export class CombatVisual {
         cast.origin.z + this.forward.z * distance,
       ).addScaledVector(this.side, Math.cos(phase) * spread)
         .addScaledVector(this.vertical, Math.sin(phase) * spread);
+      if (cast.groundFollowing) {
+        this.position.y = Math.max(this.position.y,
+          heightAt(this.position.x, this.position.z) + 1.0);
+      }
       const width = (0.24 + t * 0.85) * fade;
       this.scale.set(width, (1.1 + t * 2.4) * fade, width);
       this.matrix.compose(this.position, this.orientation, this.scale);
@@ -296,6 +301,10 @@ export class CombatVisual {
         cast.origin.z + this.forward.z * trail,
       ).addScaledVector(this.side, Math.cos(spiral) * spread)
         .addScaledVector(this.vertical, Math.sin(spiral) * spread);
+      if (cast.groundFollowing) {
+        this.position.y = Math.max(this.position.y,
+          heightAt(this.position.x, this.position.z) + 1.2);
+      }
       const radius = (0.16 + (1 - t) * 0.23) * fade;
       this.scale.set(radius, (0.63 + (1 - t) * 1.9) * fade, radius);
       this.matrix.compose(this.position, this.orientation, this.scale);
