@@ -138,6 +138,7 @@ async function main() {
       window.__scalebornQaStageShrine();
     });
     await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'DIVING', null, { timeout: 12000 });
+    await page.screenshot({ path: 'artifacts/azure-coast-tidal-echo-before.png', timeout: 60000 });
     await page.keyboard.press('g');
     await page.waitForFunction(() => document.querySelector('#echo-stage')?.textContent === 'ECHO COLLECTED', null, { timeout: 12000 });
     await page.screenshot({ path: 'artifacts/azure-coast-tidal-echo.png', timeout: 60000 });

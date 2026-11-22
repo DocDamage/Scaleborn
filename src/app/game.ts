@@ -179,9 +179,12 @@ export class Game {
       };
       host.__scalebornQaStageShrine = (): void => {
         if (!this.tidegate.solved) throw new Error('Tidegate must be awakened first.');
-        this.flight.x = ECHO_SHRINE.x;
+        // Stage at an actual interactable offset, looking toward the heart.
+        // Snap only the QA camera after teleporting; ordinary travel remains smooth.
+        this.flight.x = ECHO_SHRINE.x - 6.5;
         this.flight.z = ECHO_SHRINE.z;
         this.flight.y = ECHO_SHRINE.heartY;
+        this.flight.yaw = Math.PI / 2;
         this.flight.waterTargetY = ECHO_SHRINE.heartY;
         this.flight.mode = 'underwater';
         this.flight.form = 'rideable';
@@ -190,7 +193,12 @@ export class Game {
         this.flight.speed = 0;
         this.flight.pitch = 0;
         this.flight.roll = 0;
+        this.cameraIndex = 0;
         this.coast.update(this.flight.x, this.flight.z);
+        this.coast.setUnderwater(true);
+        this.coast.updateEcho(echoPhase(this.echo, this.tidegate), this.flight.time);
+        this.dragon.update(this.flight);
+        this.updateCamera(1, true);
         this.updateHud(0.2);
       };
       host.__scalebornQaStageEchoReturn = (): void => {
