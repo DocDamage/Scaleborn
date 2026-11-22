@@ -262,6 +262,15 @@ export function makeScalebornRider():THREE.Group {
   nose.name='rider.nose';
   group.add(nose);
 
+  // Subtle expression line follows the child heroine's lower facial contour.
+  // The lip is embedded in the sculpt, not a black floating cartoon mouth.
+  const mouth=new THREE.Mesh(taperedSpine([
+    [-.062,1.222,-.109],[-.036,1.218,-.126],
+    [0,1.216,-.136],[.036,1.218,-.126],[.062,1.222,-.109],
+  ],.0055,10,28),shadowSkin);
+  mouth.name='rider.mouth';
+  group.add(mouth);
+
   // Trouser belt and coastal talisman are visible without bulky armor.
   group.add(shapedTorso([
     [.685,.178,.15,.009],[.715,.180,.150,.008],

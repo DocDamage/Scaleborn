@@ -228,3 +228,11 @@ addition to a slight downward tuck. This affects rendering only — all
 three form dimensions, wing sockets, movement and collision remain as before.
 Actual screenshot review must determine whether any folded wing intersects
 Onyx's rear legs or rider. The quality gate remains BLOCKING.
+
+### Hybrid rider subtle face animation
+The existing original child face now includes a sculpted narrow mouth line
+in her own warm palette and deterministic blink, iris, eyelid, brow and mouth
+channels in `riderExpression.ts`. These depend on existing flight/rider pose,
+not new gameplay state. Eyes keep their small almond proportions; no elf,
+adult replacement or chibi styling. The changes need real close-range WebGL
+inspection for facial mesh occlusion and animation acceptance.

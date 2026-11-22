@@ -5,6 +5,7 @@ import { FORMS } from './forms';
 import { createWingRig, poseWing } from './wingRig';
 import { dragonPose } from './animationPose';
 import { riderPose } from '../rider/pose';
+import { riderFacialPose } from '../rider/riderExpression';
 import { applyDragonScales, makeDragonScaleTextures } from './skinSurface';
 import { makeOnyxPaintedScaleMap } from './onyxPaintedScales';
 import { CHARACTER_MODEL_SOURCES, loadCharacterModel } from './characterSources';
@@ -85,6 +86,16 @@ export class DragonVisual {
   private readonly crests:THREE.Group[] = [];
   private readonly jawPivot=new THREE.Group();
   private readonly riderTail = this.rider.getObjectByName('rider.tail') as THREE.Group;
+  private readonly riderMouth = this.rider.getObjectByName('rider.mouth') as THREE.Mesh;
+  private readonly riderEyes = ([-1,1] as const).map(side => {
+    const suffix=side<0?'left':'right';
+    return {
+      white:this.rider.getObjectByName('rider.eye.'+suffix) as THREE.Mesh,
+      iris:this.rider.getObjectByName('rider.iris.'+suffix) as THREE.Mesh,
+      upperLid:this.rider.getObjectByName('rider.eyelid.upper.'+suffix) as THREE.Mesh,
+      brow:this.rider.getObjectByName('rider.brow.'+suffix) as THREE.Mesh,
+    };
+  });
   private readonly cloakMotion = new RiderCloakMotion(
     this.rider.getObjectByName('rider.travel-cloak') as THREE.Mesh);
   private readonly riderLimbs = {
@@ -365,6 +376,14 @@ export class DragonVisual {
 
     this.importedDragon?.animateDragon(pose, dt);
     const riderMotion = riderPose(state);
+    const riderFace = riderFacialPose(state,riderMotion);
+    for(const feature of this.riderEyes){
+      feature.white.scale.y=.018*riderFace.eyeOpen;
+      feature.iris.scale.y=.014*riderFace.eyeOpen;
+      feature.upperLid.position.y=-(1-riderFace.eyeOpen)*.016;
+      feature.brow.position.y=riderFace.browLift;
+    }
+    this.riderMouth.position.y=riderFace.mouthShift;
     this.cloakMotion.update(state.time,
       state.form === 'small' ? state.riderSpeed : state.speed);
     this.importedRider?.animateRider(riderMotion, Math.abs(state.riderSpeed), dt);
