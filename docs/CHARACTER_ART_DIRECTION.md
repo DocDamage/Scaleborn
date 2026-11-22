@@ -1,8 +1,10 @@
 # Scaleborn — original protagonist and dragon visual contract
 
 **Design authority:** the approved Scaleborn master codex and technical blueprint.
-**Status:** character replacement infrastructure implemented; final authored
-hero and dragon GLB meshes have not yet been produced or approved.
+**Status:** a first original, in-engine 3D sculpt for both characters is now
+implemented in real gameplay, with skeletal wing deformation and rider pose
+sockets. Final art approval, full character skeletons, facial animation and
+authored GLB exports remain incomplete.
 
 ## Onyx: the dragon
 
@@ -56,8 +58,11 @@ as Onyx.
    `public/models/characters/hero-hybrid-original.glb`.
 2. The GLB loader accepts only the above character identity metadata.
    Missing or unapproved models do not trigger a stock-model download.
-3. The old procedural meshes remain as a **temporary load-failure fallback**
-   in the unfinished development build, not as finished character art.
+3. The former ellipsoid/primitive characters have been replaced by original
+   lofted body, head, horn, fin, clothing and appendage geometry generated
+   by `organicSculpt.ts` and `heroSculpt.ts`. These are a genuine first
+   modeling pass, but still need art review and professional refinement.
+   Missing GLBs do not trigger third-party downloads or browser 404s.
 4. Simulation, actor IDs, collision, movement, save data and form changes
    stay independent of the mesh implementation.
 5. Approve final work only from **actual engine screenshots and playable
@@ -66,5 +71,28 @@ as Onyx.
 6. No final-quality or asset-replacement claim until both authored meshes
    exist, load successfully, match this design and pass animation/visual QA.
 
-The character acceptance gate is **BLOCKED** while either original mesh is
-missing. Import infrastructure and placeholder removal are separate tasks.
+The character acceptance gate remains **BLOCKED** for final visual release:
+the current original code-generated meshes must be reviewed from actual
+gameplay renders, then refined and/or rebuilt as production sculpted, fully
+rigged GLBs. A first playable sculpt is not equivalent to accepted final art.
+
+
+## Implemented first sculpt (character visual pass 1)
+
+- `src/actors/dragon/organicSculpt.ts` lofts contiguous torso, skull and
+  tapering tail surfaces with high-resolution smooth vertex normals and
+  original fin/crest and horn geometry. Surface normals are outward-facing
+  and materials retain the existing detailed, normal-mapped scale treatment.
+- `src/actors/dragon/wingRig.ts` uses a dense curved, scalloped membrane
+  with smoothly blended weights on the established three wing joints.
+  Wing tips, span, silhouette and spring are animated without changing
+  the simulation or three-form scaling.
+- `src/actors/rider/heroSculpt.ts` supplies a custom young hybrid face,
+  horns, scale accents, clothes, cloak, boots, articulated tail and named
+  arm/leg pivots for the existing `riderPose` movement states.
+- `scripts/character-capture.mjs` captures actual game frames of
+  Onyx's small, rideable and giant sizes, plus the independent rider.
+  Render quality must be reviewed, not inferred from unit tests.
+- The local-first GLB adapter is retained for future authored production
+  models, with `installed:false` until valid original exports exist.
+  No stock-model fallback or externally downloaded elf is approved.
