@@ -30,6 +30,7 @@ try {
     window.__scalebornQaAdvance(100);
   });
   await page.waitForFunction(()=>document.querySelector('#mode-name')?.textContent==='ON LAND');
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('rideable'));
   await page.waitForTimeout(500);
   await captureQaScreenshot(page, {path:'artifacts/characters-onyx-rideable.png',timeout:120000});
 
@@ -37,10 +38,11 @@ try {
   await page.evaluate(()=>window.__scalebornQaAdvance(8));
   await page.waitForFunction(()=>
     document.querySelector('#form-name')?.textContent==='SMALL COMPANION');
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('small'));
   await page.waitForTimeout(400);
   await captureQaScreenshot(page, {path:'artifacts/characters-onyx-small.png',timeout:120000});
 
-  await page.evaluate(()=>window.__scalebornQaForest());
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('rider'));
   await page.waitForFunction(()=>
     document.querySelector('#focus-name')?.textContent==='RIDER');
   await page.waitForTimeout(400);
@@ -51,6 +53,7 @@ try {
   await page.evaluate(()=>window.__scalebornQaAdvance(10));
   await page.waitForFunction(()=>
     document.querySelector('#form-name')?.textContent==='GIANT');
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('giant'));
   await page.waitForTimeout(550);
   await captureQaScreenshot(page, {path:'artifacts/characters-onyx-giant.png',timeout:120000});
 

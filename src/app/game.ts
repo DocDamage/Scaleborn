@@ -17,6 +17,7 @@ import { MIRRORFALL_IMPACT } from '../world/waterDynamics';
 import { findLakebedReviewViewpoint } from '../world/lakebedReviewViewpoint';
 import { AdaptiveResolution } from './adaptiveResolution';
 import { QaFrameCaptureGate } from './qaFrameCaptureGate';
+import { stageCharacterPortrait, poseCharacterPortraitCamera, type PortraitPose, type PortraitSubject } from './characterReviewCamera';
 import { resolveCameraOcclusion } from './cameraOcclusion';
 import { OBSTACLES } from '../world/collision';
 import { TIDEGATE, newTidegateState, stepTidegate, interactTidegate, tidegateNearby, tidegateHint } from '../world/tidegate';
@@ -45,6 +46,7 @@ export class Game {
   private readonly resolution: AdaptiveResolution;
   private readonly qaRender: boolean;
   private readonly qaFrameCaptureGate = new QaFrameCaptureGate();
+  private qaPortraitSubject: PortraitSubject | null = null;
   private readonly scene = new THREE.Scene();
   private readonly camera: THREE.PerspectiveCamera;
   private readonly coast: AzureCoast;
@@ -184,6 +186,7 @@ export class Game {
         __scalebornQaAdvance?: (frames: number) => void;
         __scalebornQaHoldNextFrame?: () => Promise<void>;
         __scalebornQaResumeFrames?: () => void;
+        __scalebornQaCharacterPortrait?: (pose: PortraitPose) => void;
         __scalebornQaLand?: () => void;
         __scalebornQaLaunch?: () => void;
         __scalebornQaWater?: () => void;
@@ -213,6 +216,18 @@ export class Game {
       // renderer while Chromium copies its completed compositor surface.
       host.__scalebornQaHoldNextFrame = () => this.qaFrameCaptureGate.holdAfterNextFrame();
       host.__scalebornQaResumeFrames = () => this.qaFrameCaptureGate.resume();
+      host.__scalebornQaCharacterPortrait = (pose: PortraitPose): void => {
+        if (!['small','rideable','giant','rider'].includes(pose)) {
+          throw new Error('Invalid character review pose');
+        }
+        this.qaPortraitSubject = stageCharacterPortrait(this.flight, pose, heightAt);
+        this.coast.update(this.flight.x,this.flight.z);
+        this.coast.setUnderwater(false);
+        this.dragon.update(this.flight);
+        this.updateCamera(1,true);
+        this.coast.updateAtmosphere(this.flight.time,this.camera.position);
+        this.updateHud(.2);
+      };
       host.__scalebornQaLand = (): void => {
         // Stage and trigger atomically: no frame-rate-dependent input race.
         this.flight.x = -555;
@@ -384,6 +399,7 @@ export class Game {
         this.updateHud(.2);
       };
       host.__scalebornQaLake = (): void => {
+        this.qaPortraitSubject = null;
         this.flight.x = GRAND_LAKE.x + 78;
         this.flight.z = GRAND_LAKE.z + 76;
         this.flight.y = GRAND_LAKE.surfaceY + 77;
@@ -789,6 +805,9 @@ export class Game {
     }
     this.camera.lookAt(mode === 'DRAGON EYE'
       ? target.clone().addScaledVector(forward, 80) : target);
+    if (this.qaPortraitSubject) {
+      poseCharacterPortraitCamera(this.camera,state,this.qaPortraitSubject,heightAt);
+    }
   }
 
   private updateHud(dt: number): void {
