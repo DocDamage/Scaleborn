@@ -50,7 +50,7 @@ export function loftDragon(sections: readonly SculptSection[],
         .94 + .05*violet);
       if (i < lengthSegments && j < radialSegments) {
         const a0 = i*(radialSegments+1)+j, b0=a0+radialSegments+1;
-        indices.push(a0,b0,a0+1,b0,b0+1,a0+1);
+        indices.push(a0,a0+1,b0,b0,a0+1,b0+1);
       }
     }
   }
@@ -113,7 +113,7 @@ export function taperedSpine(
       pos.push(p.x,p.y,p.z);uv.push(j/sides,t);
       if(i<segments&&j<sides){
         const n=i*(sides+1)+j,m=n+sides+1;
-        ids.push(n,m,n+1,m,m+1,n+1);
+        ids.push(n,n+1,m,m,n+1,m+1);
       }
     }
   }
