@@ -36,7 +36,7 @@ describe('rigged GLB dragon and rider replacement',()=>{
     assertManifestUnique();
     for (const kind of ['dragon','rider'] as const){
       const asset=getAsset(CHARACTER_MODEL_SOURCES[kind].id);
-      expect(asset.source).toBe('glb');
+      expect(asset.source).toBe('procedural');
       expect(asset.replacementPath).toBe(CHARACTER_MODEL_SOURCES[kind].file);
       expect(asset.rigId).toMatch(/rig\.(dragon|rider)\.v2/);
       expect(characterAssetUrl(kind,'/scaleborn/'))
