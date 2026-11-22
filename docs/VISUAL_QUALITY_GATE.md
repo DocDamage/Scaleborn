@@ -232,3 +232,14 @@ shoreline and underwater renders. The scene uses normal game assets,
 physics geography and camera framing, not stock or fabricated artwork.
 Review canopy fullness, branch visibility, fern coverage and alpha cutouts
 at this viewpoint before describing the new forest as visually adequate.
+
+### Camera-local meadow grass (visual pass 5 follow-up)
+
+A fixed-size `LocalGroundcover` field anchors original curved grass-blade patches
+to deterministic world grid coordinates around the active rider/dragon, rather
+than allocating millions of grass props over 4 km. The field is updated only
+after a four-cell observer movement, rejects submerged/steep/built terrain,
+preserves leaf-wind variation, and uses exactly **one instanced draw group**.
+At the high setting the field covers a wider radius with finer spacing; low
+uses less geometry. The screenshot inspection must still check distant
+population fade/popping, foliage shading, frame rate and overdraw.
