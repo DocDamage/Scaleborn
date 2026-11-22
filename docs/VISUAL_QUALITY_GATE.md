@@ -291,3 +291,13 @@ the downwelling; outside Mirrorfall the velocity is zero. This is a
 deterministic physically-inspired gameplay force, not a conserved or
 pressure-coupled fluid volume. The rendered waterfall and foam still use
 their existing visual wave approximation.
+
+### Directional swimmer wake ribbons (visual pass 6)
+
+Swimming no longer emits perfect full circles of opaque foam. A bounded
+`SurfaceWake` pool uses original, open V-shaped Kelvin-style crest geometry,
+a feathered alpha texture and the actual actor/rider heading, scale and
+movement speed. Crests expand and fade behind each moving swimmer, with the
+wake root following the shared lake/ocean wave height every frame.
+These are simple painterly wave-edge visuals, not displaced fluid volume;
+tests enforce geometry bounds, texture alpha and direction/wave alignment.
