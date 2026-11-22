@@ -175,22 +175,24 @@ const foamVert=`
   varying vec2 vFoamUv;
   void main() {
     vec4 world = modelMatrix * vec4(position, 1.0);
+    // Both freshwater and ocean surf must ride the *same* four world-space
+    // wave components and horizontal Gerstner drift as the water surface.
+    // Previously ocean foam hovered at a fixed sea level while waves passed
+    // through it; this also made spray intermittently disappear behind crests.
+    vec2 q = world.xz;
+    float w1 = dot(q, normalize(vec2(.87,.49))) * .16 - uTime * .95;
+    float w2 = dot(q, normalize(vec2(-.23,.97))) * .37 - uTime * 1.47;
+    float w3 = dot(q, normalize(vec2(.64,-.76))) * .76 - uTime * 2.15;
+    float w4 = dot(q, normalize(vec2(.18,.98))) * .08 - uTime * .62;
+    world.y += .53*sin(w1) + .24*sin(w2) + .10*sin(w3) + .64*sin(w4);
     if (uLakeStrip > 0.5) {
-      // Use exactly the freshwater surface's four wind waves, directional
-      // horizontal drift and localized waterfall displacement. Shore foam
-      // is a moving overlay, not a bright detached static white hoop.
-      vec2 q = world.xz;
-      float w1 = dot(q, normalize(vec2(.87,.49))) * .16 - uTime * .95;
-      float w2 = dot(q, normalize(vec2(-.23,.97))) * .37 - uTime * 1.47;
-      float w3 = dot(q, normalize(vec2(.64,-.76))) * .76 - uTime * 2.15;
-      float w4 = dot(q, normalize(vec2(.18,.98))) * .08 - uTime * .62;
-      world.y += .53*sin(w1) + .24*sin(w2) + .10*sin(w3) + .64*sin(w4);
+      // Freshwater alone receives the shared waterfall impact ripple.
       float plungeD = length(q-uImpactWorld);
       world.y += exp(-plungeD*.038)*.72*
         sin(plungeD*.225-uTime*1.63);
-      world.x += .16*cos(w1) + .05*cos(w2);
-      world.z += .12*cos(w1) + .07*cos(w4);
     }
+    world.x += .16*cos(w1) + .05*cos(w2);
+    world.z += .12*cos(w1) + .07*cos(w4);
     vWorld = world.xyz;
     vFoamUv = uv;
     vec4 mvPosition = viewMatrix * world;
@@ -205,19 +207,25 @@ const foamFrag=`
   varying vec3 vWorld;
   varying vec2 vFoamUv;
   void main() {
-    // White surf belongs on top of the water. A submerged viewer should
-    // not see the back of the foam ribbon as a bright polygon horizon.
+    // Shore-break foam is surface-only; it must never form a submerged ring.
     if (cameraPosition.y < vWorld.y-.35) discard;
     float noiseA=sin(vWorld.x*.41+uTime*1.3+sin(vWorld.z*.31))*
                  sin(vWorld.z*.57-uTime*.83+sin(vWorld.x*.29));
     float turbulence=.5+.5*noiseA;
     float wisps=pow(turbulence,1.9);
-    vec3 foam=mix(vec3(.55,.78,.75),vec3(.97,.99,.93),wisps);
-    float coastalFade=sin(clamp(vFoamUv.y,0.0,1.0)*3.1415926);
-    float striped=pow(max(0.0,sin(vFoamUv.x*300.0-uTime*1.36
+    // Width coordinates are explicitly authored for ocean ribbons too.
+    // Fade both edges to avoid white rectangular coastline strips.
+    float coastalFade=pow(max(0.0,
+      sin(clamp(vFoamUv.y,0.0,1.0)*3.1415926)),1.35);
+    float oceanCrest=pow(max(0.0,sin(vWorld.x*.85+vWorld.z*.59-
+      uTime*2.8+noiseA*2.2)),2.0);
+    float lakeBands=pow(max(0.0,sin(vFoamUv.x*300.0-uTime*1.36
       +noiseA*2.7)),2.0);
-    float pulse=mix(1.0,coastalFade*(.3+.7*striped),uLakeStrip);
-    gl_FragColor=vec4(foam,clamp((.07+.46*wisps)*pulse,0.0,.61));
+    float pulse=mix(.17+.83*oceanCrest,.25+.75*lakeBands,uLakeStrip);
+    vec3 foam=mix(vec3(.55,.78,.75),vec3(.97,.99,.93),
+      clamp(wisps*.75+oceanCrest*.25,0.0,1.0));
+    float alpha=coastalFade*(.055+.47*wisps)*pulse;
+    gl_FragColor=vec4(foam,clamp(alpha,0.0,.58));
     #include <fog_fragment>
   }
 `;

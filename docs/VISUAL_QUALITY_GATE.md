@@ -544,3 +544,18 @@ The independent Mirrorfall Lake mesh and collision/wave equations are
 unchanged. This is *not* FFT ocean synthesis or volumetric water;
 capture real coastline, flight and waterline views to validate seams
 and check increased vertex processing on desktop hardware.
+
+### Wave-coupled coastal surf and breaking foam (ocean visual pass)
+
+Streamed ocean shoreline ribbons now carry explicit cross-shore UV coordinates
+and sit only 0.08 m above the undisplaced sea datum. Their vertex shader
+follows the same four wind-wave bands **and** horizontal drift as the moving
+ocean surface; the lake shoreline retains its separate plunge-pool ripple.
+Both water bodies use a tapered foam-width envelope, with world-space
+noise and animated crest break-up to avoid a flat full-width white strip.
+This corrects static ocean-foam shelves cutting through animated waves;
+it is an art-directed breaking-surf approximation, not shallow-water CFD.
+
+Review actual moving browser coastline frames for land intersection,
+alpha-sorted wave overlap, and offshore ribbon continuity. Source and
+regression contracts do not replace screenshot inspection or GPU testing.
