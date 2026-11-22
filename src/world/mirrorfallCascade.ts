@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { rng } from '../core/random';
 import { AZURE_SEED } from './terrain';
 import { GRAND_LAKE, MIRRORFALL, lakeContains } from './highlandLake';
-import { sampleWaterWaves } from './waterWaves';
+import { waterWaveOffsetAt } from './waterWaves';
 import { MIRRORFALL_IMPACT } from './waterDynamics';
 import { PlungePoolFoam } from './plungePoolFoam';
 import { makeSprayStreakGeometry, makeSprayStreakTexture } from './sprayStreak';
@@ -18,7 +18,9 @@ const gravity=9.81;
 export function waterfallSpraySurfaceY(x:number,z:number,time:number):number {
   if (![x,z,time].every(Number.isFinite) || !lakeContains(x,z))
     return GRAND_LAKE.surfaceY;
-  return sampleWaterWaves(x,z,time).surfaceY;
+  // Only height is needed here: the normal/slope finite differences in
+  // sampleWaterWaves would multiply trigonometric work by five per drop.
+  return GRAND_LAKE.surfaceY + waterWaveOffsetAt(x,z,time);
 }
 
 const vertex=`
