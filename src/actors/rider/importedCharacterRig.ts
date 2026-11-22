@@ -204,6 +204,19 @@ export class ImportedCharacterRig {
         bone.rotateX(angle);
       }
     }
+    // Maintain fallback GLB parity with the original procedural rider.
+    // Apply thigh/knee abduction after restoring named bones' rest-space
+    // quaternions. Clips intentionally remain authoritative where supplied.
+    const spread: ReadonlyArray<readonly [readonly string[], number]> = [
+      [['LeftUpLeg', 'Thigh_L', 'LeftUpperLeg'], -pose.legSpread],
+      [['RightUpLeg', 'Thigh_R', 'RightUpperLeg'], pose.legSpread],
+      [['LeftLeg', 'LeftCalf', 'Shin_L'], -pose.kneeSpread],
+      [['RightLeg', 'RightCalf', 'Shin_R'], pose.kneeSpread],
+    ];
+    for(const [names, angle] of spread) {
+      const bone=this.findBone(names);
+      if(bone && this.restRotations.has(bone)) bone.rotateZ(angle);
+    }
   }
 
   dispose(): void {

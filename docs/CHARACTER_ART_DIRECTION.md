@@ -236,3 +236,12 @@ channels in `riderExpression.ts`. These depend on existing flight/rider pose,
 not new gameplay state. Eyes keep their small almond proportions; no elf,
 adult replacement or chibi styling. The changes need real close-range WebGL
 inspection for facial mesh occlusion and animation acceptance.
+
+### Imported original heroine rig fallback — mounted thigh/knee parity
+An authored GLB with supported named thigh/calves can now receive the same
+rideable flank-abduction and giant kneeling pose as the original runtime
+procedural rider when its source clip is unavailable. Pose is restored in
+the bone's rest quaternion before local X and Z rotations. Existing animation
+clips remain preferred and identity/height normalization is unchanged. This
+improves future authored Blender and Unreal asset interchange without
+introducing any donor character or changing current fallback visuals.
