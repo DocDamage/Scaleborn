@@ -41,7 +41,7 @@ describe('bounded rider-height meadow detail',()=>{
         low.mesh.instanceMatrix.count);
       expect(high.mesh.geometry.getAttribute('position').count).toBeGreaterThan(
         low.mesh.geometry.getAttribute('position').count);
-      expect(high.mesh.material.customProgramCacheKey())
+      expect((high.mesh.material as THREE.MeshStandardMaterial).customProgramCacheKey())
         .toContain('groundcover-wind');
       low.update(GRAND_LAKE.x,GRAND_LAKE.z,1);
       expect(low.mesh.count).toBe(0);
