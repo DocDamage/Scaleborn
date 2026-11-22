@@ -10,7 +10,7 @@ const membraneMaterial = new THREE.MeshStandardMaterial({
   side: THREE.DoubleSide, vertexColors: true, roughness: 0.81, metalness: 0.05,
 });
 const sparMaterial = new THREE.MeshStandardMaterial({
-  color: 0x3c6972, roughness: 0.63, metalness: 0.07,
+  color: 0x504a79, roughness: 0.63, metalness: 0.07,
 });
 
 export interface WingRig {
@@ -61,8 +61,8 @@ export function createWingRig(side: -1 | 1): WingRig {
       // Hand-painted violet iridescence and darker wing-finger striations.
       const dusk=.5+.5*Math.sin(u*10.8+v*16.3);
       colors.push((.16+.07*dusk+.045*vein)*center,
-        (.31+.035*dusk+.05*vein)*center,
-        (.39+.11*dusk+.07*vein)*center);
+        (.23+.035*dusk+.04*vein)*center,
+        (.44+.13*dusk+.09*vein)*center);
       if(u<=.43) {
         const t=u/.43;
         joints.push(0,1,0,0);weights.push(1-t,t,0,0);
