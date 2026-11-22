@@ -5,7 +5,7 @@ import { DragonVisual } from '../src/actors/dragon/visual';
 import { newFlightState } from '../src/actors/dragon/flight';
 import { riderPose } from '../src/actors/rider/pose';
 
-describe('original hybrid girl's original hands and mounted reins articulation',()=>{
+describe("original hybrid girl's original hands and mounted reins articulation",()=>{
   it('sculpts four natural curved fingers and a thumb into both wrists',()=>{
     const rider=makeScalebornRider();
     try{
