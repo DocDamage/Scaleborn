@@ -33,7 +33,9 @@ function leafTexture(): THREE.DataTexture {
       bytes[i] = Math.round(121 + vein * 22 + (1 - v) * 8);
       bytes[i + 1] = Math.round(168 + vein * 10 - v * 10);
       bytes[i + 2] = Math.round(104 + vein * 12);
-      bytes[i + 3] = inside ? 255 : 0;
+      // Antialiased lobes instead of hard cardboard edges.
+      const feather=Math.max(0,Math.min(1,(edge-Math.abs(u))*7.5));
+      bytes[i + 3] = inside ? Math.round(255*feather) : 0;
     }
   }
   const texture = new THREE.DataTexture(bytes, size, size, THREE.RGBAFormat);
@@ -69,7 +71,7 @@ function addLeaf(vertices: number[], uv: number[],
 }
 
 /** Four distinct branch distributions share one high-density leaf-card material. */
-function treePrototypes(seed: number): {wood: THREE.BufferGeometry; foliage: THREE.BufferGeometry} {
+function treePrototypes(seed: number, quality: 'high'|'low'): {wood: THREE.BufferGeometry; foliage: THREE.BufferGeometry} {
   const rand = rng(seed);
   const wood: THREE.BufferGeometry[] = [];
   const leaves: number[] = [], uv: number[] = [];
@@ -84,12 +86,12 @@ function treePrototypes(seed: number): {wood: THREE.BufferGeometry; foliage: THR
     const end = new THREE.Vector3(Math.cos(a) * distance, y + 1.7 + rand() * 1.6,
       Math.sin(a) * distance);
     wood.push(taperBranch(start, end, 0.18 + rand() * .11, 0.035));
-    for (let k = 0; k < 19; k++) {
+    for (let k = 0; k < (quality==='high'?42:30); k++) {
       const t = 0.33 + rand() * 0.83;
       const p = start.clone().lerp(end,t);
       p.x += (rand()-.5) * 1.75; p.y += (rand()-.5) * 2.5;
       p.z += (rand()-.5) * 1.75;
-      addLeaf(leaves,uv,p,a+rand()*6.28,1.10+rand()*1.32,0.43+rand()*0.55);
+      addLeaf(leaves,uv,p,a+rand()*6.28,0.48+rand()*0.64,0.20+rand()*0.25);
     }
   }
   const combined = mergeGeometries(wood, false);
@@ -153,7 +155,10 @@ export class PainterlyNature {
     const trees: PlantSite[][]=[[],[],[],[]];
     const grasses: PlantSite[] = [], rocks: PlantSite[] = [];
 
-    const candidates = quality === 'low' ? 2600 : 15500;
+    const overlook = { x:GRAND_LAKE.x+258, z:GRAND_LAKE.z+320 };
+    const isOverlook=(x:number,z:number):boolean=>
+      Math.hypot(x-overlook.x,z-overlook.z)<35;
+    const candidates = quality === 'low' ? 4400 : 23000;
     for(let i=0;i<candidates;i++){
       const x=(rand()-.5)*3750, z=(rand()-.5)*3750;
       const y=heightAt(x,z);
@@ -162,12 +167,12 @@ export class PainterlyNature {
       if(LANDMARKS.some(l=>Math.hypot(l.x-x,l.z-z)<(l.id==='azure.harbor'?120: l.id==='azure.tidegate'?24:28)))continue;
       const density=fbm(x*.0037,z*.0037,AZURE_SEED+339,3);
       const shore=Math.abs(lakeShoreDistance(x,z))<110;
-      if(rand()<.23 && density>-0.34 && y>water+2.4 && !shore) {
+      if(rand()<.23 && density>-0.34 && y>water+2.4 && !shore && !isOverlook(x,z)) {
         const type=Math.floor(rand()*4);
         trees[type]!.push({x,y,z,scale:0.85+rand()*0.96,hue:rand()});
       } else {
         if(rand()<.72)grasses.push({x,y:y+.04,z,scale:0.34+rand()*0.9,hue:rand()});
-        if(rand()<.052)rocks.push({x,y,z,scale:1+rand()*5,hue:rand()});
+        if(rand()<.035)rocks.push({x,y,z,scale:.55+rand()*2.75,hue:rand()});
       }
     }
     // Dedicated shoreline forest: natural density where lake banks, falls,
@@ -189,21 +194,38 @@ export class PainterlyNature {
         const slope=(Math.abs(heightAt(x+step,z)-heightAt(x-step,z))+
           Math.abs(heightAt(x,z+step)-heightAt(x,z-step)))/(2*step);
         // Root trees on actual stable slopes, not the sheer waterfall face.
-        if(slope<1.05) {
+        if(slope<1.05 && !isOverlook(x,z)) {
           trees[species]!.push({x,y,z,scale:1.10+rand()*1.15,hue:rand()});
         }
       }else if(pick<.57){
         grasses.push({x,y:y+.06,z,scale:.65+rand()*.82,hue:rand()});
       }else if(pick<.65){
-        rocks.push({x,y,z,scale:1.3+rand()*7.2,hue:rand()});
+        rocks.push({x,y,z,scale:.85+rand()*2.9,hue:rand()});
       }
+    }
+    // Close-range ground-cover carpet along navigable lake overlooks.
+    // Finite instanced blade count: no per-frame geometry allocations.
+    const coverSamples=quality==='low'?5200:15500;
+    for(let i=0;i<coverSamples;i++){
+      const angle=rand()*Math.PI*2;
+      const radii=.99+rand()*.55;
+      const x=GRAND_LAKE.x+Math.cos(angle)*GRAND_LAKE.radiusX*radii;
+      const z=GRAND_LAKE.z+Math.sin(angle)*GRAND_LAKE.radiusZ*radii;
+      const y=heightAt(x,z), waterY=waterSurfaceAt(x,z);
+      if(y<waterY+1.0||y>186)continue;
+      const e=3.0;
+      const slope=Math.hypot(heightAt(x+e,z)-heightAt(x-e,z),
+        heightAt(x,z+e)-heightAt(x,z-e))/(2*e);
+      if(slope>1.12)continue;
+      const heightBias=isOverlook(x,z) ? 1.25 : .70;
+      grasses.push({x,y:y+.04,z,scale:heightBias*(.65+rand()*.82),hue:rand()});
     }
     const woodMat=makeBarkMaterial(quality);
     const rockMat=makeRockMaterial(quality);
     const leafTex=leafTexture();
     const leafMat=new THREE.MeshStandardMaterial({
       color:0x8ebb79,map:leafTex,roughness:.88,metalness:0,
-      side:THREE.DoubleSide,alphaTest:0.42,depthWrite:true,
+      side:THREE.DoubleSide,alphaTest:0.28,depthWrite:true,
     });
     const grassMat=new THREE.MeshStandardMaterial({
       color:0xb8c99c,roughness:.94,metalness:0,side:THREE.DoubleSide
@@ -231,7 +253,7 @@ export class PainterlyNature {
 
     for(let species=0;species<4;species++){
       const sites=trees[species]!;
-      const proto=treePrototypes(AZURE_SEED+species*439);
+      const proto=treePrototypes(AZURE_SEED+species*439,quality);
       const wood=new THREE.InstancedMesh(proto.wood,woodMat,sites.length);
       const crown=new THREE.InstancedMesh(proto.foliage,leafMat,sites.length);
       sites.forEach((item,i)=>{
@@ -268,9 +290,9 @@ export class PainterlyNature {
 
     const rock=new THREE.InstancedMesh(irregularRock(),rockMat,rocks.length);
     rocks.forEach((p,i)=>{
-      dummy.position.set(p.x,p.y+p.scale*.12,p.z);
+      dummy.position.set(p.x,p.y-p.scale*.11,p.z);
       dummy.rotation.set(rand()*2,rand()*6.28,rand()*.8);
-      dummy.scale.set(p.scale,p.scale*(.33+rand()*.35),p.scale*(.65+rand()*.45));
+      dummy.scale.set(p.scale,p.scale*(.27+rand()*.28),p.scale*(.55+rand()*.35));
       dummy.updateMatrix();rock.setMatrixAt(i,dummy.matrix);
     });
     rock.name='terrain.azure.rounded-pbr-boulders';
