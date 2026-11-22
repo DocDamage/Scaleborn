@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { GRAND_LAKE, lakeContains } from '../src/world/highlandLake';
 import { MIRRORFALL_IMPACT } from '../src/world/waterDynamics';
-import { MirrorfallCascade } from '../src/world/mirrorfallCascade';
+import { MirrorfallCascade, waterfallSpraySurfaceY } from '../src/world/mirrorfallCascade';
 import { PlungePoolFoam } from '../src/world/plungePoolFoam';
 import { makeSprayStreakGeometry, makeSprayStreakTexture } from '../src/world/sprayStreak';
 
@@ -76,7 +76,8 @@ describe('Mirrorfall impact foam and spray rendering',()=>{
       lowMesh.getMatrixAt(0,m);
       m.decompose(center,rotation,scale);
       expect(Number.isFinite(center.x)).toBe(true);
-      expect(center.y).toBeGreaterThanOrEqual(GRAND_LAKE.surfaceY);
+      expect(center.y).toBeGreaterThanOrEqual(
+        waterfallSpraySurfaceY(center.x,center.z,1.05)+.10);
       expect(scale.y).toBeGreaterThan(scale.x);
       expect((pool as THREE.Mesh<THREE.BufferGeometry,THREE.ShaderMaterial>)
         .material.uniforms.uTime?.value).toBe(1.05);
