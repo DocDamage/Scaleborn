@@ -4,7 +4,7 @@ import { FORMS } from '../src/actors/dragon/forms';
 import { heightAt } from '../src/world/terrain';
 import { steerGroundThreat } from '../src/combat/houndNavigation';
 import {
-  GLOAM_SPAWNS, castDragonFire, castRiderSigil, castBondSurge, combatNearby, combatRemaining,
+  GLOAM_SPAWNS, castDragonFire, castRiderSigil, castMountedRiderSigil, castBondSurge, combatNearby, combatRemaining,
   newCombatState, stepCombat,
 } from '../src/combat/combat';
 
@@ -190,6 +190,46 @@ describe('G4 deterministic encounter and dragon breath', () => {
     s.time = 0.8;
     expect(castRiderSigil(c, s).ok).toBe(true);
     expect(c.sigilSequence).toBe(2);
+  });
+
+  it('casts a mounted Tidal Sigil using Focus without interrupting dragon fire', () => {
+    const c = newCombatState(), s = groundDragon();
+    targetAhead(c, s, 13);
+    const foe = c.hounds[0]!;
+    expect(castMountedRiderSigil(c, s).ok).toBe(true);
+    expect(foe.hp).toBeLessThan(foe.maxHp);
+    expect(c.focus).toBe(77);
+    expect(c.ember).toBe(100);
+    expect(c.lastSigil?.groundFollowing).toBe(true);
+    expect(c.lastSigil?.range).toBe(38);
+    expect(c.lastSigil?.direction.x).toBeCloseTo(1, 5);
+    expect(castMountedRiderSigil(c, s).ok).toBe(false);
+    expect(c.sigilSequence).toBe(1);
+    expect(castDragonFire(c, s).ok).toBe(true);
+    expect(c.ember).toBe(78);
+    s.time = .8;
+    expect(castMountedRiderSigil(c, s).ok).toBe(true);
+    expect(c.sigilSequence).toBe(2);
+  });
+
+  it('rejects invalid mounted casts and does not auto-hit from high flight', () => {
+    const c = newCombatState(), s = groundDragon();
+    s.form = 'small';
+    expect(castMountedRiderSigil(c, s).ok).toBe(false);
+    s.form = 'rideable'; s.controlTarget = 'rider';
+    expect(castMountedRiderSigil(c, s).ok).toBe(false);
+    s.controlTarget = 'dragon'; s.mode = 'underwater';
+    expect(castMountedRiderSigil(c, s).ok).toBe(false);
+    s.mode = 'surface';
+    expect(castMountedRiderSigil(c, s).ok).toBe(false);
+    expect(c.focus).toBe(100);
+    s.mode = 'air'; s.y += 25;
+    targetAhead(c, s, 13);
+    const target = c.hounds[0]!;
+    expect(castMountedRiderSigil(c, s).ok).toBe(true);
+    expect(target.hp).toBe(target.maxHp);
+    expect(c.lastSigil?.groundFollowing).toBe(false);
+    expect(c.focus).toBe(77);
   });
 
   it('requires a real grounded dragon/rider pairing to spend both bond resources', () => {

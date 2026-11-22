@@ -202,8 +202,14 @@ export function castDragonFire(c: CombatState, s: FlightState): InteractionResul
 }
 
 /** Rider's focused tide sigil uses her own heading and reserve, not dragon Ember. */
-export function castRiderSigil(c: CombatState, s: FlightState): InteractionResult {
-  if (s.controlTarget !== 'rider' || s.form !== 'small') {
+export function castRiderSigil(c: CombatState, s: FlightState, mounted = false): InteractionResult {
+  if (mounted && (s.form === 'small' || s.controlTarget !== 'dragon')) {
+    return { ok: false, message: 'Mount Onyx to cast a mounted Tidal Sigil.' };
+  }
+  if (mounted && s.mode !== 'air' && s.mode !== 'ground') {
+    return { ok: false, message: 'Mounted Tidal Sigils require flight or solid ground.' };
+  }
+  if (!mounted && (s.controlTarget !== 'rider' || s.form !== 'small')) {
     return { ok: false, message: 'Switch to the dismounted rider to cast a sigil.' };
   }
   if (s.transition) return { ok: false, message: 'Finish the dragon maneuver first.' };
@@ -212,25 +218,37 @@ export function castRiderSigil(c: CombatState, s: FlightState): InteractionResul
 
   c.focus -= 23;
   c.sigilReadyAt = s.time + 0.67;
-  const direction = { x: Math.sin(s.riderYaw), y: 0, z: -Math.cos(s.riderYaw) };
-  const origin = {
-    x: s.riderX + direction.x * 0.4,
+  const yaw = mounted ? s.yaw : s.riderYaw;
+  const pitch = mounted ? s.pitch : 0;
+  const cos = Math.cos(pitch);
+  const direction = { x: Math.sin(yaw) * cos, y: Math.sin(pitch),
+    z: -Math.cos(yaw) * cos };
+  const scale = FORMS[s.form].visualScale;
+  const mountSeatY = .63 * scale - .66 - .055;
+  const origin = mounted ? {
+    x: s.x + direction.x * scale,
+    y: s.y + mountSeatY + 1.06 + direction.y * scale,
+    z: s.z + direction.z * scale,
+  } : {
+    x: s.riderX + direction.x * .4,
     y: s.riderY + 1.28,
-    z: s.riderZ + direction.z * 0.4,
+    z: s.riderZ + direction.z * .4,
   };
-  const arcHeight = 1.15;
-  c.lastSigil = { id: ++c.sigilSequence, origin, direction, range: 29, arcHeight,
-    groundFollowing: s.riderMode === 'ground' };
+  const range = mounted ? 38 : 29;
+  const arcHeight = mounted ? 1.15 + FORMS[s.form].standHeight * .2 : 1.15;
+  const groundFollowing = mounted ? s.mode === 'ground' : s.riderMode === 'ground';
+  const referenceY = mounted ? heightAt(s.x, s.z) : heightAt(s.riderX, s.riderZ);
+  c.lastSigil = { id: ++c.sigilSequence, origin, direction, range, arcHeight,
+    groundFollowing };
   let hits = 0;
   for (const h of c.hounds) {
     if (h.hp <= 0) continue;
     const target = { x: h.x, y: h.y + 1.2, z: h.z };
     const dx = target.x - origin.x, dy = target.y - origin.y, dz = target.z - origin.z;
-    const terrainRise = s.riderMode === 'ground'
-      ? heightAt(h.x, h.z) - heightAt(s.riderX, s.riderZ) : 0;
+    const terrainRise = groundFollowing ? heightAt(h.x, h.z) - referenceY : 0;
     const localDy = dy - terrainRise;
     const projected = dx * direction.x + localDy * direction.y + dz * direction.z;
-    if (projected < 0 || projected > 29) continue;
+    if (projected < 0 || projected > range) continue;
     const radial = Math.sqrt(Math.max(0, dx * dx + localDy * localDy + dz * dz - projected * projected));
     if (radial > 1.1 + projected * 0.065 || !fireLineClear(origin, target, arcHeight)) continue;
     h.hp = Math.max(0, h.hp - 31);
@@ -243,6 +261,15 @@ export function castRiderSigil(c: CombatState, s: FlightState): InteractionResul
   }
   if (hits > 0) grantGloamVictory(c);
   return { ok: true, message: hits ? 'Tidal sigil struck ' + hits + ' enemy.' : 'The sigil flies forward.' };
+}
+
+/**
+ * T: the unscaled heroine casts using Focus from Onyx's upper-back seat.
+ * Shared cooldown and hit logic prevent mounting from bypassing sigil rules.
+ * Aerial shots use true pitch and can miss foes below the dragon.
+ */
+export function castMountedRiderSigil(c: CombatState, s: FlightState): InteractionResult {
+  return castRiderSigil(c, s, true);
 }
 
 /** X: both companions must cooperate on dry land for a close-range bond surge. */

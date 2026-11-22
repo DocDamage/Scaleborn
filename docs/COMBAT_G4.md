@@ -67,3 +67,14 @@ underwater restrictions are unchanged. The textures, geometry and runtime
 pool remain bounded and disposable.
 
 This is a better in-game effect, not an authored final VFX sequence.
+
+### Mounted Tidal Sigil — playable G4 extension
+
+T or the controls-panel button casts the existing heroine's Tidal Sigil
+from either rideable or giant Onyx, using **Focus**, not Ember. The original
+R fire attack is unchanged. Mounted and dismounted sigils share cooldown,
+Focus reserves, directional checks, terrain occlusion and hit registration.
+Grounded shots follow terrain; airborne shots use pitch and can miss.
+Swimming, small-form, rider-control and transition exploits are rejected.
+The existing combat HUD reports remaining Focus beside Ember while mounted.
+This extends G4 combat but is not a complete mounted melee or lock-on system.

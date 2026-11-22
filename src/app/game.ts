@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { DragonVisual } from '../actors/dragon/visual';
-import { newCombatState, castDragonFire, castRiderSigil, castBondSurge, stepCombat, combatNearby, combatRemaining } from '../combat/combat';
+import { newCombatState, castDragonFire, castRiderSigil, castMountedRiderSigil, castBondSurge, stepCombat, combatNearby, combatRemaining } from '../combat/combat';
 import { CombatVisual } from '../combat/visuals';
 import { newFlightState, stepFlight, requestDragonForm, toggleLanding, type InteractionResult } from '../actors/dragon/flight';
 import { FORMS, FORM_ORDER, type DragonForm } from '../actors/dragon/forms';
@@ -621,6 +621,9 @@ export class Game {
     requireElement<HTMLButtonElement>('#fire-button').addEventListener('click', () => {
       if (!this.paused) this.fireAction();
     });
+    requireElement<HTMLButtonElement>('#mounted-sigil-button').addEventListener('click', () => {
+      if (!this.paused) this.mountedSigilAction();
+    });
     requireElement<HTMLButtonElement>('#bond-button').addEventListener('click', () => {
       if (!this.paused) this.bondAction();
     });
@@ -688,6 +691,11 @@ export class Game {
   private fireAction(): void {
     const result = this.flight.controlTarget === 'rider'
       ? castRiderSigil(this.combat, this.flight) : castDragonFire(this.combat, this.flight);
+    if (!result.ok) this.notify(result);
+  }
+
+  private mountedSigilAction(): void {
+    const result = castMountedRiderSigil(this.combat, this.flight);
     if (!result.ok) this.notify(result);
   }
 
@@ -830,7 +838,9 @@ export class Game {
       this.combat.focus < this.combat.maxFocus - 0.5;
     this.combatHud.hidden = !combatActive;
     this.combatHud.dataset.actor = rider ? 'rider' : 'dragon';
-    this.combatEnergyLabel.textContent = rider ? 'RIDER FOCUS' : 'EMBER';
+    this.combatEnergyLabel.textContent = rider ? 'RIDER FOCUS'
+      : this.flight.form === 'small' ? 'EMBER'
+        : 'EMBER · RIDER FOCUS ' + Math.round(this.combat.focus);
     this.combatEmberBar.setAttribute('aria-label', rider ? 'Rider focus' : 'Dragon Ember');
     const hpPercent = Math.round(100 * this.combat.hp / this.combat.maxHp);
     const energy = rider ? this.combat.focus : this.combat.ember;
@@ -959,6 +969,7 @@ export class Game {
       if (this.input.take('submerge')) this.diveAction();
       if (this.input.take('interact')) this.interactWithRune();
       if (this.input.take('fire')) this.fireAction();
+      if (this.input.take('mountedSigil')) this.mountedSigilAction();
       if (this.input.take('bond')) this.bondAction();
       for (const form of FORM_ORDER) {
         if (this.input.take(form)) this.setForm(form);
