@@ -28,9 +28,14 @@ describe('Mirrorfall erosion and continuous terrain projection', () => {
     const fromWest=terrainUvAt(x,y,z);
     const fromEast=terrainUvAt(x,y,z);
     expect(fromWest).toEqual(fromEast);
-    const near=makeTerrainTile(0,2,tileSpec(0,2,0,2),
+    const originX=-2, originZ=2;
+    const nearSpec=tileSpec(originX,originZ,0,2);
+    const farSpec=tileSpec(originX,originZ,1,2);
+    expect(nearSpec.segments).toBe(64);
+    expect(farSpec.segments).toBe(16);
+    const near=makeTerrainTile(0,2,nearSpec,
       new THREE.MeshBasicMaterial(),new THREE.MeshBasicMaterial());
-    const far=makeTerrainTile(1,2,tileSpec(0,2,1,2),
+    const far=makeTerrainTile(1,2,farSpec,
       new THREE.MeshBasicMaterial(),new THREE.MeshBasicMaterial());
     try {
       const meshA=near.group.getObjectByName('terrain.azure.coast') as THREE.Mesh;
@@ -40,8 +45,8 @@ describe('Mirrorfall erosion and continuous terrain projection', () => {
       const posA=meshA.geometry.getAttribute('position');
       const posB=meshB.geometry.getAttribute('position');
       // Check matching border endpoints in projected world-space.
-      const widthA=tileSpec(0,2,0,2).segments;
-      const widthB=tileSpec(0,2,1,2).segments;
+      const widthA=nearSpec.segments;
+      const widthB=farSpec.segments;
       for(const row of [0,Math.floor(widthA/2),widthA]){
         const colA=row*(widthA+1)+widthA;
         const rowB=row/widthA*widthB;
