@@ -291,6 +291,9 @@ export class Game {
       host.__scalebornQaForest = (): void => {
         // Ground-level visual acceptance, staged next to a real seeded oak.
         // This uses an actual instanced tree from the world, not a test prop.
+        // Expand visibility once for seed-stable oak selection; the next
+        // actual gameplay frame restores camera-aware visibility filtering.
+        this.coast.animate(this.flight.time, GRAND_LAKE.x, this.flight.y, GRAND_LAKE.z);
         const grove=this.scene.getObjectByName('vegetation.azure.pbr-tree-wood.0');
         if (!(grove instanceof THREE.InstancedMesh) || grove.count===0) {
           throw new Error('Oak forest not present in rendered scene');
@@ -815,11 +818,14 @@ export class Game {
     } else this.accumulator = 0;
     const focus = this.focusPosition();
     this.coast.setUnderwater(this.isWaterborne());
-    this.coast.animate(this.flight.time, focus.x, focus.y, focus.z, this.flight);
-    this.coast.updateTidegate(this.tidegate, this.flight.time, this.echo.attuned);
-    this.coast.updateEcho(echoPhase(this.echo, this.tidegate), this.flight.time);
+    // Resolve the real chase/wide/orbit camera before choosing visible
+    // vegetation, so flight turns do not leave a whole world of leaf cards
+    // behind the player in the CPU renderer or dedicated GPU draw pass.
     this.dragon.update(this.flight);
     this.updateCamera(elapsed);
+    this.coast.animate(this.flight.time, focus.x, focus.y, focus.z, this.flight, this.camera);
+    this.coast.updateTidegate(this.tidegate, this.flight.time, this.echo.attuned);
+    this.coast.updateEcho(echoPhase(this.echo, this.tidegate), this.flight.time);
     const immersion = this.coast.updateAtmosphere(this.flight.time, this.camera.position);
     this.waterTint.hidden = immersion < .06;
     this.waterTint.style.opacity = immersion.toFixed(2);
