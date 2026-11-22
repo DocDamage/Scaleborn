@@ -137,3 +137,67 @@ Swimming wakes are now generated around the controlled dragon and independent ri
 - The low preset uses fewer caustic mesh vertices; shader and lake physics
   remain present in both modes. Tests verify terrain alignment, shoreline
   containment, independent foam materials and animation uniforms.
+
+### Depth-aware underwater optics (visual pass 4)
+
+- Atmospheric color, exposure and fog strength respond to the **actual camera**
+  depth below the collision-matched freshwater or seawater level. Fog transitions
+  smoothly across the waterline rather than snapping when the player's
+  swimming animation changes state; ocean and lake retain separate palettes.
+- Sunlight attenuates with depth but remains navigable through Mirrorfall's
+  full 148-meter basin. A deterministic crossed-card shaft field is confined
+  to the lake and fades out well above the deep floor. This is screen-facing
+  transparent geometry approximating visible light shafts, not volumetric
+  raymarching, scattering integration or physically correct transmission.
+- The new browser visual capture includes a third **actual submerged view**
+  (`artifacts/mirrorfall-underwater-browser.png`) plus the existing overhead
+  and shoreline views. Hardware GPU profiling and human image review remain
+  mandatory before claiming final art quality.
+
+### Actual-screenshot geometric correction (follow-up to visual pass 4)
+
+A review of the **actual Chromium overhead and shoreline images** revealed broad,
+smooth geometric walls and UV-stretched terrain at the lake's escarpment,
+despite the earlier successful build and screenshot tests. Passing rendering
+tests must not be mistaken for passing the artistic visual-quality gate.
+
+- The flanking lake-bank heightfield now uses a broader eroded cliff ramp;
+  the narrow central waterfall cleft stays steep. The same deterministic
+  heightfield still drives terrain mesh, collision, and lake bathymetry.
+- `terrainUvAt` projects painted surface maps in shared world coordinates
+  while reserving geological cliff masks for a later triplanar material shader. This
+  removes the previous single texture repetition across each 250 m tile,
+  and preserves matched UV coordinates across LOD boundaries.
+- Low-preset geological vertex colors receive layered strata rather than a
+  flat gray slope. Seeded PBR scree uses the existing instanced boulder mesh
+  and gently vegetated shelves, without introducing visible debug primitives.
+- GPU-frame benchmarks and human review of new screenshots remain mandatory;
+  generated textures and procedural rocks are still not photogrammetric assets.
+
+### Underwater-facing water surface and foam correction
+
+The initial real underwater screenshot exposed a dark solid-looking surface
+and shoreline foam seen from below as a bright unnatural ring. The lake and
+ocean shaders now use lower-alpha transmitted coloring for underwater-facing
+fragments; surface-only breaking foam is discarded from below. Lake sunshaft
+cards also use broader feathering and lower opacity to avoid vertical
+laser-like streaks. These are shader approximations, not physical refraction,
+and require a fresh **actual** browser screenshot before acceptance.
+
+### Shoreline UV-regression correction
+
+Actual rider-height screenshot review showed dense striated moiré bands where
+the horizontal and vertical UV coordinate sets were interpolated across
+Mirrorfall's slopes. The cliff mask is retained for later triplanar **shader**
+blending, but mixed vertex UV projections are disabled. Both flat and steep
+terrain now use stable continuous world-XZ tiling; this trades some steep-face
+anisotropy for correct texture filtering and no projection-induced ripples.
+
+### Underwater visibility correction after real-image inspection
+
+The real submerged frame still showed a full-bright waterfall and thin distant
+shoreline line. Surface-shader crest foam is now suppressed from below (in
+addition to ribbon back-face suppression), and the waterfall's transparent
+curtains opt into the scene's depth-aware fog. The resulting optical behavior
+is still an approximation; the next captured frames must be reviewed for
+readability and improved masking.

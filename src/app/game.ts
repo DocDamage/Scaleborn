@@ -161,6 +161,7 @@ export class Game {
         __scalebornQaStageShrine?: () => void;
         __scalebornQaStageEchoReturn?: () => void;
         __scalebornQaLake?: () => void;
+        __scalebornQaLakeDive?: () => void;
         __scalebornQaShore?: () => void;
       };
       host.__scalebornQaLand = (): void => {
@@ -298,6 +299,31 @@ export class Game {
         this.updateCamera(1, true);
         this.updateHud(0.2);
       };
+      host.__scalebornQaLakeDive = (): void => {
+        // Repeatable actual underwater camera inside the deep freshwater basin.
+        const x = GRAND_LAKE.x + 42, z = GRAND_LAKE.z + 34;
+        const y = GRAND_LAKE.surfaceY - 13;
+        if (heightAt(x, z) > y - 15) throw new Error('Underwater QA site is too shallow');
+        this.flight.x = x;
+        this.flight.z = z;
+        this.flight.y = y;
+        this.flight.waterTargetY = y;
+        this.flight.yaw = 1.31;
+        this.flight.pitch = 0;
+        this.flight.roll = 0;
+        this.flight.speed = 0;
+        this.flight.form = 'rideable';
+        this.flight.mode = 'underwater';
+        this.flight.controlTarget = 'dragon';
+        this.flight.transition = null;
+        this.cameraIndex = 0;
+        this.coast.update(x, z);
+        this.coast.setUnderwater(true);
+        this.dragon.update(this.flight);
+        this.updateCamera(1, true);
+        this.coast.updateAtmosphere(this.flight.time, this.camera.position);
+        this.updateHud(0.2);
+      };
       host.__scalebornQaAdvance = (frames: number): void => {
         if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
           throw new Error('QA frames must be an integer between 1 and 180');
@@ -423,6 +449,15 @@ export class Game {
     const s = this.flight;
     return s.controlTarget === 'rider'
       ? s.riderMode === 'underwater' : s.mode === 'underwater';
+  }
+
+  private isWaterborne(): boolean {
+    // At the water surface the third-person camera can dip through a wave.
+    // Optical submersion must follow the camera there, too.
+    const s = this.flight;
+    return s.controlTarget === 'rider'
+      ? s.riderMode === 'underwater' || s.riderMode === 'surface'
+      : s.mode === 'underwater' || s.mode === 'surface';
   }
 
   private updateCamera(dt: number, instant = false): void {
@@ -619,13 +654,15 @@ export class Game {
       this.reveal.hidden = this.revealTimer === 0;
     } else this.accumulator = 0;
     const focus = this.focusPosition();
-    this.coast.setUnderwater(this.isUnderwater());
-    this.waterTint.hidden = !this.isUnderwater();
+    this.coast.setUnderwater(this.isWaterborne());
     this.coast.animate(this.flight.time, focus.x, focus.y, focus.z, this.flight);
     this.coast.updateTidegate(this.tidegate, this.flight.time, this.echo.attuned);
     this.coast.updateEcho(echoPhase(this.echo, this.tidegate), this.flight.time);
     this.dragon.update(this.flight);
     this.updateCamera(elapsed);
+    const immersion = this.coast.updateAtmosphere(this.flight.time, this.camera.position);
+    this.waterTint.hidden = immersion < .06;
+    this.waterTint.style.opacity = immersion.toFixed(2);
     this.renderer.render(this.scene, this.camera);
     // Begin the QA cooldown *after* software rasterization. Measuring from
     // frame entry fails to yield when one SwiftShader frame exceeds 125 ms.

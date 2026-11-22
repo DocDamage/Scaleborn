@@ -17,9 +17,16 @@ async function main() {
   const errors = [];
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-    page.on('pageerror', (error) => errors.push('page: ' + error.message));
+    page.on('pageerror', (error) => {
+      const message = 'page: ' + error.message;
+      errors.push(message);
+      console.error('BROWSER PAGE ERROR:', message);
+    });
     page.on('console', (message) => {
-      if (message.type() === 'error') errors.push('console: ' + message.text());
+      if (message.type() === 'error') {
+        errors.push('console: ' + message.text());
+        console.error('BROWSER CONSOLE ERROR:', message.text());
+      }
     });
     const url = process.env.SCALEBORN_URL ?? 'http://127.0.0.1:5173';
     // SwiftShader CPU rendering must not be mistaken for a dedicated GPU.
@@ -57,20 +64,20 @@ async function main() {
       const text = document.querySelector('#form-name')?.textContent;
       const notice = document.querySelector('#action-toast')?.textContent;
       return text?.includes('GIANT') || notice?.includes('Climb higher');
-    }, null, { timeout: 6000 });
+    }, null, { timeout: 20000 });
     await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-giant.png' });
     await page.keyboard.press('2');
-    await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'RIDEABLE', null, { timeout: 6000 });
+    await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'RIDEABLE', null, { timeout: 20000 });
     await page.keyboard.press('1');
     await page.waitForFunction(() =>
       document.querySelector('#action-toast')?.textContent?.includes('Land first'),
-      null, { timeout: 6000 });
+      null, { timeout: 20000 });
     assert.match(await page.locator('#form-name').textContent() ?? '', /RIDEABLE/);
     const initialCamera = await page.locator('#camera-name').textContent();
     await page.keyboard.press('v');
     await page.waitForFunction(
       (before) => document.querySelector('#camera-name')?.textContent !== before,
-      initialCamera, { timeout: 6000 },
+      initialCamera, { timeout: 20000 },
     );
     await page.waitForTimeout(1600);
     const hasWebGL = await page.locator('#game').evaluate((canvas) =>

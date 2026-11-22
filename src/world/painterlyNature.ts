@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rng, fbm } from '../core/random';
 import { AZURE_SEED, heightAt, LANDMARKS } from './terrain';
-import { GRAND_LAKE, waterSurfaceAt, lakeShoreDistance } from './highlandLake';
+import { GRAND_LAKE, MIRRORFALL, waterSurfaceAt, lakeShoreDistance } from './highlandLake';
 import { makeBarkMaterial, makeRockMaterial } from './materials';
 
 interface PlantSite { x: number; y: number; z: number; scale: number; hue: number }
@@ -204,6 +204,28 @@ export class PainterlyNature {
         rocks.push({x,y,z,scale:.85+rand()*2.9,hue:rand()});
       }
     }
+    // Broken rock and talus fields flank the waterfall escarpment. These
+    // scattered, irregular stones share the existing PBR instanced mesh, so
+    // they add geological scale without additional materials/draw calls.
+    const screeSamples=quality==='low'?1150:3900;
+    for(let i=0;i<screeSamples;i++){
+      const angle=(rand()-.5)*2.15;
+      const radius=1.027+rand()*.40;
+      const x=GRAND_LAKE.x+Math.cos(angle)*GRAND_LAKE.radiusX*radius;
+      const z=GRAND_LAKE.z+Math.sin(angle)*GRAND_LAKE.radiusZ*radius;
+      const y=heightAt(x,z);
+      if(y<GRAND_LAKE.surfaceY+1.5 || y>205)continue;
+      if(Math.hypot(x-MIRRORFALL.x,z-MIRRORFALL.z)<29)continue;
+      const pick=rand();
+      if(pick<.51){
+        rocks.push({x,y,z,scale:.46+rand()*1.65,hue:rand()});
+      }else if(pick<.65){
+        const step=2.8;
+        const slope=Math.hypot(heightAt(x+step,z)-heightAt(x-step,z),
+          heightAt(x,z+step)-heightAt(x,z-step))/(2*step);
+        if(slope<.80)grasses.push({x,y:y+.04,z,scale:.49+rand()*.65,hue:rand()});
+      }
+    }
     // Close-range ground-cover carpet along navigable lake overlooks.
     // Finite instanced blade count: no per-frame geometry allocations.
     const coverSamples=quality==='low'?5200:15500;
@@ -320,6 +342,8 @@ export class PainterlyNature {
       dummy.rotation.set(rand()*2,rand()*6.28,rand()*.8);
       dummy.scale.set(p.scale,p.scale*(.27+rand()*.28),p.scale*(.55+rand()*.35));
       dummy.updateMatrix();rock.setMatrixAt(i,dummy.matrix);
+      rock.setColorAt(i,new THREE.Color().setHSL(
+        .12+p.hue*.09,.09+p.hue*.14,.62+p.hue*.17));
     });
     rock.name='terrain.azure.rounded-pbr-boulders';
     rock.castShadow=quality==='high';
