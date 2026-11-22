@@ -196,3 +196,15 @@ bulky boots and a smaller bond pendant. No donor/elf character was added.
 The updated artwork requires a fresh head-and-shoulders screenshot review.
 This is a localized correction, **not** acceptance of final rider identity,
 facial animation quality, cinematics or the overall visual-quality gate.
+
+### Onyx wing silhouette refinement (2026-11-22)
+
+The actual WebGL head/wing portrait still showed nearly straight
+triangular sail panels. The original three-bone, mirrored skinned
+wing meshes now use a continuous five-bay scalloped trailing-edge
+outline, arch taper and pointed distal finger instead of broad
+untapered silhouettes. Vertices, UVs, skin weights, color atlas,
+socket names, wing forms and flight controls are preserved.
+The change does not alter aerodynamic collision or gameplay speed.
+WebGL screenshot acceptance is still required; this remains a
+work-in-progress sculpt.

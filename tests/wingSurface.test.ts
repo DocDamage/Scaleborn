@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { paintWingMembraneMaps, makeWingMembraneMaterial } from '../src/actors/dragon/wingSurface';
-import { createWingRig, poseWing } from '../src/actors/dragon/wingRig';
+import { createWingRig, poseWing, wingMembraneSectionAt } from '../src/actors/dragon/wingRig';
 import { newFlightState } from '../src/actors/dragon/flight';
 import { dragonPose } from '../src/actors/dragon/animationPose';
 
@@ -43,6 +43,25 @@ describe('Onyx PBR painted wing membranes',()=>{
       expect(mat.roughnessMap).toBe(maps.roughness);
       expect(mat.normalScale.x).toBeLessThan(.5);
     }finally{mat.dispose();Object.values(maps).forEach(t=>t.dispose());}
+  });
+
+  it('keeps tapered, five-bay original wing outline continuous and positive',()=>{
+    const samples=Array.from({length:201},(_,i)=>wingMembraneSectionAt(i/200));
+    for(const part of samples){
+      expect(Number.isFinite(part.front+part.rear+part.chord)).toBe(true);
+      expect(part.chord).toBeGreaterThan(.025);
+      expect(part.rear).toBeGreaterThan(part.front);
+    }
+    expect(samples[200]!.chord).toBeLessThan(.04);
+    expect(samples[150]!.chord).toBeGreaterThan(samples[200]!.chord*8);
+    let fingerBays=0;
+    for(let i=20;i<180;i++){
+      const a=samples[i-1]!.chord,b=samples[i]!.chord,c=samples[i+1]!.chord;
+      if(b<a&&b<c&&b<samples[i-7]!.chord*.92)fingerBays++;
+    }
+    expect(fingerBays).toBeGreaterThanOrEqual(3);
+    expect(()=>wingMembraneSectionAt(Number.NaN)).toThrow();
+    expect(()=>wingMembraneSectionAt(Number.POSITIVE_INFINITY)).toThrow();
   });
 
   it('preserves deforming three-bone membranes and animation under the material',()=>{

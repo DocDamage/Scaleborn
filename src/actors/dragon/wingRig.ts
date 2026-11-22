@@ -12,6 +12,34 @@ const sparMaterial = new THREE.MeshStandardMaterial({
   color: 0x504a79, roughness: 0.63, metalness: 0.07,
 });
 
+export interface WingMembraneSection {
+  front: number;
+  rear: number;
+  chord: number;
+}
+
+/**
+ * Hand-authored anatomical outline for Onyx's original wing:
+ * curved leading edge, five visible trailing finger bays and a true
+ * tapered tip. All joins are smooth and keep positive chord length.
+ */
+export function wingMembraneSectionAt(spanFraction:number):WingMembraneSection {
+  if(!Number.isFinite(spanFraction))throw new Error('Wing span must be finite');
+  const u=Math.max(0,Math.min(1,spanFraction));
+  const front=-.05-1.07*Math.sin(u*Math.PI*.85)-.18*u;
+  const envelope=Math.pow(Math.max(0,
+    Math.sin(Math.PI*(.04+.88*u))),.68);
+  const scallopPhase=2*Math.PI*(5*u+.07);
+  const scallop=Math.pow(.5+.5*Math.cos(scallopPhase),8);
+  const bayStrength=Math.min(1,Math.max(0,(u-.09)/.15));
+  const tipFraction=Math.max(0,Math.min(1,(u-.84)/.16));
+  const tipSmooth=tipFraction*tipFraction*(3-2*tipFraction);
+  const taper=1-tipSmooth;
+  const chord=.031 + (1.96*envelope - .89*envelope*scallop*bayStrength)
+    *taper;
+  return {front,rear:front+chord,chord};
+}
+
 export interface WingRig {
   root: THREE.Group;
   mesh: THREE.SkinnedMesh;
@@ -43,17 +71,17 @@ export function createWingRig(side: -1 | 1): WingRig {
   for(let i=0;i<=sections;i++) {
     const u=i/sections;
     const span=4.20*u;
-    const edgeEnvelope=Math.pow(Math.max(0,Math.sin(Math.PI*(.04+.88*u))),.68);
-    const fingerArc=Math.abs(Math.sin(Math.PI*u*4.7));
-    const front=-.05-1.07*Math.sin(u*Math.PI*.85)-.18*u;
-    const rear=.10+1.62*edgeEnvelope-.25*Math.pow(fingerArc,8);
+    const {front,rear}=wingMembraneSectionAt(u);
     for(let j=0;j<=chordSections;j++){
       const v=j/chordSections;
       const z=front+(rear-front)*v;
       const camber=.19*Math.sin(Math.PI*v)*(1-u)
         +.08*Math.sin(u*Math.PI*2)*Math.sin(Math.PI*v);
+      // Taper the depth of sculpted wing arches toward each narrow fingertip.
+      const endTaper=.10+.90*Math.sin(Math.PI*Math.min(.999,u));
       const crease=.025*Math.sin(v*23+u*35)*Math.sin(Math.PI*v);
-      vertices.push(side*span,.07*Math.sin(Math.PI*u)+camber+crease,z);
+      vertices.push(side*span,
+        .07*Math.sin(Math.PI*u)+camber*endTaper+crease*endTaper,z);
       uv.push(u,v);
       const vein=Math.pow(Math.max(0,Math.cos(v*Math.PI*4.4+u*9.2)),18);
       const center=.44+.56*Math.sin(Math.PI*v);
