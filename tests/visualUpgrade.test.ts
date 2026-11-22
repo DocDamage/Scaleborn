@@ -15,6 +15,11 @@ describe('Mirrorfall visual systems contract', () => {
         expect(material.roughness).toBeGreaterThan(0.75);
       }
       expect(all[0]!.vertexColors).toBe(true);
+      for (const material of all) {
+        expect(material.map).toBeInstanceOf(THREE.DataTexture);
+        expect(material.normalMap).toBeInstanceOf(THREE.DataTexture);
+        expect(material.roughnessMap).toBeInstanceOf(THREE.DataTexture);
+      }
       expect(all[1]!.metalness).toBe(0);
     } finally { all.forEach(m=>m.dispose()); }
   });

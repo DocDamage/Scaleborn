@@ -18,6 +18,7 @@ describe('Natural Mirrorfall environment rather than primitive props', () => {
       const geo=(wall as THREE.Mesh).geometry as THREE.BufferGeometry;
       expect(geo.getAttribute('position').count).toBeGreaterThan(1000);
       expect(geo.index?.count).toBeGreaterThan(3000);
+      expect(geo.getAttribute('uv').count).toBe(geo.getAttribute('position').count);
       // The waterfall gap is truly open geometry, not a transparent overlay.
       expect(geo.index!.count).toBeLessThan(76*58*6);
     } finally {cliffs.dispose();}

@@ -138,3 +138,7 @@ The game runs **high** painterly PBR shaders by default. Add `?quality=low` to r
 ### Waterfall flow coupling
 
 The lake waterfall now drives a shared, fixed-step local current field in `src/world/waterDynamics.ts` and an accompanying ripple/foam distortion in the lake shader. Swimming dragons and independently swimming riders are nudged away from the plunge point, with a collision-safety check. Impact current fades with distance and does not affect the ocean. This is not a fully coupled 3D fluid or water-pressure solver and will require additional work before being labeled realistic water physics.
+
+### Surface texture generation
+
+Rock, bark and terrain now have deterministic tileable original **albedo, normal and roughness maps** generated in memory. Both Low and High settings receive texture detail; High also uses the world-space procedural shader. The rock escarpment's UVs match its geometry, so procedural striations are visible rather than a smooth colored slab. There are still no third-party or temporary image assets. Textures are disposed when their materials are disposed.

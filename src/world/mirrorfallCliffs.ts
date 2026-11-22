@@ -22,6 +22,7 @@ export class MirrorfallCliffs {
     const segmentY=quality==='low'?58:112;
     const positions:number[]=[];
     const colors:number[]=[];
+    const uvs:number[]=[];
     const indices:number[]=[];
     const middle=GRAND_LAKE.z;
     for(let row=0;row<=segmentY;row++){
@@ -42,6 +43,7 @@ export class MirrorfallCliffs {
         const waterfallX=MIRRORFALL.x-82 + 81*t;
         const x=waterfallX+7 + ridge*0.20+noise*3.4+stratum*.23;
         positions.push(x,y,z);
+        uvs.push(col/segmentZ*12.0,t*6.0);
         // Rock albedo is geological rather than a flat grey slab. Broad
         // strata, mineral veins, and moss near the crest are baked into
         // vertex colors so the low renderer benefits as well.
@@ -67,6 +69,7 @@ export class MirrorfallCliffs {
     const geometry=new THREE.BufferGeometry();
     geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
     geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+    geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
     this.wall=new THREE.Mesh(geometry,this.material);

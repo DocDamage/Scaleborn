@@ -1,5 +1,24 @@
 import * as THREE from 'three';
 import { GRAND_LAKE } from './highlandLake';
+import { makePaintedSurfaceTextures, type SurfaceKind } from './surfaceTextures';
+
+function attachPaintedMaps(
+  material: THREE.MeshStandardMaterial, kind: SurfaceKind,
+  quality: 'high' | 'low',
+): void {
+  const maps=makePaintedSurfaceTextures(kind,quality==='high'?256:128);
+  material.map=maps.color;
+  material.normalMap=maps.normal;
+  material.roughnessMap=maps.roughness;
+  const normalStrength=kind==='rock'?.68:kind==='bark'?.53:.32;
+  material.normalScale.set(normalStrength,normalStrength);
+  // Material disposal must release generated GPU textures too.
+  material.addEventListener('dispose',()=>{
+    maps.color.dispose();
+    maps.normal.dispose();
+    maps.roughness.dispose();
+  });
+}
 
 /**
  * Painterly physical surface layer. Keeps real Three.js light response and
@@ -70,16 +89,19 @@ export function makeTerrainMaterial(quality: 'high' | 'low' = 'high'): THREE.Mes
     vertexColors: true, color: 0xffffff, roughness: 0.93, metalness: 0,
     side: THREE.DoubleSide,
   });
+  attachPaintedMaps(mat,'soil',quality);
   if (quality === 'high') installSurfaceDetail(mat, 'land');
   return mat;
 }
 export function makeRockMaterial(quality: 'high' | 'low' = 'high'): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0x8b9d9c, roughness: 0.87, metalness: 0 });
+  attachPaintedMaps(mat,'rock',quality);
   if (quality === 'high') installSurfaceDetail(mat, 'rock');
   return mat;
 }
 export function makeBarkMaterial(quality: 'high' | 'low' = 'high'): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0x716057, roughness: 0.95, metalness: 0 });
+  attachPaintedMaps(mat,'bark',quality);
   if (quality === 'high') installSurfaceDetail(mat, 'bark');
   return mat;
 }

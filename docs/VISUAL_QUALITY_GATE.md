@@ -107,3 +107,7 @@ quests and combat is on hold until the visual checkpoint improves meaningfully.
 `src/world/waterWaves.ts` uses the same four directional wave phase/amplitude components as the vertex shader and the same impact-ripple function as the waterfall. The swimmer controllers follow damped, time-dependent surface elevation instead of an unrelated perfectly flat plane. This prevents obvious visual/physics desynchronization while maintaining bounded arcade movement. High-frequency dynamics and actual two-way water pressure are still outside the implementation.
 
 The waterfall curtain now has noisy, feathered break-up edges and a progressively wider impact sheet. This is animated transparent geometry and impact spray—not a volumetrically simulated liquid volume.
+
+### All-graphics-presets surface quality
+
+Color-only terrain polygons failed the user's visual test. `surfaceTextures.ts` therefore generates tileable albedo, tangent-space normal and roughness maps for soil, rock and bark, with UVs generated for the cliff wall. Low quality gets map detail while High adds triplanar-style world-space material variation. These generated maps are **a substantial stepping stone** and must not be described as equivalent to high-resolution scan-based PBR assets. The screenshot review must verify visible grain at typical gameplay distances without conspicuous repetitive tiling. GPU/memory benchmarking on the real desktop remains required.
