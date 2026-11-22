@@ -162,6 +162,38 @@ QA mode intentionally throttles browser rendering, so these screenshots are
 frame time/draw calls separately on the intended GPU. Visual quality remains
 blocked until those checks are accepted.
 
+### Unthrottled hardware performance profile
+
+The visual screenshot harness uses development QA throttling and **cannot**
+measure real gameplay speed. For a repeatable, actual game high-quality profile,
+start `npm run dev` on the desktop GPU, then run:
+
+```bash
+npm run benchmark:gpu
+```
+
+On Windows PowerShell, a visible browser window can be requested with:
+
+```powershell
+$env:SCALEBORN_BENCH_HEADFUL = "1"
+npm run benchmark:gpu
+```
+
+The benchmark uses `start=lake&quality=high` **without** `qa=1`, disables
+software rasterization, and records a sample of ordinary running-game
+`requestAnimationFrame` intervals. It rejects identifiable SwiftShader and
+other software adapters, writing the adapter, average presentation FPS,
+median/p95/worst frame intervals, visible draws/triangles, and internal
+rendering ratio to
+`artifacts/scaleborn-high-hardware-profile.json`. It also records an actual
+browser screenshot alongside the JSON report.
+
+**Limits:** these measurements include browser/CPU presentation scheduling
+and are not hardware GPU timer-query measurements; automatic resolution
+adaptation remains enabled, so compare the recorded internal DPR. The script
+does not claim to measure VRAM, thermals, or 60 FPS success. A real in-game
+human art review and follow-up GPU profiling remain required before release.
+
 ### Waterfall flow coupling
 
 The lake waterfall now drives a shared, fixed-step local current field in `src/world/waterDynamics.ts` and an accompanying ripple/foam distortion in the lake shader. Swimming dragons and independently swimming riders are nudged away from the plunge point, with a collision-safety check. Impact current fades with distance and does not affect the ocean. This is not a fully coupled 3D fluid or water-pressure solver and will require additional work before being labeled realistic water physics.
