@@ -3,7 +3,7 @@ import type { DragonPose } from './animationPose';
 
 /**
  * Original code-built deforming dragon wing.
- * Each wing has three actual skin bones and vertex weights, allowing a future
+ * Each wing has three deforming skin bones and dense curved membrane rows, allowing a future
  * model swap to retain the logical leftWing/rightWing sockets.
  */
 const membraneMaterial = new THREE.MeshStandardMaterial({
@@ -31,68 +31,84 @@ function spar(parent: THREE.Bone, length: number, angleZ = 0): void {
 }
 
 export function createWingRig(side: -1 | 1): WingRig {
-  const root = new THREE.Group();
-  root.name = side < 0 ? 'leftWing' : 'rightWing';
-  root.position.set(side * 0.56, 0.40, -0.20);
-  const outline: ReadonlyArray<readonly [number, number, number]> = [
-    [0, 0, 0], [1.05, 0.14, -0.84], [2.45, 0.16, -1.53],
-    [3.97, 0.07, -0.71], [3.72, -0.1, 0.17],
-    [3.94, -0.13, 0.64], [3.21, -0.14, 0.60],
-    [2.77, -0.08, 1.25], [2.16, -0.07, 0.89],
-    [1.38, -0.05, 1.23], [0.63, 0, 0.75],
-  ];
-  const vertices: number[] = [];
-  const colors: number[] = [];
-  const weights: number[] = [];
-  const joints: number[] = [];
-  const triangles: number[] = [];
-  for (let i = 0; i < outline.length; i++) {
-    const point = outline[i]!;
-    const dist = point[0];
-    vertices.push(side * dist, point[1], point[2]);
-    const gradient = Math.min(1, dist / 4);
-    colors.push(0.12 + gradient * 0.05, 0.28 + gradient * 0.07, 0.33 + gradient * 0.1);
-    // Three.skinWeight attributes use four influences even when two are active.
-    if (dist < 1.7) {
-      const t = dist / 1.7;
-      joints.push(0, 1, 0, 0);
-      weights.push(1 - t, t, 0, 0);
-    } else {
-      const t = Math.min(1, (dist - 1.7) / 2.3);
-      joints.push(1, 2, 0, 0);
-      weights.push(1 - t, t, 0, 0);
+  const root=new THREE.Group();
+  root.name=side<0?'leftWing':'rightWing';
+  root.position.set(side*.56,.40,-.20);
+
+  // Dense, organically curved membrane surface. Five broad finger-lobes
+  // interrupt the rear edge rather than a single eleven-vertex triangle fan.
+  // Three skeletal controls (shoulder/elbow/tip) deform every membrane row.
+  const sections=80,chordSections=16;
+  const vertices:number[]=[], uv:number[]=[], colors:number[]=[];
+  const joints:number[]=[], weights:number[]=[], triangles:number[]=[];
+  for(let i=0;i<=sections;i++) {
+    const u=i/sections;
+    const span=4.20*u;
+    const edgeEnvelope=Math.pow(Math.max(0,Math.sin(Math.PI*(.04+.88*u))),.68);
+    const fingerArc=Math.abs(Math.sin(Math.PI*u*4.7));
+    const front=-.05-1.07*Math.sin(u*Math.PI*.85)-.18*u;
+    const rear=.10+1.62*edgeEnvelope-.25*Math.pow(fingerArc,8);
+    for(let j=0;j<=chordSections;j++){
+      const v=j/chordSections;
+      const z=front+(rear-front)*v;
+      const camber=.19*Math.sin(Math.PI*v)*(1-u)
+        +.08*Math.sin(u*Math.PI*2)*Math.sin(Math.PI*v);
+      const crease=.025*Math.sin(v*23+u*35)*Math.sin(Math.PI*v);
+      vertices.push(side*span,.07*Math.sin(Math.PI*u)+camber+crease,z);
+      uv.push(u*2.1,v*1.8);
+      const vein=Math.pow(Math.max(0,Math.cos(v*Math.PI*4.4+u*9.2)),18);
+      const center=.44+.56*Math.sin(Math.PI*v);
+      // Hand-painted violet iridescence and darker wing-finger striations.
+      const dusk=.5+.5*Math.sin(u*10.8+v*16.3);
+      colors.push((.16+.07*dusk+.045*vein)*center,
+        (.31+.035*dusk+.05*vein)*center,
+        (.39+.11*dusk+.07*vein)*center);
+      if(u<=.43) {
+        const t=u/.43;
+        joints.push(0,1,0,0);weights.push(1-t,t,0,0);
+      } else {
+        const t=Math.min(1,(u-.43)/.57);
+        joints.push(1,2,0,0);weights.push(1-t,t,0,0);
+      }
+      if(i<sections&&j<chordSections){
+        const a=i*(chordSections+1)+j,b=a+chordSections+1;
+        triangles.push(a,b,a+1,b,b+1,a+1);
+      }
     }
   }
-  for (let i = 1; i < outline.length - 1; i++) triangles.push(0, i, i + 1);
-  const geo = new THREE.BufferGeometry();
+  const geo=new THREE.BufferGeometry();
   geo.setIndex(triangles);
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(joints, 4));
-  geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(weights, 4));
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+  geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+  geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+  geo.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(joints,4));
+  geo.setAttribute('skinWeight',new THREE.Float32BufferAttribute(weights,4));
   geo.computeVertexNormals();
 
-  const shoulder = new THREE.Bone();
-  shoulder.name = side < 0 ? 'leftWing.shoulder' : 'rightWing.shoulder';
-  const elbow = new THREE.Bone();
-  elbow.position.set(side * 1.72, 0, -0.07);
-  elbow.name = side < 0 ? 'leftWing.elbow' : 'rightWing.elbow';
-  const tip = new THREE.Bone();
-  tip.position.set(side * 1.55, 0, -0.02);
-  tip.name = side < 0 ? 'leftWing.tip' : 'rightWing.tip';
-  shoulder.add(elbow);
-  elbow.add(tip);
-  const mesh = new THREE.SkinnedMesh(geo, membraneMaterial);
-  mesh.name = side < 0 ? 'wing.left.membrane' : 'wing.right.membrane';
+  const shoulder=new THREE.Bone();
+  shoulder.name=side<0?'leftWing.shoulder':'rightWing.shoulder';
+  const elbow=new THREE.Bone();
+  elbow.position.set(side*1.78,.04,-.13);
+  elbow.name=side<0?'leftWing.elbow':'rightWing.elbow';
+  const tip=new THREE.Bone();
+  tip.position.set(side*1.66,-.03,.02);
+  tip.name=side<0?'leftWing.tip':'rightWing.tip';
+  shoulder.add(elbow);elbow.add(tip);
+  const mesh=new THREE.SkinnedMesh(geo,membraneMaterial);
+  mesh.name=side<0?'wing.left.membrane':'wing.right.membrane';
+  mesh.frustumCulled=false; // Skeletal tip positions are outside bind-pose bounds.
+  mesh.castShadow=true;mesh.receiveShadow=true;
   mesh.add(shoulder);
   mesh.updateMatrixWorld(true);
-  mesh.bind(new THREE.Skeleton([shoulder, elbow, tip]));
+  mesh.bind(new THREE.Skeleton([shoulder,elbow,tip]));
   root.add(mesh);
-  // The spars are thin animated bones, not detached decorative wing props.
-  spar(shoulder, 1.6);
-  spar(elbow, 1.5);
-  spar(tip, 0.65);
-  return { root, mesh, shoulder, elbow, tip };
+
+  // Vein spars are attached to deforming bones and kept narrow enough to
+  // preserve the arched painted-skin silhouette in flight and landing.
+  spar(shoulder,1.65);
+  spar(elbow,1.63);
+  spar(tip,.72);
+  return {root,mesh,shoulder,elbow,tip};
 }
 
 /** Blend continuously between folded, launch, landing and cruise wing poses. */
