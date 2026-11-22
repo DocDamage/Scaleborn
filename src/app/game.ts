@@ -11,6 +11,13 @@ import { toggleDragonDive } from '../actors/dragon/swimming';
 import { toggleRiderControl, toggleRiderDive } from '../actors/rider/movement';
 import { SEA_LEVEL, LANDMARKS } from '../world/terrain';
 import { TIDEGATE, newTidegateState, stepTidegate, interactTidegate, tidegateNearby, tidegateHint } from '../world/tidegate';
+import {
+  ECHO_SHRINE, newTidalEchoState, echoPhase, echoObjective,
+  echoShrineNearby, interactEchoShrine, attuneEchoAtGate,
+} from '../world/tidalEcho';
+import {
+  loadAzureProgress, saveAzureProgress, snapshotAzureProgress, type ProgressStorage,
+} from '../data/azureProgress';
 
 const FIXED_DT = 1 / 60;
 const MAX_STEPS = 5;
@@ -31,6 +38,15 @@ export class Game {
   private readonly dragon = new DragonVisual();
   private readonly discoveries = new CoastDiscovery();
   private readonly tidegate = newTidegateState();
+  private readonly echo = newTidalEchoState();
+  private readonly progressStorage: ProgressStorage | null;
+  private saveAvailable = false;
+  private readonly echoTitle = requireElement<HTMLElement>('#echo-title');
+  private readonly echoStage = requireElement<HTMLElement>('#echo-stage');
+  private readonly echoHintText = requireElement<HTMLElement>('#echo-hint');
+  private readonly echoDistance = requireElement<HTMLElement>('#echo-distance');
+  private readonly echoSaveStatus = requireElement<HTMLElement>('#echo-save-status');
+  private readonly echoAction = requireElement<HTMLButtonElement>('#echo-action');
   private readonly tidegatePanel = requireElement<HTMLElement>('#tidegate-panel');
   private readonly tidegateHintText = requireElement<HTMLElement>('#tidegate-hint');
   private readonly tidegateStatus = requireElement<HTMLElement>('#tidegate-status');
@@ -63,6 +79,15 @@ export class Game {
 
   constructor(canvas: HTMLCanvasElement) {
     assertManifestUnique();
+    let browserStorage: ProgressStorage | null = null;
+    try { browserStorage = window.localStorage; } catch { /* Private mode may deny access. */ }
+    this.progressStorage = browserStorage;
+    this.saveAvailable = browserStorage !== null;
+    const saved = loadAzureProgress(browserStorage);
+    this.tidegate.solved = saved.tidegateSolved;
+    this.echo.collected = saved.echo.collected;
+    this.echo.attuned = saved.echo.attuned;
+    this.discoveries.restore(saved.discovered);
     this.renderer = new THREE.WebGLRenderer({
       canvas, antialias: true, powerPreference: 'high-performance',
     });
@@ -101,6 +126,8 @@ export class Game {
         __scalebornQaWater?: () => void;
         __scalebornQaDive?: () => void;
         __scalebornQaStageRiderRune?: () => void;
+        __scalebornQaStageShrine?: () => void;
+        __scalebornQaStageEchoReturn?: () => void;
       };
       host.__scalebornQaLand = (): void => {
         // Stage and trigger atomically: no frame-rate-dependent input race.
@@ -150,6 +177,52 @@ export class Game {
         this.flight.riderTargetY = this.flight.riderY;
         this.updateHud(0.2);
       };
+      host.__scalebornQaStageShrine = (): void => {
+        if (!this.tidegate.solved) throw new Error('Tidegate must be awakened first.');
+        // Stage at an actual interactable offset, looking toward the heart.
+        // Snap only the QA camera after teleporting; ordinary travel remains smooth.
+        this.flight.x = ECHO_SHRINE.x - 6.5;
+        this.flight.z = ECHO_SHRINE.z;
+        this.flight.y = ECHO_SHRINE.heartY;
+        this.flight.yaw = Math.PI / 2;
+        this.flight.waterTargetY = ECHO_SHRINE.heartY;
+        this.flight.mode = 'underwater';
+        this.flight.form = 'rideable';
+        this.flight.controlTarget = 'dragon';
+        this.flight.transition = null;
+        this.flight.speed = 0;
+        this.flight.pitch = 0;
+        this.flight.roll = 0;
+        this.cameraIndex = 0;
+        this.coast.update(this.flight.x, this.flight.z);
+        this.coast.setUnderwater(true);
+        this.coast.updateEcho(echoPhase(this.echo, this.tidegate), this.flight.time);
+        this.dragon.update(this.flight);
+        this.updateCamera(1, true);
+        this.updateHud(0.2);
+      };
+      host.__scalebornQaStageEchoReturn = (): void => {
+        if (!this.echo.collected) throw new Error('The dragon has not collected the Echo.');
+        this.flight.x = TIDEGATE.dragon.x;
+        this.flight.z = TIDEGATE.dragon.z;
+        this.flight.y = heightAt(this.flight.x, this.flight.z) + FORMS.small.standHeight;
+        this.flight.yaw = 0;
+        this.flight.pitch = 0;
+        this.flight.roll = 0;
+        this.flight.speed = 0;
+        this.flight.form = 'small';
+        this.flight.mode = 'ground';
+        this.flight.transition = null;
+        this.flight.controlTarget = 'rider';
+        this.flight.riderX = TIDEGATE.rider.x;
+        this.flight.riderZ = TIDEGATE.rider.z;
+        this.flight.riderY = heightAt(this.flight.riderX, this.flight.riderZ) + 0.05;
+        this.flight.riderTargetY = this.flight.riderY;
+        this.flight.riderSpeed = 0;
+        this.flight.riderMode = 'ground';
+        this.coast.update(this.flight.x, this.flight.z);
+        this.updateHud(0.2);
+      };
       host.__scalebornQaAdvance = (frames: number): void => {
         if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
           throw new Error('QA frames must be an integer between 1 and 180');
@@ -179,6 +252,9 @@ export class Game {
       if (!this.paused) this.diveAction();
     });
     requireElement<HTMLButtonElement>('#tidegate-action').addEventListener('click', () => {
+      if (!this.paused) this.interactWithRune();
+    });
+    this.echoAction.addEventListener('click', () => {
       if (!this.paused) this.interactWithRune();
     });
     requireElement<HTMLButtonElement>('#start').addEventListener('click', () => this.begin(canvas));
@@ -230,10 +306,25 @@ export class Game {
       ? toggleRiderDive(this.flight) : toggleDragonDive(this.flight));
   }
 
+  private persistProgress(): void {
+    this.saveAvailable = saveAzureProgress(this.progressStorage,
+      snapshotAzureProgress(this.tidegate, this.echo, this.discoveries.visitedIds()));
+  }
+
   private interactWithRune(): void {
-    this.notify(tidegateNearby(this.flight)
-      ? interactTidegate(this.tidegate, this.flight)
-      : { ok: false, message: 'No runestones within reach.' });
+    let response: InteractionResult;
+    if (echoShrineNearby(this.flight)) {
+      response = interactEchoShrine(this.echo, this.tidegate, this.flight);
+    } else if (tidegateNearby(this.flight)) {
+      response = this.tidegate.solved && this.echo.collected
+        ? attuneEchoAtGate(this.echo, this.tidegate, this.flight)
+        : interactTidegate(this.tidegate, this.flight);
+    } else {
+      response = { ok: false, message: 'No ancient runes within reach.' };
+    }
+    if (response.ok) this.persistProgress();
+    this.notify(response);
+    this.updateHud(0.2);
   }
 
   private focusPosition(): { x: number; y: number; z: number } {
@@ -308,6 +399,18 @@ export class Game {
     this.tidegateHintText.textContent = tidegateHint(this.tidegate, this.flight);
     this.tidegateStatus.textContent = this.tidegate.solved ? 'TIDEBOUND SIGIL AWAKENED'
       : this.tidegate.dragonAnchored ? '1 / 2 RUNES' : '0 / 2 RUNES';
+    const objective = echoObjective(this.echo, this.tidegate);
+    const phase = echoPhase(this.echo, this.tidegate);
+    this.echoStage.textContent = phase === 'complete' ? 'COMPLETE'
+      : phase === 'return-to-gate' ? 'ECHO COLLECTED'
+      : phase === 'seek-shrine' ? 'SEEK THE SHRINE' : 'LOCKED';
+    this.echoTitle.textContent = objective.title;
+    this.echoHintText.textContent = objective.instruction;
+    this.echoDistance.textContent = phase === 'complete' ? 'Trial completed'
+      : Math.round(Math.hypot(current.x - objective.x, current.z - objective.z)) + ' m to objective';
+    this.echoSaveStatus.textContent = this.saveAvailable ? 'Local checkpoints enabled' : 'Session progress only';
+    this.echoAction.hidden = !echoShrineNearby(this.flight) &&
+      !(tidegateNearby(this.flight) && this.tidegate.solved && this.echo.collected);
     this.modeName.textContent = this.flight.transition?.phase === 'landing' ? 'LANDING'
       : this.flight.transition?.phase === 'takingOff' ? 'TAKING OFF'
       : this.flight.transition?.phase === 'splashdown' ? 'SPLASHDOWN'
@@ -335,6 +438,7 @@ export class Game {
       'CONTROL ' + this.flight.controlTarget,
       'RIDER ' + this.flight.riderMode,
       'TIDEGATE ' + (this.tidegate.solved ? 'AWAKENED' : this.tidegate.dragonAnchored ? 'ANCHORED' : 'INACTIVE'),
+      'ECHO ' + echoPhase(this.echo, this.tidegate),
       'TERRAIN TILES ' + this.coast.tileCount(),
       'DISCOVERED ' + this.discoveries.count() + '/' + LANDMARKS.length,
       'DRAWS ' + render.calls,
@@ -389,6 +493,7 @@ export class Game {
       if (found.length) {
         this.reveal.textContent = '✦  DISCOVERED  ·  ' + found.map((site) => site.name).join(', ');
         this.revealTimer = 4.2;
+        this.persistProgress();
       }
       this.revealTimer = Math.max(0, this.revealTimer - elapsed);
       this.reveal.hidden = this.revealTimer === 0;
@@ -397,7 +502,8 @@ export class Game {
     this.coast.setUnderwater(this.isUnderwater());
     this.waterTint.hidden = !this.isUnderwater();
     this.coast.animate(this.flight.time, focus.x, focus.y, focus.z);
-    this.coast.updateTidegate(this.tidegate, this.flight.time);
+    this.coast.updateTidegate(this.tidegate, this.flight.time, this.echo.attuned);
+    this.coast.updateEcho(echoPhase(this.echo, this.tidegate), this.flight.time);
     this.dragon.update(this.flight);
     this.updateCamera(elapsed);
     this.renderer.render(this.scene, this.camera);

@@ -70,6 +70,8 @@ async function main() {
     );
     assert.ok(hasWebGL, 'No WebGL2 context on game canvas');
     await page.screenshot({ path: 'artifacts/azure-coast-smoke.png' });
+    // Extended QA uses the actual on-screen action handlers. SwiftShader sometimes
+    // stalls RAF, so dev-only bounded simulation steps refresh HUD deterministically.
     // Exercise a complete animated landing/size change/takeoff in a deterministic meadow.
     const meadowResponse = await page.goto(url + '?start=meadow&qa=1', { waitUntil: 'networkidle' });
     assert.equal(meadowResponse?.status(), 200);
@@ -84,23 +86,27 @@ async function main() {
       window.__scalebornQaAdvance(100);
     });
     await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'ON LAND', null, { timeout: 12000 });
-    await page.keyboard.press('1');
-    await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'SMALL COMPANION', null, { timeout: 6000 });
-    await page.keyboard.press('g');
-    await page.waitForFunction(() => document.querySelector('#tidegate-status')?.textContent === '1 / 2 RUNES', null, { timeout: 10000 });
-    await page.keyboard.press('Tab');
-    await page.waitForFunction(() => document.querySelector('#focus-name')?.textContent === 'RIDER', null, { timeout: 8000 });
+    await page.locator('[data-form="small"]').evaluate((button) => button.click());
+    await page.evaluate(() => window.__scalebornQaAdvance(1));
+    await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'SMALL COMPANION', null, { timeout: 12000 });
+    await page.locator('#tidegate-action').evaluate((button) => button.click());
+    await page.waitForFunction(() => document.querySelector('#tidegate-status')?.textContent === '1 / 2 RUNES', null, { timeout: 12000 });
+    await page.locator('#focus-button').evaluate((button) => button.click());
+    await page.evaluate(() => window.__scalebornQaAdvance(1));
+    await page.waitForFunction(() => document.querySelector('#focus-name')?.textContent === 'RIDER', null, { timeout: 12000 });
     await page.evaluate(() => {
       if (typeof window.__scalebornQaStageRiderRune !== 'function') throw new Error('Tidegate QA hook missing');
       window.__scalebornQaStageRiderRune();
     });
-    await page.keyboard.press('g');
-    await page.waitForFunction(() => document.querySelector('#tidegate-status')?.textContent === 'TIDEBOUND SIGIL AWAKENED', null, { timeout: 10000 });
+    await page.locator('#tidegate-action').evaluate((button) => button.click());
+    await page.waitForFunction(() => document.querySelector('#tidegate-status')?.textContent === 'TIDEBOUND SIGIL AWAKENED', null, { timeout: 12000 });
     await page.screenshot({ path: 'artifacts/azure-coast-small-meadow.png' });
-    await page.keyboard.press('Tab');
-    await page.waitForFunction(() => document.querySelector('#focus-name')?.textContent === 'DRAGON', null, { timeout: 8000 });
-    await page.keyboard.press('2');
-    await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'RIDEABLE', null, { timeout: 6000 });
+    await page.locator('#focus-button').evaluate((button) => button.click());
+    await page.evaluate(() => window.__scalebornQaAdvance(1));
+    await page.waitForFunction(() => document.querySelector('#focus-name')?.textContent === 'DRAGON', null, { timeout: 12000 });
+    await page.locator('[data-form="rideable"]').evaluate((button) => button.click());
+    await page.evaluate(() => window.__scalebornQaAdvance(1));
+    await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'RIDEABLE', null, { timeout: 12000 });
     await page.evaluate(() => {
       if (typeof window.__scalebornQaLaunch !== 'function') throw new Error('Dev takeoff hook missing');
       window.__scalebornQaLaunch();
@@ -130,8 +136,33 @@ async function main() {
       window.__scalebornQaAdvance(100);
     });
     await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'SWIMMING', null, { timeout: 12000 });
+
+    // The real G interaction must collect the underwater heart, then allow
+    // a separate rider-only attunement back at the already solved Tidegate.
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaStageShrine !== 'function') throw new Error('Shrine QA hook missing');
+      window.__scalebornQaStageShrine();
+    });
+    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'DIVING', null, { timeout: 12000 });
+    await page.screenshot({ path: 'artifacts/azure-coast-tidal-echo-before.png', timeout: 60000 });
+    await page.locator('#echo-action').evaluate((button) => button.click());
+    await page.waitForFunction(() => document.querySelector('#echo-stage')?.textContent === 'ECHO COLLECTED', null, { timeout: 12000 });
+    await page.screenshot({ path: 'artifacts/azure-coast-tidal-echo.png', timeout: 60000 });
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaStageEchoReturn !== 'function') throw new Error('Echo return QA hook missing');
+      window.__scalebornQaStageEchoReturn();
+    });
+    await page.locator('#echo-action').evaluate((button) => button.click());
+    await page.waitForFunction(() => document.querySelector('#echo-stage')?.textContent === 'COMPLETE', null, { timeout: 12000 });
+    const stored = await page.evaluate(() => {
+      const raw = window.localStorage.getItem('scaleborn.azure-progress.v1');
+      return raw ? JSON.parse(raw) : null;
+    });
+    assert.equal(stored?.tidegateSolved, true);
+    assert.equal(stored?.echo?.collected, true);
+    assert.equal(stored?.echo?.attuned, true);
     assert.deepEqual(errors, [], 'Browser reported runtime or shader errors');
-    console.log('PASS: WebGL2, multiple cameras, giant and small forms, full landing/takeoff phases, and screenshots.');
+    console.log('PASS: WebGL2, dragon/rider controls, ocean diving, Tidegate, Tidal Echo shrine and saved quest progress.');
   } finally {
     await browser.close();
   }

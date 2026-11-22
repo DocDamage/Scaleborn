@@ -174,3 +174,24 @@ button:focus-visible { outline: 3px solid white; outline-offset:3px; }
   #tidegate-panel strong {font-size:14px;}
   #tidegate-panel p {font-size:10px;}
 }
+
+#echo-panel {
+  position:absolute; z-index:4; top:251px; right:20px; width:min(300px, 45vw);
+  border:1px solid rgba(240,214,164,.27); border-radius:9px; padding:12px 14px;
+  background:linear-gradient(115deg,rgba(11,39,49,.82),rgba(25,67,68,.73));
+  box-shadow:0 9px 26px rgba(1,18,27,.17); backdrop-filter:blur(8px);
+  pointer-events:auto;
+}
+#echo-stage {display:block; margin-top:6px; font:700 10px Arial,sans-serif; letter-spacing:.17em; color:#a9e4d0;}
+#echo-panel strong {display:block; margin:6px 0 5px; font:500 17px Georgia,serif;}
+#echo-panel p {font:12px/1.45 Arial,sans-serif; color:#d7e5e1; margin:0 0 10px;}
+#echo-panel .echo-foot {display:flex; flex-wrap:wrap; gap:5px 12px; justify-content:space-between;
+  color:#decfb9; font:10px/1.5 Arial,sans-serif;}
+#echo-action {margin-top:10px; width:100%; padding:10px 12px; background:#b1dfc7; color:#163941;
+  font:700 12px Arial,sans-serif;}
+@media(max-width:660px) {
+  #echo-panel {top:140px; right:10px; width:min(240px,50vw); padding:8px;}
+  #echo-panel strong {font-size:13px;}
+  #echo-panel p {font-size:10px;}
+  #echo-panel .echo-foot {font-size:9px;}
+}
