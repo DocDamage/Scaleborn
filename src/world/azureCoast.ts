@@ -99,6 +99,7 @@ export class AzureCoast {
     this.waterfall = new MirrorfallCascade(quality);
     scene.add(this.sky.mesh, this.ocean, this.caustics.mesh, this.shafts.mesh,
       this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group);
+    if (this.water.midMesh) scene.add(this.water.midMesh);
     if (this.water.nearMesh) scene.add(this.water.nearMesh);
     this.nature = new PainterlyNature(scene, quality);
     this.nearGrass = new LocalGroundcover(scene, quality);

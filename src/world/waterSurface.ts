@@ -58,6 +58,9 @@ const frag=`
   uniform vec2 uNearCenter;
   uniform float uNearHole;
   uniform float uNearHalf;
+  uniform vec2 uMidCenter;
+  uniform float uMidHole;
+  uniform float uMidHalf;
   varying vec3 vScWorld;
   varying float vScWave;
   float h(vec2 p) {
@@ -71,9 +74,12 @@ const frag=`
   void main() {
     vec2 q=vScWorld.xz;
     float nearDist=max(abs(q.x-uNearCenter.x),abs(q.y-uNearCenter.y));
-    // Mask the far-water mesh under the detailed surface; otherwise its
-    // undersampled waves protrude through the transparent near-water pass.
-    if (uNearRole>.5 && uNearRole<1.5 && nearDist<uNearHole) discard;
+    float midDist=max(abs(q.x-uMidCenter.x),abs(q.y-uMidCenter.y));
+    // Three nested LODs: far ocean is cut beneath the mid-field; the
+    // mid-field is cut beneath the high-resolution near-field. Without
+    // both masks, overlapping coarse vertices visibly pierce the waves.
+    if (uNearRole>.5 && uNearRole<1.5 && midDist<uMidHole) discard;
+    if (uNearRole>2.5 && nearDist<uNearHole) discard;
     vec2 d=(q-vec2(${GRAND_LAKE.x.toFixed(1)},${GRAND_LAKE.z.toFixed(1)}))/
       vec2(${GRAND_LAKE.radiusX.toFixed(1)},${GRAND_LAKE.radiusZ.toFixed(1)});
     float angle=atan(d.y,d.x);
@@ -86,10 +92,15 @@ const frag=`
     float shallow=uLake*(1.0-smoothstep(0.4,11.0,waterDepth));
     // Remove the ocean below the isolated freshwater basin.
     if (uLake<0.5 && r<1.05) discard;
-    // Cross-fade over the coarse ocean rather than drawing a rectangular
-    // water tile outline. Patch remains opaque where the coarse mesh is cut.
-    float patchFade=uNearRole>1.5
-      ? 1.0-smoothstep(uNearHole-.5,uNearHalf,nearDist) : 1.0;
+    // The near detail patch fades into a moderately tessellated 640 m
+    // mid-field, rather than straight into 60 m-spaced ocean polygons.
+    // The middle patch then blends into the distant ocean. Both borders
+    // are feathered outside their respective underlying cutouts.
+    float patchFade=1.0;
+    if(uNearRole>1.5 && uNearRole<2.5)
+      patchFade=1.0-smoothstep(uNearHole-.5,uNearHalf,nearDist);
+    if(uNearRole>2.5)
+      patchFade=1.0-smoothstep(uMidHole-.5,uMidHalf,midDist);
     float t=uTime;
     float p1=dot(q,normalize(vec2(.87,.49)))*.16-t*.95;
     float p2=dot(q,normalize(vec2(-.23,.97)))*.37-t*1.47;
@@ -227,8 +238,10 @@ export function makeFoamShader(lakeStrip = false): THREE.ShaderMaterial {
 export class PainterlyWaterSurface {
   readonly mesh: THREE.Mesh;
   readonly nearMesh: THREE.Mesh | null = null;
+  readonly midMesh: THREE.Mesh | null = null;
   private readonly material: THREE.ShaderMaterial;
   private readonly nearMaterial: THREE.ShaderMaterial | null = null;
+  private readonly midMaterial: THREE.ShaderMaterial | null = null;
   private readonly bathymetry: THREE.DataTexture;
   constructor(kind:'ocean'|'lake', quality:'high'|'low'='high') {
     const isLake=kind==='lake';
@@ -252,6 +265,9 @@ export class PainterlyWaterSurface {
         uNearCenter:{value:new THREE.Vector2(0,0)},
         uNearHole:{value:116},
         uNearHalf:{value:128},
+        uMidCenter:{value:new THREE.Vector2(0,0)},
+        uMidHole:{value:296},
+        uMidHalf:{value:320},
       }]),
       vertexShader:vert,fragmentShader:frag,
       transparent:true,depthWrite:false,side:THREE.DoubleSide,fog:true,
@@ -285,29 +301,53 @@ export class PainterlyWaterSurface {
       detail.renderOrder=1.5;
       this.nearMaterial=material;
       this.nearMesh=detail;
+
+      // Resolve the short wind-wave bands beyond the 128 m near patch.
+      // 3.33 m vertex spacing on High (5 m on Low) avoids the severe
+      // undersampling of the 60 m far-ocean grid at common camera heights.
+      const middleMaterial=this.material.clone();
+      middleMaterial.uniforms.uNearRole!.value=3;
+      const middleSteps=quality==='high'?192:128;
+      const middleGeometry=new THREE.PlaneGeometry(
+        640,640,middleSteps,middleSteps);
+      middleGeometry.rotateX(-Math.PI/2);
+      const middle=new THREE.Mesh(middleGeometry,middleMaterial);
+      middle.name='water.azure.ocean-midfield';
+      middle.position.y=SEA_LEVEL;
+      middle.renderOrder=1.25;
+      this.midMaterial=middleMaterial;
+      this.midMesh=middle;
       this.follow(0,0);
     }
   }
   /** Snap the detail patch near the camera without restarting wave phases. */
   follow(x:number,z:number):void {
-    if (!this.nearMesh || !this.nearMaterial ||
-      !Number.isFinite(x) || !Number.isFinite(z)) return;
+    if (!this.nearMesh || !this.nearMaterial || !this.midMesh ||
+      !this.midMaterial || !Number.isFinite(x) || !Number.isFinite(z)) return;
     const cx=Math.round(x/16)*16,cz=Math.round(z/16)*16;
     if(this.nearMesh.position.x===cx && this.nearMesh.position.z===cz)return;
     this.nearMesh.position.set(cx,SEA_LEVEL,cz);
-    (this.material.uniforms.uNearCenter!.value as THREE.Vector2).set(cx,cz);
-    (this.nearMaterial.uniforms.uNearCenter!.value as THREE.Vector2).set(cx,cz);
+    this.midMesh.position.set(cx,SEA_LEVEL,cz);
+    // Keep all three surfaces on the same absolute wind-wave phases.
+    for(const mat of [this.material,this.midMaterial,this.nearMaterial]){
+      (mat.uniforms.uNearCenter!.value as THREE.Vector2).set(cx,cz);
+      (mat.uniforms.uMidCenter!.value as THREE.Vector2).set(cx,cz);
+    }
     (this.nearMaterial.uniforms.uWaveOrigin!.value as THREE.Vector2).set(cx,cz);
+    (this.midMaterial.uniforms.uWaveOrigin!.value as THREE.Vector2).set(cx,cz);
   }
   update(time:number):void {
     this.material.uniforms.uTime!.value=time;
     if(this.nearMaterial) this.nearMaterial.uniforms.uTime!.value=time;
+    if(this.midMaterial) this.midMaterial.uniforms.uTime!.value=time;
   }
   dispose():void {
     this.mesh.geometry.dispose();
     this.material.dispose();
     this.nearMesh?.geometry.dispose();
     this.nearMaterial?.dispose();
+    this.midMesh?.geometry.dispose();
+    this.midMaterial?.dispose();
     this.bathymetry.dispose();
   }
 }

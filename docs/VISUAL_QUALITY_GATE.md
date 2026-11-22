@@ -525,3 +525,22 @@ an artist-directed sheet shader and point-spray approximation, **not** an
 interacting volumetric water simulation. Verify water sheet breakup, splash
 placement, fogged underwater appearance and frame timing in real browser
 screenshots before accepting the visual gate.
+
+
+### Ocean multi-ring surface LOD (visual pass 6 follow-up)
+
+The original 256 m camera-following ocean patch met the 8.3 m wave
+Nyquist spacing locally, but cross-faded immediately into the ocean's
+60 m-spaced long-range grid. That produced highly inconsistent wave
+silhouettes and obvious geometry changes just beyond the rider.
+The ocean now uses three independently shaded surface resolutions:
+a 256 m detail patch (existing), a new 640 m middle patch (192×192
+High / 128×128 Low), and the distant broad ocean. Each patch follows
+the observer on the same snapped world-space origin, animates against
+the same absolute wave coordinates and cuts out the underlying lower
+detail inside its coverage. Separate feathered borders at 116–128 m
+and 296–320 m limit transparent overlap and hard square seams.
+The independent Mirrorfall Lake mesh and collision/wave equations are
+unchanged. This is *not* FFT ocean synthesis or volumetric water;
+capture real coastline, flight and waterline views to validate seams
+and check increased vertex processing on desktop hardware.
