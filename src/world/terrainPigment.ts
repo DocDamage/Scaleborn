@@ -156,10 +156,24 @@ export function installTerrainPigment(material:THREE.MeshStandardMaterial):void 
         diffuseColor.rgb=mix(diffuseColor.rgb,
           diffuseColor.rgb*vec3(.47,.62,.66),scPigSwash*.40);
       `);
-    shader.fragmentShader=shader.fragmentShader.replace(
-      '#include <roughnessmap_fragment>',
-      '#include <roughnessmap_fragment>\n' +
-      'roughnessFactor=mix(roughnessFactor,0.29,scPigSwash*.75);'
-    );
+    // TerrainTriplanar expands <roughnessmap_fragment> before pigment runs.
+    // Inject after the *actual* triplanar roughness sampling, otherwise the
+    // wetness control silently disappears on both material presets.
+    const swashRough='roughnessFactor=mix(roughnessFactor,0.29,scPigSwash*.75);';
+    const highSurfaceWet='roughnessFactor=mix(roughnessFactor,0.39,wet*0.72);';
+    if(shader.fragmentShader.includes(highSurfaceWet)){
+      // High mode also layers a static physically painted wetness response.
+      shader.fragmentShader=shader.fragmentShader.replace(
+        highSurfaceWet, highSurfaceWet+'\n'+swashRough,
+      );
+    }else{
+      const triplanarRough=/float roughnessFactor = roughness;[\s\S]*?#endif/;
+      if(!triplanarRough.test(shader.fragmentShader)){
+        throw new Error('Terrain swash requires compiled triplanar roughness');
+      }
+      shader.fragmentShader=shader.fragmentShader.replace(
+        triplanarRough,(section)=>section+'\n'+swashRough,
+      );
+    }
   };
 }
