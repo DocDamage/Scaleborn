@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { assistedDirection } from '../src/combat/aimAssist';
 import { newFlightState, type FlightState } from '../src/actors/dragon/flight';
 import { FORMS } from '../src/actors/dragon/forms';
 import { heightAt } from '../src/world/terrain';
@@ -64,6 +65,18 @@ describe('G4 deterministic encounter and dragon breath', () => {
     const before = victim.hp;
     castDragonFire(c, s);
     expect(victim.hp).toBe(before);
+  });
+
+  it('only bends almost-correct locked attacks without steering backward',()=>{
+    const raw={x:1,y:0,z:0},origin={x:0,y:1,z:0};
+    const v=assistedDirection(raw,origin,{x:15,y:1,z:-1.7});
+    expect(v.z).toBeLessThan(0);
+    expect(v.z).toBeGreaterThan(-.13);
+    expect(Math.hypot(v.x,v.y,v.z)).toBeCloseTo(1,6);
+    expect(assistedDirection(raw,origin,{x:-12,y:1,z:0})).toEqual(raw);
+    expect(assistedDirection(raw,origin,{x:6,y:18,z:0})).toEqual(raw);
+    expect(assistedDirection(raw,origin,{x:NaN,y:0,z:0})).toEqual(raw);
+    expect(assistedDirection(raw,origin,null)).toEqual(raw);
   });
 
   it('sweeps grounded claws only forward with distinct cooldown and no Ember cost', () => {

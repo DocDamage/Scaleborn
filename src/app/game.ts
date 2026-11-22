@@ -736,9 +736,16 @@ export class Game {
     }
   }
 
+  private aimTarget(): {x:number;y:number;z:number}|null {
+    const h=this.targetLock.current(this.combat,this.flight);
+    return h ? {x:h.x,y:h.y+1.2,z:h.z}:null;
+  }
+
   private fireAction(): void {
+    const target=this.aimTarget();
     const result = this.flight.controlTarget === 'rider'
-      ? castRiderSigil(this.combat, this.flight) : castDragonFire(this.combat, this.flight);
+      ? castRiderSigil(this.combat,this.flight,false,target)
+      : castDragonFire(this.combat,this.flight,target);
     this.finishCombatAction(result);
   }
 
@@ -747,11 +754,11 @@ export class Game {
   }
 
   private clawAction(): void {
-    this.finishCombatAction(castDragonClaw(this.combat, this.flight));
+    this.finishCombatAction(castDragonClaw(this.combat,this.flight,this.aimTarget()));
   }
 
   private mountedSigilAction(): void {
-    this.finishCombatAction(castMountedRiderSigil(this.combat, this.flight));
+    this.finishCombatAction(castMountedRiderSigil(this.combat,this.flight,this.aimTarget()));
   }
 
   private bondAction(): void {

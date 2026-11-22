@@ -4,6 +4,7 @@ import { FORMS } from '../actors/dragon/forms';
 import { canStand } from '../world/collision';
 import { steerGroundThreat } from './houndNavigation';
 import { heightAt } from '../world/terrain';
+import { assistedDirection, type CombatPoint } from './aimAssist';
 
 const clamp = (n: number, low: number, high: number): number => Math.max(low, Math.min(high, n));
 export const COMBAT_DEN = { x: -410, z: -45 } as const;
@@ -178,7 +179,7 @@ function fireLineClear(
 }
 
 /** R / primary click: one directional, terrain-occluded fire cone, not an auto-hit. */
-export function castDragonFire(c: CombatState, s: FlightState): InteractionResult {
+export function castDragonFire(c: CombatState, s: FlightState, target?:CombatPoint|null): InteractionResult {
   if (s.controlTarget !== 'dragon') return { ok: false, message: 'Switch to Onyx to breathe fire.' };
   if (s.transition) return { ok: false, message: 'Complete the traversal maneuver first.' };
   if (s.mode === 'underwater' || s.mode === 'surface') {
@@ -192,9 +193,9 @@ export function castDragonFire(c: CombatState, s: FlightState): InteractionResul
   c.fireReadyAt = s.time + 0.78;
   const scale = FORMS[s.form].visualScale;
   const cos = Math.cos(s.pitch);
-  const direction = {
-    x: Math.sin(s.yaw) * cos, y: Math.sin(s.pitch), z: -Math.cos(s.yaw) * cos,
-  };
+  const raw={x:Math.sin(s.yaw)*cos,y:Math.sin(s.pitch),z:-Math.cos(s.yaw)*cos};
+  const direction=assistedDirection(raw,
+    {x:s.x,y:s.y+.25*scale,z:s.z},target);
   const muzzle = 2.05 * scale;
   const origin = {
     x: s.x + direction.x * muzzle,
@@ -241,7 +242,7 @@ export function castDragonFire(c: CombatState, s: FlightState): InteractionResul
  * authentic hound health/stagger and one-time victory handling as fire.
  * No Ember is spent; its cooldown is independent of dragon breath.
  */
-export function castDragonClaw(c: CombatState, s: FlightState): InteractionResult {
+export function castDragonClaw(c: CombatState,s:FlightState,target?:CombatPoint|null): InteractionResult {
   if (s.controlTarget !== 'dragon') {
     return { ok: false, message: 'Switch to Onyx to use his claws.' };
   }
@@ -252,7 +253,11 @@ export function castDragonClaw(c: CombatState, s: FlightState): InteractionResul
     return { ok: false, message: 'Onyx is recovering from the claw sweep.' };
   }
   const spec = CLAW[s.form];
-  const dir = { x: Math.sin(s.yaw), z: -Math.cos(s.yaw) };
+  const raw={x:Math.sin(s.yaw),y:0,z:-Math.cos(s.yaw)};
+  // The physical melee attack only adjusts horizontal yaw, never elevation.
+  const desired=target ? {x:target.x,y:s.y,z:target.z}:null;
+  const guided=assistedDirection(raw,{x:s.x,y:s.y,z:s.z},desired,.18);
+  const dir={x:guided.x,z:guided.z};
   c.lastClaw = {
     id: ++c.clawSequence, time: s.time, form: s.form,
     origin: { x: s.x, y: s.y, z: s.z }, direction: dir, reach: spec.reach,
@@ -285,7 +290,9 @@ export function castDragonClaw(c: CombatState, s: FlightState): InteractionResul
 }
 
 /** Rider's focused tide sigil uses her own heading and reserve, not dragon Ember. */
-export function castRiderSigil(c: CombatState, s: FlightState, mounted = false): InteractionResult {
+export function castRiderSigil(
+  c:CombatState,s:FlightState,mounted=false,target?:CombatPoint|null,
+):InteractionResult {
   if (mounted && (s.form === 'small' || s.controlTarget !== 'dragon')) {
     return { ok: false, message: 'Mount Onyx to cast a mounted Tidal Sigil.' };
   }
@@ -304,9 +311,12 @@ export function castRiderSigil(c: CombatState, s: FlightState, mounted = false):
   const yaw = mounted ? s.yaw : s.riderYaw;
   const pitch = mounted ? s.pitch : 0;
   const cos = Math.cos(pitch);
-  const direction = { x: Math.sin(yaw) * cos, y: Math.sin(pitch),
-    z: -Math.cos(yaw) * cos };
+  const raw={x:Math.sin(yaw)*cos,y:Math.sin(pitch),z:-Math.cos(yaw)*cos};
   const scale = FORMS[s.form].visualScale;
+  const aimOrigin=mounted
+    ? {x:s.x,y:s.y+.63*scale+.3,z:s.z}
+    : {x:s.riderX,y:s.riderY+1.28,z:s.riderZ};
+  const direction=assistedDirection(raw,aimOrigin,target);
   const mountSeatY = .63 * scale - .66 - .055;
   const origin = mounted ? {
     x: s.x + direction.x * scale,
@@ -351,8 +361,10 @@ export function castRiderSigil(c: CombatState, s: FlightState, mounted = false):
  * Shared cooldown and hit logic prevent mounting from bypassing sigil rules.
  * Aerial shots use true pitch and can miss foes below the dragon.
  */
-export function castMountedRiderSigil(c: CombatState, s: FlightState): InteractionResult {
-  return castRiderSigil(c, s, true);
+export function castMountedRiderSigil(
+  c:CombatState,s:FlightState,target?:CombatPoint|null,
+):InteractionResult {
+  return castRiderSigil(c,s,true,target);
 }
 
 /** X: both companions must cooperate on dry land for a close-range bond surge. */

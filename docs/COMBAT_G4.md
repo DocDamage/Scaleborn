@@ -114,3 +114,13 @@ screen-space marker is projected only while a valid target is in view.
 The system does **not** auto-hit, alter facing/flight physics, bypass
 cover, or show permanent HUD panels. This is a foundation for future
 form-specific assisted aim and lock cycling, not a completed boss lock-on.
+
+### Real narrowly assisted attacks
+
+With L target lock active, dragon fire, grounded claw and dismounted or
+mounted Tidal Sigil now apply up to a 0.18–0.20 rad, 66%-blended aim
+correction toward the tracked living target. No correction occurs if
+the target is behind, far away, out of the near-center cone or invalid.
+Normal collision, distance, terrain, cooldown, costs and hit tests still
+run unchanged; the player's yaw/pitch and saved gameplay state never
+change. This is a manual-aim comfort aid, **not** an auto-hit mechanism.
