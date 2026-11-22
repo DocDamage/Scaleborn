@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createTreePrototype, makeLeafAtlas, type TreeSpecies } from './treeCanopy';
 import { makeFernTuft } from './fernUnderstory';
+import { InstanceVisibility } from './instanceVisibility';
 import { rng, fbm } from '../core/random';
 import { AZURE_SEED, heightAt, LANDMARKS } from './terrain';
 import { GRAND_LAKE, MIRRORFALL, waterSurfaceAt, lakeShoreDistance } from './highlandLake';
@@ -52,6 +53,7 @@ export class PainterlyNature {
   private readonly materials: THREE.Material[] = [];
   private readonly meshes: THREE.InstancedMesh[] = [];
   private readonly textures: THREE.Texture[] = [];
+  private readonly visibility = new InstanceVisibility();
   private grassWind: { value: number } | null = null;
   private leafWind: { value: number } | null = null;
   constructor(scene: THREE.Scene, quality: 'high' | 'low' = 'high') {
@@ -239,6 +241,8 @@ export class PainterlyNature {
       wood.receiveShadow = quality === 'high';
       this.root.add(wood,crown);
       this.meshes.push(wood,crown);
+      this.visibility.register(wood,sites,quality==='high'?1160:820);
+      this.visibility.register(crown,sites,quality==='high'?1160:820);
     }
 
     const grass=new THREE.InstancedMesh(grassTuft(),grassMat,grasses.length);
@@ -252,6 +256,7 @@ export class PainterlyNature {
     grass.name='vegetation.azure.waving-grass';
     grass.receiveShadow = quality === 'high';
     this.root.add(grass);this.meshes.push(grass);
+    this.visibility.register(grass,grasses,quality==='high'?420:270);
 
     // Broadleaf canopy plus real understory makes the landscape readable at
     // rider height; a fern patch is one draw call rather than separate props.
@@ -266,6 +271,7 @@ export class PainterlyNature {
     fern.name='vegetation.azure.forest-ferns';
     fern.receiveShadow=quality==='high';
     this.root.add(fern);this.meshes.push(fern);
+    this.visibility.register(fern,ferns,quality==='high'?350:235);
 
     const rock=new THREE.InstancedMesh(irregularRock(),rockMat,rocks.length);
     rocks.forEach((p,i)=>{
@@ -280,10 +286,12 @@ export class PainterlyNature {
     rock.castShadow=quality==='high';
     rock.receiveShadow=quality==='high';
     this.root.add(rock);this.meshes.push(rock);
+    this.visibility.register(rock,rocks,quality==='high'?780:520);
   }
-  update(time:number):void{
+  update(time:number,x?:number,z?:number):void{
     if(this.grassWind)this.grassWind.value=time;
     if(this.leafWind)this.leafWind.value=time;
+    if(x!==undefined&&z!==undefined)this.visibility.update(x,z);
   }
   dispose():void{
     this.meshes.forEach(mesh=>mesh.geometry.dispose());

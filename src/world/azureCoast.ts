@@ -172,7 +172,7 @@ export class AzureCoast {
     this.caustics.update(time);
     this.waterfall.update(time);
     if(state)this.wake.update(state,time);
-    this.nature.update(time);
+    this.nature.update(time,x,z);
     this.nearGrass.update(x,z,time);
     this.clouds.update(time);
     this.foamMaterial.uniforms.uTime!.value=time;

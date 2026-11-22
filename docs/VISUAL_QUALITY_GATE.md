@@ -243,3 +243,18 @@ preserves leaf-wind variation, and uses exactly **one instanced draw group**.
 At the high setting the field covers a wider radius with finer spacing; low
 uses less geometry. The screenshot inspection must still check distant
 population fade/popping, foliage shading, frame rate and overdraw.
+
+### Per-instance forest visibility (visual pass 5 performance safety)
+
+Foliage formerly used one world-sized batch per species, causing every tree,
+grass patch and boulder across the 4 km region to be submitted even from a
+small shoreline camera view. `InstanceVisibility` records immutable instance
+matrices and tints at generation, then repacks only nearby specimens into
+the existing instanced mesh buffers when the player crosses a 48 m cell.
+Low-quality foliage has a smaller submission radius, while forest trees retain
+a longer distance than near-ground grass. One draw call per surviving batch;
+no per-frame new mesh creation, world-coordinate reseeding or gameplay changes.
+
+Known limitation: this is a CPU distance gate, not hardware occlusion culling,
+impostor LOD, or GPU-driven per-instance culling. Test distant pop-in and
+performance on the actual desktop GPU before visual release.
