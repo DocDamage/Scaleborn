@@ -96,12 +96,16 @@ export const ONYX_TORSO: readonly SculptSection[] = [
 ];
 
 export const ONYX_HEAD: readonly SculptSection[] = [
-  [-1.36,-.11,.14,.11],
-  [-1.19,-.13,.30,.18],
-  [-.95,-.13,.43,.23],
-  [-.71,-.075,.51,.28],
-  [-.46,.018,.60,.37],
-  [-.16,.085,.63,.43],
+  // A nearly closed nose tip and narrow wedge-shaped muzzle replace the
+  // blunt open ellipse that gave Onyx a hippo-like profile in real WebGL.
+  [-1.46,-.12,.008,.010],
+  [-1.37,-.125,.145,.11],
+  [-1.20,-.145,.27,.16],
+  [-.98,-.145,.38,.22],
+  [-.77,-.095,.48,.27],
+  [-.54,.005,.58,.36],
+  [-.31,.07,.62,.41],
+  [-.11,.09,.61,.41],
   [.18,.10,.57,.38],
   [.43,.12,.41,.26],
   [.70,.08,.065,.055],

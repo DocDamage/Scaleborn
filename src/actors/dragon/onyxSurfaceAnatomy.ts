@@ -47,8 +47,11 @@ export function onyxSurfaceOffset(
   const brow = bell(z, -.30, .38) * bell(ny, .53, .30);
   const orbit = bell(z, -.35, .24) * bell(ny, .32, .22);
   const muzzle = bell(z, -1.02, .36);
+  // Lower jaw tapers into a distinct reptilian wedge while retaining the
+  // cheek/orbit landmarks and existing jaw hinge and horn attachment sockets.
+  const jawWedge=bell(z, -.98, .62)*Math.pow(underside,3);
   return {
-    x: side * (.076 * cheek + .065 * brow - .052 * orbit),
+    x: side * (.076 * cheek + .065 * brow - .052 * orbit -.035*jawWedge),
     y: .023 * brow * top - .044 * muzzle * Math.pow(top, 4)
       - .026 * bell(z, -.47, .43) * Math.pow(underside, 5),
   };

@@ -132,3 +132,13 @@ dorsal bend, shortens the resting bind pose to 44% along span/chord,
 65% vertically, and raises the attachment 15 cm into the dorsal contour.
 All form physics and named bones are unchanged. Needs new real screenshot
 confirmation; visual acceptance remains BLOCKING.
+
+### Onyx face silhouette correction from actual side WebGL imagery
+Current real side captures show a bulky blunt reptile/hippo-shaped snout even
+after the organic skull loft and brow/cheek work. The original Onyx skull
+profile now closes the very front surface to a ~16mm wide tapered tip,
+keeps the measured eye/orbit/cheek/horn locations intact, and introduces a
+subtle narrower lower-jaw wedge. This replaces the large front elliptical
+opening without adding separate sphere/cone parts or changing the root
+physics/gameplay form dimensions. Require fresh real side/front screenshots
+in small/rideable/giant forms; no final art approval.
