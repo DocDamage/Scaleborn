@@ -25,6 +25,11 @@ describe('Mirrorfall impact foam and spray rendering',()=>{
       const shader=low.mesh.material;
       expect(shader.transparent).toBe(true);
       expect(shader.depthWrite).toBe(false);
+      expect(shader.fog).toBe(true);
+      expect(shader.uniforms.fogColor?.value).toBeInstanceOf(THREE.Color);
+      expect(shader.uniforms.fogDensity?.value).toBeDefined();
+      expect(shader.vertexShader).toContain('#include <fog_vertex>');
+      expect(shader.fragmentShader).toContain('#include <fog_fragment>');
       expect(shader.uniforms.uImpactWorld?.value).toEqual(
         new THREE.Vector2(MIRRORFALL_IMPACT.x,MIRRORFALL_IMPACT.z));
       expect(shader.vertexShader).toContain('plungeD');
