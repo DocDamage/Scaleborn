@@ -67,21 +67,91 @@ export function makeWaterfallMistTexture(): THREE.DataTexture {
  * oscillating like a fixed row of white billboards. No particle objects,
  * geometry or textures are allocated during update().
  */
+
+const mistVertex = [
+  '#include <fog_pars_vertex>',
+  'attribute float instanceOpacity;',
+  'varying vec2 vMistUv;',
+  'varying float vMistOpacity;',
+  'void main() {',
+  '  vMistUv = uv;',
+  '  vMistOpacity = instanceOpacity;',
+  '  vec4 world = modelMatrix * instanceMatrix * vec4(position, 1.0);',
+  '  vec4 mvPosition = viewMatrix * world;',
+  '  gl_Position = projectionMatrix * mvPosition;',
+  '  #include <fog_vertex>',
+  '}',
+].join('\n');
+
+const mistFragment = [
+  'precision highp float;',
+  '#include <fog_pars_fragment>',
+  'uniform sampler2D uMistMap;',
+  'varying vec2 vMistUv;',
+  'varying float vMistOpacity;',
+  'void main() {',
+  '  vec4 mist = texture2D(uMistMap, vMistUv);',
+  '  float alpha = mist.a * vMistOpacity;',
+  '  if (alpha < 0.001) discard;',
+  '  gl_FragColor = vec4(mist.rgb * vec3(0.89, 0.95, 0.92), alpha);',
+  '  #include <tonemapping_fragment>',
+  '  #include <colorspace_fragment>',
+  '  #include <fog_fragment>',
+  '}',
+].join('\n');
+
+/**
+ * One instanced, camera-facing plume draw instead of 16/36 separately
+ * sorted sprite draw calls. All particle transforms and opacity values are
+ * updated in preallocated typed buffers; neither scene graph nor materials
+ * grow during rendering. The diffuse texture and deterministic advection
+ * remain the same physically inspired visual approximation.
+ */
 export class WaterfallMist {
   readonly group = new THREE.Group();
+  readonly mesh: THREE.InstancedMesh;
   private readonly texture = makeWaterfallMistTexture();
-  private readonly sprites: THREE.Sprite[] = [];
+  private readonly material: THREE.ShaderMaterial;
   private readonly seeds: MistSeed[] = [];
+  private readonly opacities: Float32Array;
+  private readonly opacityAttribute: THREE.InstancedBufferAttribute;
+  private readonly position = new THREE.Vector3();
+  private readonly facing = new THREE.Quaternion();
+  private readonly size = new THREE.Vector3();
+  private readonly matrix = new THREE.Matrix4();
 
   constructor(quality: Quality = 'high') {
     this.group.name = 'water.azure.mirrorfall-buoyant-mist';
     const random = rng(AZURE_SEED + 19073);
     const count = quality === 'high' ? 36 : 16;
+    const geometry = new THREE.PlaneGeometry(1, 1);
+    this.opacities = new Float32Array(count);
+    this.opacityAttribute = new THREE.InstancedBufferAttribute(this.opacities, 1);
+    this.opacityAttribute.setUsage(THREE.DynamicDrawUsage);
+    geometry.setAttribute('instanceOpacity', this.opacityAttribute);
+    this.material = new THREE.ShaderMaterial({
+      uniforms: THREE.UniformsUtils.merge([
+        THREE.UniformsLib.fog, { uMistMap: { value: this.texture } },
+      ]),
+      vertexShader: mistVertex,
+      fragmentShader: mistFragment,
+      transparent: true,
+      depthWrite: false,
+      depthTest: true,
+      side: THREE.DoubleSide,
+      fog: true,
+    });
+    this.mesh = new THREE.InstancedMesh(geometry, this.material, count);
+    this.mesh.name = 'water.azure.mirrorfall-mist-batch';
+    this.mesh.renderOrder = 3.5;
+    // The cloud expands and drifts; a static construction-time bounding sphere
+    // could otherwise incorrectly cull the entire batch.
+    this.mesh.frustumCulled = false;
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     for (let i = 0; i < count; i++) {
-      const seed: MistSeed = {
+      this.seeds.push({
         phase: random(),
         period: 7 + 4.5 * random(),
-        // All azimuths point away from the rock wall into the lake.
         azimuth: Math.PI + (random() - .5) * 2.55,
         radius: 1.5 + 7 * random(),
         travel: 17 + 30 * random(),
@@ -90,34 +160,19 @@ export class WaterfallMist {
         size: 14 + 15 * random(),
         opacity: .17 + .10 * random(),
         wobble: random() * Math.PI * 2,
-      };
-      const material = new THREE.SpriteMaterial({
-        map: this.texture,
-        color: 0xe1f2eb,
-        transparent: true,
-        depthWrite: false,
-        depthTest: true,
-        fog: true,
-        opacity: 0,
       });
-      const sprite = new THREE.Sprite(material);
-      sprite.name = 'water.azure.mirrorfall-mist-wisp';
-      sprite.renderOrder = 3.5;
-      this.seeds.push(seed);
-      this.sprites.push(sprite);
-      this.group.add(sprite);
     }
+    this.group.add(this.mesh);
     this.update(0);
   }
 
-  update(time: number): void {
+  /** Camera rotation, not camera position, faces the cards without translation. */
+  update(time: number, camera?: THREE.Camera): void {
     if (!Number.isFinite(time)) return;
-    // One wave sample for the entire shared source rather than one for
-    // every sprite; the splash origin follows the actual lake wave motion.
+    if (camera) camera.getWorldQuaternion(this.facing);
     const waterY = GRAND_LAKE.surfaceY + waterWaveOffsetAt(
       MIRRORFALL_IMPACT.x, MIRRORFALL_IMPACT.z, time);
-    for (let i = 0; i < this.sprites.length; i++) {
-      const sprite = this.sprites[i]!;
+    for (let i = 0; i < this.seeds.length; i++) {
       const seed = this.seeds[i]!;
       const age = ((time / seed.period + seed.phase) % 1 + 1) % 1;
       const spread = seed.radius + age * seed.travel;
@@ -128,23 +183,27 @@ export class WaterfallMist {
         + crosswind;
       const rise = 1.1 + age * seed.height
         + Math.sin(age * 9 + seed.wobble) * age * .55;
-      sprite.position.set(x, waterY + rise, z);
-      const size = seed.size * (.58 + age * 1.10);
-      sprite.scale.set(size * 1.17, size * .72, 1);
+      this.position.set(x, waterY + rise, z);
+      const width = seed.size * (.58 + age * 1.10);
+      this.size.set(width * 1.17, width * .72, 1);
+      this.matrix.compose(this.position, this.facing, this.size);
+      this.mesh.setMatrixAt(i, this.matrix);
       const appear = smooth01(age / .16);
       const dissipate = 1 - smooth01((age - .65) / .35);
-      (sprite.material as THREE.SpriteMaterial).opacity =
-        seed.opacity * appear * dissipate;
+      this.opacities[i] = seed.opacity * appear * dissipate;
     }
+    this.mesh.instanceMatrix.needsUpdate = true;
+    this.opacityAttribute.needsUpdate = true;
   }
 
   get count(): number {
-    return this.sprites.length;
+    return this.seeds.length;
   }
 
   dispose(): void {
     this.group.removeFromParent();
-    for (const sprite of this.sprites) sprite.material.dispose();
+    this.mesh.geometry.dispose();
+    this.material.dispose();
     this.texture.dispose();
     this.group.clear();
   }

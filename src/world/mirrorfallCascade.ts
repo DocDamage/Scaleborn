@@ -224,7 +224,7 @@ export class MirrorfallCascade {
         d.y+d.vy*d.life-.5*gravity*d.life*d.life);}
   }
 
-  update(time:number):void{
+  update(time:number,camera?:THREE.Camera):void{
     const dt=Math.min(.065,Math.max(0,time-this.previousTime));
     this.previousTime=time;
     this.waterMat.uniforms.uTime!.value=time;
@@ -250,7 +250,7 @@ export class MirrorfallCascade {
     });
     this.spray.instanceMatrix.needsUpdate=true;
     this.foam.update(time);
-    this.mist.update(time);
+    this.mist.update(time,camera);
   }
   dispose():void{
     this.foam.dispose();
