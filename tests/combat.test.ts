@@ -267,4 +267,32 @@ describe('G4 deterministic encounter and dragon breath', () => {
     }
   });
 
+
+  it('grants one genuine, once-only Ember capacity increase for clearing the den', () => {
+    const s = groundDragon(-414, -56);
+    const c = newCombatState();
+    s.form = 'small';
+    s.y = heightAt(s.x, s.z) + FORMS.small.standHeight;
+    s.riderX = s.x + 1;
+    s.riderZ = s.z;
+    s.riderY = heightAt(s.riderX, s.riderZ) + 0.05;
+    s.riderMode = 'ground';
+    for (let k = 0; k < c.hounds.length; k++) {
+      const h = c.hounds[k]!;
+      h.x = s.x + 3 + 1.6 * k;
+      h.z = s.z + 0.9 * k;
+      h.y = heightAt(h.x, h.z);
+      h.hp = 1;
+    }
+    expect(castBondSurge(c, s).ok).toBe(true);
+    expect(c.hounds.every((h) => h.hp === 0)).toBe(true);
+    expect(c.gloamCleared).toBe(true);
+    expect(c.maxEmber).toBe(115);
+    expect(c.ember).toBe(115);
+    expect(c.notice?.message).toContain('15 Ember');
+    s.time = 7;
+    expect(castBondSurge(c, s).ok).toBe(true);
+    expect(c.maxEmber).toBe(115);
+  });
+
 });

@@ -9,6 +9,7 @@ Open `/?start=combat` (optionally `&quality=low`) and click **Take flight**. Thi
 - Breath consumes a regenerating **Ember** pool; attacks have a 0.78-second cooldown. Small, rideable and giant forms have different reach and damage. Swimming, rider focus and active traversal transitions cannot breathe fire.
 - The independent rider casts a directional **Tidal Sigil** with the same R input and a separate regenerating **Focus** pool. Both actors must be grounded and close (8 m) to perform **X · Bond Surge**, an area attack consuming both reserves with a 6.5-second cooldown. A shared HUD bar displays the active actor's energy without adding a third permanent panel.
 - Gloam hounds pursue ground/low-air targets inside a finite aggro radius, stop at terrain blockers, wind up before melee, recoil when hit and leash home. High flying or diving escapes melee; their hit reaction and deaths have visible feedback.
+- Clearing all three threats grants one permanent-for-session **+15 maximum Ember** improvement and a full Ember refill. The reward is awarded once and is not yet part of the G5 save format.
 - **Bond vitality** is shared between rider and dragon for this first slice. Repeated strikes can exhaust it. Defeat returns both safely to the Tidegate meadow with a short grace period, while preserving quest/discovery progress and already banished hounds. Encounter state is session-only until G5 save slots.
 - The minimal two-bar display appears only near living threats or when vitality/ember is below full. It does not resurrect cluttered old HUD panels.
 

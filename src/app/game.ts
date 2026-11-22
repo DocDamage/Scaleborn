@@ -191,6 +191,7 @@ export class Game {
         __scalebornQaForest?: () => void;
         __scalebornQaCombatSnapshot?: () => {
           hp: number; ember: number; focus: number; respawns: number;
+          maxEmber: number; gloamCleared: boolean;
           fireSequence: number; sigilSequence: number; bondSequence: number;
           hounds: Array<{ id: string; hp: number; maxHp: number; alert: boolean; windup: number }>;
         };
@@ -411,6 +412,8 @@ export class Game {
       // Read-only combat diagnostics; no fake damage or enemy state changes.
       host.__scalebornQaCombatSnapshot = () => ({
         hp: this.combat.hp,
+        maxEmber: this.combat.maxEmber,
+        gloamCleared: this.combat.gloamCleared,
         ember: this.combat.ember,
         focus: this.combat.focus,
         respawns: this.combat.respawns,
@@ -697,11 +700,13 @@ export class Game {
     this.combatEmberBar.setAttribute('aria-label', rider ? 'Rider focus' : 'Dragon Ember');
     const hpPercent = Math.round(100 * this.combat.hp / this.combat.maxHp);
     const energy = rider ? this.combat.focus : this.combat.ember;
-    const emberPercent = Math.round(100 * energy / this.combat.maxEmber);
+    const energyMax = rider ? this.combat.maxFocus : this.combat.maxEmber;
+    const emberPercent = Math.round(100 * energy / energyMax);
     this.combatHealth.style.width = hpPercent + '%';
     this.combatEmber.style.width = emberPercent + '%';
     this.combatHealthBar.setAttribute('aria-valuenow', String(this.combat.hp));
     this.combatEmberBar.setAttribute('aria-valuenow', String(Math.round(energy)));
+    this.combatEmberBar.setAttribute('aria-valuemax', String(energyMax));
     const enemiesLeft = combatRemaining(this.combat);
     this.combatThreats.textContent = enemiesLeft === 0 ? 'GLOAM DEN CLEARED'
       : 'GLOAM HOUNDS · ' + enemiesLeft + ' REMAIN';

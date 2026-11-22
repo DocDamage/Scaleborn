@@ -68,6 +68,7 @@ export interface CombatState {
   noticeSequence: number;
   notice: CombatNotice | null;
   respawns: number;
+  gloamCleared: boolean;
   hounds: GloamHound[];
 }
 
@@ -89,7 +90,7 @@ export function newCombatState(): CombatState {
     focus: 100, maxFocus: 100, sigilReadyAt: 0, bondReadyAt: 0,
     sigilSequence: 0, lastSigil: null, bondSequence: 0, lastBond: null,
     fireSequence: 0, lastFire: null, noticeSequence: 0, notice: null,
-    respawns: 0,
+    respawns: 0, gloamCleared: false,
     hounds: GLOAM_SPAWNS.map((spawn, index) => ({
       id: spawn.id, x: spawn.x, z: spawn.z, y: heightAt(spawn.x, spawn.z),
       homeX: spawn.x, homeZ: spawn.z, yaw: index * 1.6,
@@ -102,6 +103,15 @@ export function newCombatState(): CombatState {
 function notice(c: CombatState, kind: CombatNotice['kind'], message: string): void {
   c.noticeSequence++;
   c.notice = { sequence: c.noticeSequence, kind, message };
+}
+
+/** One real mechanical reward, granted only once when all threats are defeated. */
+function grantGloamVictory(c: CombatState): void {
+  if (c.gloamCleared || !c.hounds.length || !c.hounds.every((h) => h.hp === 0)) return;
+  c.gloamCleared = true;
+  c.maxEmber += 15;
+  c.ember = c.maxEmber;
+  notice(c, 'kill', 'Gloam Den cleansed. Onyx gains 15 Ember capacity.');
 }
 
 function actorPosition(s: FlightState): { x: number; y: number; z: number } {
@@ -172,9 +182,7 @@ export function castDragonFire(c: CombatState, s: FlightState): InteractionResul
       notice(c, 'kill', 'Gloam hound banished.');
     }
   }
-  if (c.hounds.every((hound) => hound.hp === 0)) {
-    notice(c, 'kill', 'The Gloam Den falls silent.');
-  }
+  if (landed > 0) grantGloamVictory(c);
   return { ok: true, message: landed > 0 ? 'Flame struck ' + landed + ' enemy.' : 'Onyx breathes fire.' };
 }
 
@@ -213,9 +221,7 @@ export function castRiderSigil(c: CombatState, s: FlightState): InteractionResul
       notice(c, 'kill', 'Gloam hound dispelled by the rider.');
     }
   }
-  if (hits && c.hounds.every((h) => h.hp === 0)) {
-    notice(c, 'kill', 'The Gloam Den falls silent.');
-  }
+  if (hits > 0) grantGloamVictory(c);
   return { ok: true, message: hits ? 'Tidal sigil struck ' + hits + ' enemy.' : 'The sigil flies forward.' };
 }
 
@@ -249,9 +255,7 @@ export function castBondSurge(c: CombatState, s: FlightState): InteractionResult
       notice(c, 'kill', 'Gloam hound scattered by the bond.');
     }
   }
-  if (hits && c.hounds.every((h) => h.hp === 0)) {
-    notice(c, 'kill', 'The Gloam Den falls silent.');
-  }
+  if (hits > 0) grantGloamVictory(c);
   return { ok: true, message: hits ? 'Bond surge struck ' + hits + ' enemy.' : 'The bond surge blossoms.' };
 }
 

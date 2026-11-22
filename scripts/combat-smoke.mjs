@@ -79,7 +79,8 @@ try {
     window.__scalebornQaCombatSnapshot()?.bondSequence === 1,
   null, { timeout: 40000 });
   const bond = await snapshot();
-  assert.ok(bond.ember < dragon.ember, 'Bond surge must use dragon Ember');
+  assert.ok(bond.ember < dragon.ember || bond.gloamCleared,
+    'Bond surge must use Ember unless the victory reward refilled it');
   assert.ok(bond.focus < rider.focus, 'Bond surge must use rider Focus');
   assert.ok(alive(bond) < alive(rider), 'Bond surge must strike a nearby enemy');
   await page.screenshot({ path: 'artifacts/combat-bond-surge.png', timeout: 120000 });
