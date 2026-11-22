@@ -121,3 +121,19 @@ Swimming wakes are now generated around the controlled dragon and independent ri
 ### Responsive render budget (follow-up pass)
 
 `src/app/adaptiveResolution.ts` independently controls internal pixel density using sustained frame-rate thresholds with cooldown. High-quality PBR materials remain enabled as resolution falls; this is a usability safety net rather than a replacement for profiling. Benchmark actual render GPU time, world-stream generation, and shader compilation, not just FPS. Quality screenshots with `?qa=1` lock their selected pixel ratio so regressions can be compared reliably.
+
+### Mirrorfall lake light and shore-break alignment (visual pass 3)
+
+- The shallow freshwater lakebed has a dedicated deterministic polar light
+  mesh following `heightAt` (the exact collision terrain), with two moving
+  interference bands, depth absorption and distance fade. It never crosses
+  the procedural shore boundary. These are approximated caustics, not
+  refractive ray tracing.
+- Shoreline foam vertices now follow the same four wind-wave terms,
+  directional drift and plunge-point displacement as the lake-water shader,
+  with a thin 0.10 m separation rather than a detached static 0.82 m ring.
+  Foam and the lake share one waterfall impact coordinate. Sea coast
+  foam uses its existing behavior.
+- The low preset uses fewer caustic mesh vertices; shader and lake physics
+  remain present in both modes. Tests verify terrain alignment, shoreline
+  containment, independent foam materials and animation uniforms.
