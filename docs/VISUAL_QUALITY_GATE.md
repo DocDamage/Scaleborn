@@ -705,3 +705,17 @@ draw group; no extra materials, image assets or particle pools.
 This improves surface layering but does not make the waterfall a fluid
 volume or implement mass-conserving turbulence; actual WebGL rendering and
 hardware alpha overdraw still require review.
+
+### Mirrorfall crest aligned with real terrain
+
+The original waterfall started at x≈227m and y=192m above the world, while
+the collision heightfield there was only around 70–90m: the water appeared
+from open air and its upper rock wall was decorative only. The live waterfall
+lip is now moved to the actual eastern escarpment (x≈262m, y=176m, terrain
+roughly 172m), leaving a natural short spill over a real cliff and over
+100m of falling water into the freshwater basin. The plume, impact foam,
+currents, curtain geometry and named landmark follow the common
+`MIRRORFALL` contract. This corrects a major source of floating waterfall
+appearance without changing the shared lake basin, seed, saved quest flags
+or player controls. Browser views and physics clearance must be checked
+before approving the change.

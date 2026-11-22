@@ -19,9 +19,11 @@ export const GRAND_LAKE = Object.freeze({
 export const MIRRORFALL = Object.freeze({
   id: 'azure.mirrorfall',
   name: 'Mirrorfall Cascade',
-  x: GRAND_LAKE.x + GRAND_LAKE.radiusX * 1.08,
+  // Align the water lip with the actual eastern escarpment's 170–180m
+  // summit rather than spawning a curtain in open air above lakebank terrain.
+  x: GRAND_LAKE.x + GRAND_LAKE.radiusX * 1.17,
   z: GRAND_LAKE.z,
-  topY: 192,
+  topY: 176,
   bottomY: GRAND_LAKE.surfaceY,
   width: 78,
 });

@@ -17,6 +17,16 @@ describe('Mirrorfall Lake common geometry contract', () => {
     expect(MIRRORFALL.topY - GRAND_LAKE.surfaceY).toBeGreaterThan(95);
     expect(heightAt(-555, 100)).toBeGreaterThan(50);
   });
+  it('anchors the waterfall crest to the actual summit, with impact inside lake',()=>{
+    const lip=heightAt(MIRRORFALL.x-1,MIRRORFALL.z);
+    expect(Math.abs(lip-MIRRORFALL.topY)).toBeLessThan(9);
+    expect(MIRRORFALL.topY-lip).toBeGreaterThan(0);
+    const plungeX=MIRRORFALL.x-82;
+    expect(lakeContains(plungeX,MIRRORFALL.z)).toBe(true);
+    expect(GRAND_LAKE.surfaceY-heightAt(plungeX,MIRRORFALL.z))
+      .toBeGreaterThan(10);
+    expect(MIRRORFALL.topY-GRAND_LAKE.surfaceY).toBeGreaterThan(100);
+  });
   it('does not introduce seam discontinuities at the sculpt radius boundary', () => {
     const z = GRAND_LAKE.z;
     const a = heightAt(GRAND_LAKE.x + GRAND_LAKE.radiusX * 1.715, z);
