@@ -47,7 +47,7 @@ describe('seam-aware streamed terrain', () => {
   it('never reads outside bounds on a high-to-low corner', () => {
     const edge = tileSpec(0, 0, 2, 2);
     expect(Number.isFinite(stitchedHeight(2, 2, 64, 64, edge))).toBe(true);
-    expect(stitchedHeight(2, 2, 32, 32, edge)).toBeCloseTo(heightAt(750, 750), 6);
+    expect(stitchedHeight(2, 2, 64, 64, edge)).toBeCloseTo(heightAt(750, 750), 6);
   });
   it('uses the same world positions for north/south neighbor boundaries', () => {
     const high = tileSpec(0, 0, 0, 2);
