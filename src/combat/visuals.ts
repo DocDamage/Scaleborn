@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import type { CombatState, FireCast, GloamHound, SigilCast, BondCast } from './combat';
 import { heightAt } from '../world/terrain';
 import { makeBondSurgePatchGeometry, makeBondSurgePatchTexture } from './bondSurgeFx';
+import { taperedSpine } from '../actors/dragon/organicSculpt';
+import { makeGloamHoundBody, makeGloamHoundLeg, makeGloamHoundPaw, makeGloamPeltNormal } from './gloamHoundSculpt';
 
 interface HoundRig {
   root: THREE.Group;
@@ -31,6 +33,7 @@ export class CombatVisual {
   private readonly bond: THREE.InstancedMesh;
   private readonly bondMaterial: THREE.MeshBasicMaterial;
   private readonly bondTexture: THREE.DataTexture;
+  private readonly houndNormal = makeGloamPeltNormal();
   private readonly bondLight: THREE.PointLight;
   private magic: SigilCast | null = null;
   private magicAge = 1;
@@ -124,7 +127,8 @@ export class CombatVisual {
     const root = new THREE.Group();
     root.name = enemy.id;
     const skin = new THREE.MeshStandardMaterial({
-      color: 0x302939, roughness: 0.69, metalness: 0.18,
+      color: 0x302939, roughness: 0.82, metalness: 0.08,
+      normalMap: this.houndNormal, normalScale: new THREE.Vector2(.28,.28),
       emissive: 0x67382e, emissiveIntensity: 0.06,
     });
     const ridge = new THREE.MeshStandardMaterial({
@@ -134,11 +138,12 @@ export class CombatVisual {
       color: 0xffb476, emissive: 0xff6a2f, emissiveIntensity: 2.2,
       roughness: 0.28,
     });
-    // Long, smooth animal silhouette with raised shoulders and narrowed muzzle.
-    this.mesh(root, new THREE.SphereGeometry(1, 28, 18), skin, 0, 1.23, 0.1, 0.68, 0.56, 1.22);
-    this.mesh(root, new THREE.SphereGeometry(1, 26, 18), skin, 0, 1.45, -0.61, 0.69, 0.65, 0.59);
-    this.mesh(root, new THREE.SphereGeometry(1, 28, 18), skin, 0, 1.54, -1.2, 0.48, 0.4, 0.64);
-    this.mesh(root, new THREE.SphereGeometry(1, 22, 14), ridge, 0, 1.29, -1.55, 0.3, 0.20, 0.44);
+    // A continuous wolf-like anatomical loft, not overlapping spheres.
+    const body = this.mesh(root, makeGloamHoundBody(), skin, 0, 0, 0);
+    body.name = 'enemy.gloam.sculpted-body';
+    const nose=this.mesh(root,new THREE.SphereGeometry(.12,14,10),
+      ridge,0,1.36,-2.01,.95,.66,1);
+    nose.name='enemy.gloam.nose';
     // Curved tail flows behind rather than a rigid straight cylinder.
     const tail = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0, 1.40, 0.98),
@@ -148,14 +153,20 @@ export class CombatVisual {
     ]);
     this.mesh(root, new THREE.TubeGeometry(tail, 16, 0.135, 9), ridge, 0, 0, 0);
     for (let i = 0; i < 6; i++) {
-      const spike = this.mesh(root, new THREE.ConeGeometry(0.22 - i * 0.014, 0.57, 11),
-        ridge, 0, 1.83 + Math.sin(i * 0.5) * 0.13, -0.54 + i * 0.32);
-      spike.rotation.x = -0.36;
+      const z=-.75+i*.36;
+      const base=1.66+Math.sin(i*.52)*.11;
+      const spine=this.mesh(root,taperedSpine([
+        [0,base,z],[0,base+.27,z+.10],
+        [Math.sin(i*1.23)*.09,base+.43,z+.24],
+      ],.17-i*.008,10,20),ridge,0,0,0);
+      spine.name='enemy.gloam.curved-ridge';
     }
     for (const side of [-1, 1]) {
-      const ear = this.mesh(root, new THREE.ConeGeometry(0.19, 0.64, 12), ridge,
-        side * 0.39, 1.98, -1.43);
-      ear.rotation.z = side * -0.25;
+      const ear=this.mesh(root,taperedSpine([
+        [side*.36,1.73,-1.35],[side*.47,1.98,-1.43],
+        [side*.56,2.20,-1.29],
+      ],.18,12,24),ridge,0,0,0);
+      ear.name='enemy.gloam.swept-ear';
       this.mesh(root, new THREE.SphereGeometry(0.105, 14, 10), eyes,
         side * 0.36, 1.65, -1.61);
       // Tooth silhouettes read during a forward lunge.
@@ -168,10 +179,10 @@ export class CombatVisual {
       for (const rear of [false, true]) {
         const pivot = new THREE.Group();
         pivot.position.set(side * 0.44, 1.04, rear ? 0.83 : -0.73);
-        this.mesh(pivot, new THREE.SphereGeometry(1, 18, 14), skin,
-          0, -0.35, 0, 0.22, 0.63, 0.25);
-        this.mesh(pivot, new THREE.SphereGeometry(1, 16, 12), ridge,
-          0, -0.87, -0.16, 0.25, 0.16, 0.35);
+        const leg=this.mesh(pivot,makeGloamHoundLeg(rear),skin,0,0,0);
+        leg.name='enemy.gloam.leg-surface';
+        const paw=this.mesh(pivot,makeGloamHoundPaw(),ridge,0,0,0);
+        paw.name='enemy.gloam.paw';
         root.add(pivot);
         legs.push(pivot);
       }
@@ -367,6 +378,7 @@ export class CombatVisual {
     geometry.forEach((g) => g.dispose());
     materials.forEach((m) => m.dispose());
     this.bondTexture.dispose();
+    this.houndNormal.dispose();
     this.root.removeFromParent();
     this.rigs.clear();
   }

@@ -40,3 +40,17 @@ opaque textures or unbounded off-terrain particles.
 
 This is a visual improvement in the game, not a final VFX art acceptance.
 Review the next real browser capture and RTX 3060 performance.
+
+### Gloam hound anatomical visual refinement
+
+The first real G4 screenshots showed the small enemies as dark sphere stacks.
+The Gloam hound now has a continuous original tapered wolf-like torso/muzzle,
+four smooth pivoted legs and rounded paws, swept ears, curved ridge quills,
+and a deterministic original pelt-normal map. The existing AI state machine,
+attack cues, hit volumes, positions, named actors and enemy HP remain
+unchanged. This is actual in-game procedural geometry, not a stock creature.
+The unified mesh has UV/normal data and explicit disposal; tests cover its
+geometry, material and all three live enemies.
+
+Final character art, polished animation and real GPU frame times still need
+review before the playable quality gate is accepted.
