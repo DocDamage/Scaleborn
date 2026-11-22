@@ -9,6 +9,9 @@ describe('original AI-assisted Onyx scale paint is bound to real gameplay',()=>{
     const pixels=paintedScalePixels();
     expect(pixels.length).toBe(ONYX_PAINTED_SAMPLE_SIZE**2*4);
     expect(paintedScalePixels()).toEqual(pixels);
+    // First index and pigment are preserved from the actual original
+    // 64x64 sampled painting, not an unrelated 32x32 quantizer palette.
+    expect(Array.from(pixels.slice(0,3))).toEqual([204,204,224]);
     expect(new Set(Array.from(pixels.filter((_,i)=>i%4===0))).size).toBeGreaterThan(6);
     expect(new Set(Array.from(pixels.filter((_,i)=>i%4===2))).size).toBeGreaterThan(6);
     for(let i=3;i<pixels.length;i+=4)expect(pixels[i]).toBe(255);
