@@ -16,9 +16,11 @@ describe('non-repeating forest geometry and real understory', () => {
         expect(p.wood.getAttribute('position').count).toBeGreaterThan(150);
         expect(p.foliage.getAttribute('uv').count)
           .toBe(p.foliage.getAttribute('position').count);
-        expect(p.leafCards).toBeGreaterThan(170);
+        expect(p.leafCards).toBeGreaterThan(450);
         expect(p.wood.getAttribute('normal').count).toBeGreaterThan(150);
-        expect(p.foliage.getAttribute('normal').count).toBeGreaterThan(1000);
+        expect(p.foliage.getAttribute('normal').count).toBeGreaterThan(2700);
+        // Every individual leaf is now a full 2-triangle atlas quad.
+        expect(p.foliage.getAttribute('position').count).toBe(p.leafCards*6);
       }
       expect(prototypes[2]!.height).toBeGreaterThan(prototypes[0]!.height);
       expect(prototypes[2]!.crownRadius).toBeLessThan(prototypes[0]!.crownRadius);

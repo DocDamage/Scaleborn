@@ -20,17 +20,17 @@ interface TreeProfile {
 
 const PROFILES: readonly TreeProfile[] = [
   // Low, broad crown; sturdy contorted branches.
-  {height:12.2,spread:6.4,trunkRadius:.57,baseHeight:.32,limbs:16,
-    twigCount:3,foliageCount:11,inclination:1.6,droop:.12},
+  {height:12.2,spread:6.4,trunkRadius:.57,baseHeight:.32,limbs:18,
+    twigCount:5,foliageCount:14,inclination:1.6,droop:.12},
   // High slender trunk, sparse upper crown, long drooping fine branches.
-  {height:16.7,spread:3.8,trunkRadius:.35,baseHeight:.37,limbs:18,
-    twigCount:3,foliageCount:10,inclination:1.15,droop:-.72},
+  {height:16.7,spread:3.8,trunkRadius:.35,baseHeight:.37,limbs:20,
+    twigCount:4,foliageCount:13,inclination:1.15,droop:-.72},
   // Conical needle sprays on stepped horizontal branches.
-  {height:18.6,spread:5.1,trunkRadius:.48,baseHeight:.16,limbs:48,
-    twigCount:1,foliageCount:9,inclination:-.20,droop:-.18},
+  {height:18.6,spread:5.1,trunkRadius:.48,baseHeight:.16,limbs:54,
+    twigCount:2,foliageCount:15,inclination:-.20,droop:-.18},
   // Rounded, uneven waterside crown with flexible hanging boughs.
-  {height:13.3,spread:5.3,trunkRadius:.44,baseHeight:.25,limbs:20,
-    twigCount:3,foliageCount:12,inclination:.80,droop:-.58},
+  {height:13.3,spread:5.3,trunkRadius:.44,baseHeight:.25,limbs:22,
+    twigCount:5,foliageCount:14,inclination:.80,droop:-.58},
 ];
 
 export interface TreePrototype {
@@ -82,7 +82,7 @@ export function makeLeafAtlas(size = 128): THREE.DataTexture {
       const v = 2 * (y + .5) / cell - 1;
       const mid = Math.abs(v);
       const edge = species === 2
-        ? .13 * Math.pow(Math.max(0, 1-mid*mid), .66)
+        ? .20 * Math.pow(Math.max(0, 1-mid*mid), .66)
         : species === 1
           ? .45 * Math.pow(Math.max(0, 1-mid*mid), .95) * (1-.12*v)
           : species === 0
@@ -118,13 +118,16 @@ function appendLeaf(
   const sideways = new THREE.Vector3(
     -Math.sin(yaw),.28*Math.cos(yaw*1.7),Math.cos(yaw),
   ).normalize();
-  const left = base.clone().addScaledVector(direction,length*.46)
-    .addScaledVector(sideways,width);
-  const right = base.clone().addScaledVector(direction,length*.46)
-    .addScaledVector(sideways,-width);
-  const tip = base.clone().addScaledVector(direction,length);
+  // Use the entire textured quad. The old diamond-shaped pair of
+  // triangles sampled only the centre of the alpha leaf, exposing thin
+  // branches with small floating shards even when card counts increased.
+  const bottom = base.clone().addScaledVector(direction,-length*.17);
+  const top = base.clone().addScaledVector(direction,length*.83);
+  const bL=bottom.clone().addScaledVector(sideways,-width);
+  const bR=bottom.clone().addScaledVector(sideways,width);
+  const tL=top.clone().addScaledVector(sideways,-width*.72);
+  const tR=top.clone().addScaledVector(sideways,width*.72);
   const col = species % 2, row = Math.floor(species / 2);
-  // Avoid filtering across the four leaf silhouettes in the texture atlas.
   const uv = (u:number,v:number):void => {
     uvs.push((col+ .02 + u*.96)*.5,(row+.02+v*.96)*.5);
   };
@@ -132,8 +135,8 @@ function appendLeaf(
     positions.push(v.x,v.y,v.z);
     uv(u,t);
   };
-  add(base,.5,0); add(left,0,.5); add(tip,.5,1);
-  add(base,.5,0); add(tip,.5,1); add(right,1,.5);
+  add(bL,0,0); add(bR,1,0); add(tL,0,1);
+  add(bR,1,0); add(tR,1,1); add(tL,0,1);
 }
 
 /**
@@ -193,7 +196,7 @@ export function createTreePrototype(
     branchGeometries.push(branchSegment(mid,end,majorRadius*.66,.025,quality));
     const countTwigs=profile.twigCount;
     for(let twig=0;twig<countTwigs;twig++){
-      const location=.47+twig/countTwigs*.43;
+      const location=.23+twig/countTwigs*.67;
       const start=mid.clone().lerp(end,location);
       const sideAngle=angle+(twig%2===0?1:-1)*(.28+rand()*.64);
       const length=(species===2?.65:1.28)*(0.7+rand()*.78);
@@ -216,12 +219,12 @@ export function createTreePrototype(
         const yaw=sideAngle+(rand()-.5)*Math.PI*2;
         appendLeaf(leafPositions,leafUv,species,center,yaw,
           (species===2?.88:.57)+rand()*(species===2?.60:.62),
-          (species===2?.065:.18)+rand()*(species===2?.035:.23),
+          (species===2?.14:.20)+rand()*(species===2?.060:.25),
           species===2 ? .18+rand()*.32 : (rand()-.4)*.85);
       }
     }
     // Fill gaps close to the main limbs instead of a skeletal branch fan.
-    if(species!==2)for(let k=0;k<(quality==='high'?8:5);k++){
+    if(species!==2)for(let k=0;k<(quality==='high'?22:13);k++){
       const center=mid.clone().lerp(end,.20+rand()*.8);
       center.add(new THREE.Vector3((rand()-.5)*1.25,(rand()-.5)*1.1,
         (rand()-.5)*1.25));
