@@ -10,6 +10,7 @@ import { SEA_LEVEL, WORLD_WIDTH_METERS } from './terrain';
  * solver. Reusable by both the ocean and the fully navigable highland lake.
  */
 const vert=`
+  #include <fog_pars_vertex>
   varying vec3 vScWorld;
   varying float vScWave;
   uniform float uTime;
@@ -36,11 +37,14 @@ const vert=`
     vec3 offset=wavePos(position);
     vec4 wp=modelMatrix*vec4(offset,1.0);
     vScWorld=wp.xyz;
-    gl_Position=projectionMatrix*viewMatrix*wp;
+    vec4 mvPosition=viewMatrix*wp;
+    gl_Position=projectionMatrix*mvPosition;
+    #include <fog_vertex>
   }
 `;
 const frag=`
   precision highp float;
+  #include <fog_pars_fragment>
   uniform float uTime;
   uniform float uLake;
   uniform vec2 uImpactWorld;
@@ -133,10 +137,12 @@ const frag=`
     color=mix(color,transmitted,underside*.47);
     alpha=mix(alpha,undersideAlpha,underside);
     gl_FragColor=vec4(color,alpha);
+    #include <fog_fragment>
   }
 `;
 
 const foamVert=`
+  #include <fog_pars_vertex>
   uniform float uTime;
   uniform float uLakeStrip;
   uniform vec2 uImpactWorld;
@@ -162,10 +168,13 @@ const foamVert=`
     }
     vWorld = world.xyz;
     vFoamUv = uv;
-    gl_Position = projectionMatrix * viewMatrix * world;
+    vec4 mvPosition = viewMatrix * world;
+    gl_Position = projectionMatrix * mvPosition;
+    #include <fog_vertex>
   }
 `;
 const foamFrag=`
+  #include <fog_pars_fragment>
   uniform float uTime;
   uniform float uLakeStrip;
   varying vec3 vWorld;
@@ -184,17 +193,19 @@ const foamFrag=`
       +noiseA*2.7)),2.0);
     float pulse=mix(1.0,coastalFade*(.3+.7*striped),uLakeStrip);
     gl_FragColor=vec4(foam,clamp((.07+.46*wisps)*pulse,0.0,.61));
+    #include <fog_fragment>
   }
 `;
 
 export function makeFoamShader(lakeStrip = false): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms:{
-      uTime:{value:0},uLakeStrip:{value:lakeStrip?1:0},
-      uImpactWorld:{value:new THREE.Vector2(MIRRORFALL_IMPACT.x,MIRRORFALL_IMPACT.z)},
-    },
+    uniforms:THREE.UniformsUtils.merge([
+      THREE.UniformsLib.fog,
+      { uTime:{value:0},uLakeStrip:{value:lakeStrip?1:0},
+        uImpactWorld:{value:new THREE.Vector2(MIRRORFALL_IMPACT.x,MIRRORFALL_IMPACT.z)} },
+    ]),
     vertexShader:foamVert,fragmentShader:foamFrag,
-    transparent:true,depthWrite:false,side:THREE.DoubleSide,
+    transparent:true,depthWrite:false,side:THREE.DoubleSide,fog:true,
     blending:THREE.NormalBlending,
   });
 }
@@ -210,7 +221,7 @@ export class PainterlyWaterSurface {
       : new THREE.DataTexture(new Uint8Array([255,255,255,255]),1,1,THREE.RGBAFormat);
     this.bathymetry.needsUpdate=true;
     this.material=new THREE.ShaderMaterial({
-      uniforms:{
+      uniforms:THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{
         uTime:{value:0},
         uLake:{value:isLake?1:0},
         uWaveOrigin:{value:new THREE.Vector2(isLake ? GRAND_LAKE.x : 0,
@@ -221,9 +232,9 @@ export class PainterlyWaterSurface {
           GRAND_LAKE.x-LAKE_MAP_WIDTH*.5,GRAND_LAKE.z-LAKE_MAP_HEIGHT*.5)},
         uBathySpan:{value:new THREE.Vector2(LAKE_MAP_WIDTH,LAKE_MAP_HEIGHT)},
         uDepthRange:{value:BATHYMETRY_RANGE_METERS},
-      },
+      }]),
       vertexShader:vert,fragmentShader:frag,
-      transparent:true,depthWrite:false,side:THREE.DoubleSide,
+      transparent:true,depthWrite:false,side:THREE.DoubleSide,fog:true,
     });
     const geo=isLake?
       new THREE.PlaneGeometry(GRAND_LAKE.radiusX*2.05,GRAND_LAKE.radiusZ*2.05,160,132):
