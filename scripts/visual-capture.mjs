@@ -9,7 +9,7 @@ import { chromium } from 'playwright';
 async function main() {
   const hardware = process.argv.includes('--hardware');
   const screenshotFile = (path) => hardware
-    ? path.replace(/-browser\\.png$/, '-high-browser.png') : path;
+    ? path.replace(/-browser\.png$/, '-high-browser.png') : path;
   const browser = await chromium.launch({
     headless: true,
     args: hardware ? [
