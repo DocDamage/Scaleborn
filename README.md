@@ -135,6 +135,33 @@ The existing asset-independent design remains unchanged. All new effects use gen
 
 The game runs **high** painterly PBR shaders by default. Add `?quality=low` to reduce foliage density, internal pixel ratio and shader cost on integrated GPUs or software renderers. The lake shape, collision, traversal and quest data are identical. `?start=lake&quality=high` is the dedicated visual acceptance view. CI tests lower-resolution software WebGL; high-mode screenshots require real-GPU review.
 
+### GPU-only high-quality visual review
+
+The ordinary `npm run test:visual` screenshot workflow deliberately uses low
+settings and SwiftShader for CI. Those images prove that a WebGL scene rendered;
+they are **not** final art approval.
+
+With the development server running on a machine with a real GPU and Playwright
+Chromium installed, run:
+
+```bash
+npm run test:visual:high
+```
+
+This separate, opt-in path uses the **high** painterly shaders and explicitly
+disables the browser's software rasterizer. It captures actual in-game aerial,
+shoreline, rider-height forest, deep-water, planted lakebed, feeder-river and
+underwater waterfall-impact views under `artifacts/*-high-browser.png`.
+It rejects WebGL runtime errors and recognizable software adapter names rather
+than silently passing a SwiftShader image as a GPU review. If the browser cannot
+create a hardware WebGL2 context, the command should fail; do not lower the
+review gate to make it pass.
+
+QA mode intentionally throttles browser rendering, so these screenshots are
+**not an FPS benchmark**. Review the high-mode images in motion and measure
+frame time/draw calls separately on the intended GPU. Visual quality remains
+blocked until those checks are accepted.
+
 ### Waterfall flow coupling
 
 The lake waterfall now drives a shared, fixed-step local current field in `src/world/waterDynamics.ts` and an accompanying ripple/foam distortion in the lake shader. Swimming dragons and independently swimming riders are nudged away from the plunge point, with a collision-safety check. Impact current fades with distance and does not affect the ocean. This is not a fully coupled 3D fluid or water-pressure solver and will require additional work before being labeled realistic water physics.
