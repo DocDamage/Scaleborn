@@ -20,7 +20,7 @@ export function makeGrassPatch(quality: Quality): THREE.BufferGeometry {
     const rootX = Math.sin(i * 3.17) * .31;
     const rootZ = Math.cos(i * 3.17) * .31;
     const height = .58 + (i % 5) * .13;
-    const width = .040 + (i % 3) * .012;
+    const width = .056 + (i % 3) * .015;
     const hue = Math.sin(i * 2.61) * .055;
     const first = positions.length / 3;
     for (let j = 0; j <= sections; j++) {
@@ -29,9 +29,13 @@ export function makeGrassPatch(quality: Quality): THREE.BufferGeometry {
       const forward = height * (.13 * t + .43 * t * t);
       const rise = height * (t - .11 * t * t);
       const halfWidth = width * Math.pow(1 - t, .78) + .0008;
-      const r = .46 + t * .33 + hue;
-      const g = .57 + t * .32 + hue * .55;
-      const b = .30 + t * .25 + (i % 4) * .018;
+      // Instance tint, base material and vertex pigment multiply. The old
+      // dark root-to-tip values were multiplied three times, producing a
+      // nearly featureless dark-green field even at rider height.
+      // Paint these blades in a lighter, still muted watercolour range.
+      const r = .72 + t * .21 + hue;
+      const g = .79 + t * .17 + hue * .40;
+      const b = .63 + t * .18 + (i % 4) * .018;
       for (const sign of [-1, 1]) {
         positions.push(
           rootX + dx * forward + sideX * halfWidth * sign,
@@ -76,7 +80,10 @@ export class LocalGroundcover {
 
   constructor(scene:THREE.Scene,quality:Quality='high') {
     this.radius=quality==='high'?94:76;
-    this.spacing=quality==='high'?2.70:4.35;
+    // Ground-level WebGL captures showed isolated grass tufts several
+    // metres apart. Close the meadow gaps while keeping ONE draw call and
+    // an explicitly bounded high/low instance budget.
+    this.spacing=quality==='high'?2.10:2.80;
     const side=Math.ceil(this.radius*2/this.spacing)+5;
     const capacity=side*side;
     this.material=new THREE.MeshStandardMaterial({
@@ -160,7 +167,9 @@ export class LocalGroundcover {
         this.dummy.scale.setScalar(.58+tint*.75);
         this.dummy.updateMatrix();
         this.mesh.setMatrixAt(count,this.dummy.matrix);
-        this.color.setHSL(.22+tint*.11,.28+tint*.13,.46+tint*.17);
+        // Retain subtle plant-by-plant hue variation without multiplying
+        // a dark instance tint into the already painted root colours.
+        this.color.setHSL(.24+tint*.055,.18+tint*.11,.73+tint*.10);
         this.mesh.setColorAt(count,this.color);
         count++;
       }

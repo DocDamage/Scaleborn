@@ -607,3 +607,17 @@ depth/alpha parity and the low/high graphics budgets.
 This fixes a **source-level forest-motion and shadow defect**; it is not
 evidence of in-game visual fidelity. Still require moving forest gameplay
 captures, actual Chromium shader validation and GPU shadow-cost profiling.
+
+### Actual low-mode forest capture: meadow density correction
+
+The real rider-height forest and shore images captured from PR #12's
+`3dbc77bc` pass show **isolated grass tufts separated by mostly featureless
+dark-green terrain**, especially in the foreground. The
+`LocalGroundcover` high/low world-grid spacing is now 2.10 m / 2.80 m
+(previously 2.70 m / 4.35 m) with explicit bounded instancing and no new
+draw groups. Grass blades are broader and the painted root-to-tip palette
+was lifted to compensate for color multiplication through vertex paint,
+instance tint and base PBR color. Fading and deterministic world-seeding
+remain unchanged. This is a measurable density/material adjustment rather
+than proof that the meadow looks finished; evaluate real shader screenshots
+and GPU time before visual approval.
