@@ -772,3 +772,16 @@ width as the visible feeder surface. Low and High use separate population
 budgets, and 48m-cell CPU instance culling keeps just one nearby rock batch.
 These are small decorative stones, not a replacement for production
 photogrammetry or physically collidable river boulders.
+
+### On-demand real rider-height view of the river crest
+
+The shallow upper feeder is now approximately 2.25m at its center so the
+waterline and submerged camera actually lie above its carved bed (without
+making the stream deep enough for a giant dragon to dive). To review its
+real rendered appearance without lengthening every CI screenshot run,
+`npm run test:headwaters` launches the existing local development server's
+real WebGL game at `?start=lake&quality=low&qa=1`, stages the rider at a
+dry creek bank facing the western waterfall lip and writes
+`artifacts/mirrorfall-headwaters-browser.png`. The hook is DEV+qa-only,
+not part of production gameplay. The image must be inspected before any
+art-acceptance claim for the new water source.

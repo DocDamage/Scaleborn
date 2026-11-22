@@ -10,7 +10,7 @@ import { CoastDiscovery } from '../world/discoveries';
 import { toggleDragonDive } from '../actors/dragon/swimming';
 import { toggleRiderControl, toggleRiderDive } from '../actors/rider/movement';
 import { LANDMARKS } from '../world/terrain';
-import { GRAND_LAKE, waterSurfaceAt } from '../world/highlandLake';
+import { GRAND_LAKE, MIRRORFALL, headwaterProfileAt, waterSurfaceAt } from '../world/highlandLake';
 import { AdaptiveResolution } from './adaptiveResolution';
 import { resolveCameraOcclusion } from './cameraOcclusion';
 import { OBSTACLES } from '../world/collision';
@@ -165,6 +165,7 @@ export class Game {
         __scalebornQaLake?: () => void;
         __scalebornQaLakeDive?: () => void;
         __scalebornQaLakebed?: () => void;
+        __scalebornQaHeadwaters?: () => void;
         __scalebornQaShore?: () => void;
         __scalebornQaForest?: () => void;
       };
@@ -405,6 +406,43 @@ export class Game {
         this.cameraIndex=0;
         this.coast.update(x,z);
         this.coast.setUnderwater(true);
+        this.dragon.update(this.flight);
+        this.updateCamera(1,true);
+        this.coast.updateAtmosphere(this.flight.time,this.camera.position);
+        this.updateHud(.2);
+      };
+      host.__scalebornQaHeadwaters = (): void => {
+        // The real rider-height creek camera sees water flowing into the
+        // waterfall lip. Keep it opt-in so recurring CI does not render
+        // another expensive software-WebGL screenshot every code commit.
+        const x=MIRRORFALL.x+64;
+        const channel=headwaterProfileAt(x,GRAND_LAKE.z);
+        if(!channel)throw new Error('No visible feeder stream at QA site');
+        const z=channel.centerZ+channel.halfWidth*1.18;
+        const y=heightAt(x,z);
+        if(waterSurfaceAt(x,z)!==0 || y<channel.surfaceY-1){
+          throw new Error('Headwater QA rider must stand on the dry bank');
+        }
+        this.flight.x=x+2;
+        this.flight.z=z+4;
+        this.flight.y=heightAt(this.flight.x,this.flight.z)+FORMS.small.standHeight;
+        this.flight.form='small';
+        this.flight.mode='ground';
+        this.flight.controlTarget='rider';
+        this.flight.transition=null;
+        this.flight.speed=0;
+        this.flight.roll=0;
+        this.flight.pitch=0;
+        this.flight.riderX=x;
+        this.flight.riderZ=z;
+        this.flight.riderY=y+.05;
+        this.flight.riderTargetY=this.flight.riderY;
+        this.flight.riderMode='ground';
+        this.flight.riderSpeed=0;
+        this.flight.riderYaw=-Math.PI/2+.36;
+        this.cameraIndex=1;
+        this.coast.update(x,z);
+        this.coast.setUnderwater(false);
         this.dragon.update(this.flight);
         this.updateCamera(1,true);
         this.coast.updateAtmosphere(this.flight.time,this.camera.position);

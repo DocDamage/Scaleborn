@@ -51,7 +51,7 @@ export function headwaterProfileAt(x: number, z: number): HeadwaterProfile | nul
   const surfaceY=MIRRORFALL.topY+1.75*t;
   const channel=1-smoothstep(.16,.89,edge);
   const raisedBank=smoothstep(.81,1.25,edge);
-  const bedY=surfaceY-1.50*channel+1.60*raisedBank;
+  const bedY=surfaceY-2.25*channel+1.60*raisedBank;
   return {along,centerZ,halfWidth,relativeWidth,
     surfaceY,bedY,influence};
 }
