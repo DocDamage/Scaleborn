@@ -3,6 +3,7 @@ import { MIRRORFALL, GRAND_LAKE } from './highlandLake';
 import { makeRockMaterial } from './materials';
 import { fbm } from '../core/random';
 import { AZURE_SEED } from './terrain';
+import { makeCliffRunoffMaterial } from './cliffRunoff';
 
 /**
  * Irregular eroded rock wall enclosing the cascading water.
@@ -13,6 +14,8 @@ export class MirrorfallCliffs {
   readonly group=new THREE.Group();
   private readonly material:THREE.MeshStandardMaterial;
   private readonly wall:THREE.Mesh;
+  private readonly runoff:THREE.Mesh;
+  private readonly runoffMaterial:THREE.ShaderMaterial;
   constructor(quality:'high'|'low'='high'){
     this.group.name='terrain.azure.mirrorfall-cliff';
     this.material=makeRockMaterial(quality);
@@ -77,15 +80,23 @@ export class MirrorfallCliffs {
     this.wall.receiveShadow=true;
     this.wall.castShadow=quality==='high';
     this.group.add(this.wall);
+    // Same indexed geometry; the wet shader offsets only its draw vertices.
+    this.runoffMaterial=makeCliffRunoffMaterial();
+    this.runoff=new THREE.Mesh(geometry,this.runoffMaterial);
+    this.runoff.name='terrain.azure.mirrorfall-wet-runnels';
+    this.runoff.renderOrder=1;
+    this.group.add(this.runoff);
 
     // Cliff silhouette comes from the continuous triangulated rock face.
     // Never scatter detached white ovals as a substitute for exposed rock.
   }
+  update(time:number):void{
+    this.runoffMaterial.uniforms.uTime!.value=time;
+  }
   dispose():void{
-    this.group.traverse(node=>{
-      if(node instanceof THREE.Mesh)node.geometry.dispose();
-    });
+    this.wall.geometry.dispose();
     this.material.dispose();
+    this.runoffMaterial.dispose();
     this.group.removeFromParent();
   }
 }

@@ -325,3 +325,12 @@ invisible outside a bounded lake viewing radius. Rocks are low and partly
 buried; large collidable boulders, caves, wildlife, and photogrammetric
 replacements are still future work. The lake depth remains navigable and the
 procedural habitat does not alter terrain collision or quest state.
+
+### Runoff across Mirrorfall cliff wings
+
+The waterfall-adjacent rock strata gain a subtle animated mineral wetness
+shader sharing the existing indexed cliff geometry. World-space moisture
+varies with waterfall distance and height, with thin rivulets, broad damp
+patches and distance fade. The overlay has its own fog-safe uniforms and
+transparent no-depth-write shading; it does not allocate more rock triangles.
+This is painterly runoff approximation, not a groundwater or erosion solver.

@@ -179,6 +179,7 @@ export class AzureCoast {
     this.caustics.update(time);
     this.lakebed.update(time,x,z);
     this.waterfall.update(time);
+    this.cliffs.update(time);
     if(state){
       this.wake.update(state,time);
       this.splash.update(state,time);
