@@ -141,3 +141,15 @@ dragon material, per-frame texture allocations, or altered wing bones.
 The material remains an approximation: production wing hand-painting,
 translucent scattering, close-up shader QA, correct posed normals and GPU
 profile still require acceptance before final art signoff.
+
+### Integrated procedural travel-cloak motion
+
+The original young hybrid rider's cloak now uses a pinned-shoulder,
+speed- and wind-responsive deformation in the real gameplay mesh. It retains
+the rider's existing mount/limb sockets and fixed height. No per-frame geometry
+buffers or downloaded character models are required. This restores the cloth
+motion present in the earlier environment/rider pass while keeping the
+Scaleborn-specific sculpt and GLB identity contract.
+
+This is preliminary in-engine cloth animation, not fully authored rigging
+or an approved final visual character.

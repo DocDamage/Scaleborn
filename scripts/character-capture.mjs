@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { captureQaScreenshot } from './qa-screenshot.mjs';
 
 const browser=await chromium.launch({headless:true,args:[
   '--enable-webgl','--ignore-gpu-blocklist','--enable-unsafe-swiftshader',
@@ -30,20 +31,20 @@ try {
   });
   await page.waitForFunction(()=>document.querySelector('#mode-name')?.textContent==='ON LAND');
   await page.waitForTimeout(500);
-  await page.screenshot({path:'artifacts/characters-onyx-rideable.png',timeout:120000});
+  await captureQaScreenshot(page, {path:'artifacts/characters-onyx-rideable.png',timeout:120000});
 
   await page.keyboard.press('1');
   await page.evaluate(()=>window.__scalebornQaAdvance(8));
   await page.waitForFunction(()=>
     document.querySelector('#form-name')?.textContent==='SMALL COMPANION');
   await page.waitForTimeout(400);
-  await page.screenshot({path:'artifacts/characters-onyx-small.png',timeout:120000});
+  await captureQaScreenshot(page, {path:'artifacts/characters-onyx-small.png',timeout:120000});
 
   await page.evaluate(()=>window.__scalebornQaForest());
   await page.waitForFunction(()=>
     document.querySelector('#focus-name')?.textContent==='RIDER');
   await page.waitForTimeout(400);
-  await page.screenshot({path:'artifacts/characters-hybrid-hero.png',timeout:120000});
+  await captureQaScreenshot(page, {path:'artifacts/characters-hybrid-hero.png',timeout:120000});
 
   await page.evaluate(()=>window.__scalebornQaLake());
   await page.keyboard.press('3');
@@ -51,7 +52,7 @@ try {
   await page.waitForFunction(()=>
     document.querySelector('#form-name')?.textContent==='GIANT');
   await page.waitForTimeout(550);
-  await page.screenshot({path:'artifacts/characters-onyx-giant.png',timeout:120000});
+  await captureQaScreenshot(page, {path:'artifacts/characters-onyx-giant.png',timeout:120000});
 
   assert.deepEqual(errors,[],'Browser/shader errors during real character rendering');
   console.log('PASS: actual skinned wing, three form changes and hybrid rider rendered.');

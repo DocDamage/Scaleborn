@@ -12,6 +12,7 @@ import { makeScalebornRider } from '../rider/heroSculpt';
 import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
 import { dragonExpression } from './dragonExpression';
 import { createDragonLegSculpt } from './limbSculpt';
+import { RiderCloakMotion } from '../rider/cloakMotion';
 
 const scaleTextures=makeDragonScaleTextures();
 const skin = applyDragonScales(
@@ -77,6 +78,8 @@ export class DragonVisual {
   private readonly crests:THREE.Group[] = [];
   private readonly jawPivot=new THREE.Group();
   private readonly riderTail = this.rider.getObjectByName('rider.tail') as THREE.Group;
+  private readonly cloakMotion = new RiderCloakMotion(
+    this.rider.getObjectByName('rider.travel-cloak') as THREE.Mesh);
   private readonly riderLimbs = {
     leftArm: this.rider.getObjectByName('rider.leftArm') as THREE.Group,
     rightArm: this.rider.getObjectByName('rider.rightArm') as THREE.Group,
@@ -310,6 +313,8 @@ export class DragonVisual {
 
     this.importedDragon?.animateDragon(pose, dt);
     const riderMotion = riderPose(state);
+    this.cloakMotion.update(state.time,
+      state.form === 'small' ? state.riderSpeed : state.speed);
     this.importedRider?.animateRider(riderMotion, Math.abs(state.riderSpeed), dt);
     this.riderLimbs.leftArm.rotation.x = riderMotion.leftArm;
     this.riderLimbs.rightArm.rotation.x = riderMotion.rightArm;

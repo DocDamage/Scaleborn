@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { captureQaScreenshot } from './qa-screenshot.mjs';
 
 const BASE = process.env.SCALEBORN_URL ?? 'http://127.0.0.1:5173';
 const browser = await chromium.launch({
@@ -48,7 +49,7 @@ try {
     Boolean(canvas.getContext('webgl2')),
   );
   assert.ok(hasWebGL, 'Combat scene requires a real WebGL2 canvas');
-  await page.screenshot({ path: 'artifacts/combat-gloam-encounter.png', timeout: 120000 });
+  await captureQaScreenshot(page, { path: 'artifacts/combat-gloam-encounter.png', timeout: 120000 });
 
   // Stage only the player's position after slow screenshot capture; attacks
   // still hit the unchanged real moving enemy through normal keyboard input.
@@ -63,7 +64,7 @@ try {
     console.error('Real terrain fire diagnostic:', JSON.stringify({ before: first, after: dragon }));
   }
   assert.ok(alive(dragon) < alive(first), 'Dragon fire must hit an enemy ahead');
-  await page.screenshot({ path: 'artifacts/combat-dragon-fire.png', timeout: 120000 });
+  await captureQaScreenshot(page, { path: 'artifacts/combat-dragon-fire.png', timeout: 120000 });
 
   // Staging changes player placement only; rider attack uses regular R input.
   await page.evaluate(() => window.__scalebornQaStageCombat('rider'));
@@ -74,7 +75,7 @@ try {
   const rider = await snapshot();
   assert.ok(rider.focus < first.focus, 'Rider sigil must consume independent Focus');
   assert.ok(alive(rider) < alive(dragon), 'Rider sigil must damage the actual threat');
-  await page.screenshot({ path: 'artifacts/combat-rider-sigil.png', timeout: 120000 });
+  await captureQaScreenshot(page, { path: 'artifacts/combat-rider-sigil.png', timeout: 120000 });
 
   await page.evaluate(() => window.__scalebornQaStageCombat('bond'));
   await page.keyboard.press('x');
@@ -86,7 +87,7 @@ try {
     'Bond surge must use Ember unless the victory reward refilled it');
   assert.ok(bond.focus < rider.focus, 'Bond surge must use rider Focus');
   assert.ok(alive(bond) < alive(rider), 'Bond surge must strike a nearby enemy');
-  await page.screenshot({ path: 'artifacts/combat-bond-surge.png', timeout: 120000 });
+  await captureQaScreenshot(page, { path: 'artifacts/combat-bond-surge.png', timeout: 120000 });
 
   // Advance the *same* combat and movement simulations, not a mock attack.
   await page.evaluate(() => {
