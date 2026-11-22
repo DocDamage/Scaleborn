@@ -47,6 +47,7 @@ describe('Gloam combat scene adapter', () => {
     try {
       const first = c.hounds[0]!;
       first.windup = 0.4;
+      first.alert = true;
       visual.update(c, 1, 1 / 60);
       const target = scene.getObjectByName(first.id) as THREE.Group;
       expect(target.visible).toBe(true);

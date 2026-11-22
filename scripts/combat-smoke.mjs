@@ -50,7 +50,9 @@ try {
   assert.ok(hasWebGL, 'Combat scene requires a real WebGL2 canvas');
   await page.screenshot({ path: 'artifacts/combat-gloam-encounter.png', timeout: 120000 });
 
-  // R is the actual mapped keyboard action. QA observes outcomes read-only.
+  // Stage only the player's position after slow screenshot capture; attacks
+  // still hit the unchanged real moving enemy through normal keyboard input.
+  await page.evaluate(() => window.__scalebornQaStageCombat('dragon'));
   await page.keyboard.press('r');
   await page.waitForFunction(() =>
     window.__scalebornQaCombatSnapshot()?.fireSequence === 1,

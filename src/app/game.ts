@@ -194,7 +194,7 @@ export class Game {
           fireSequence: number; sigilSequence: number; bondSequence: number;
           hounds: Array<{ id: string; hp: number; maxHp: number; alert: boolean; windup: number }>;
         };
-        __scalebornQaStageCombat?: (mode: 'rider' | 'bond' | 'melee') => void;
+        __scalebornQaStageCombat?: (mode: 'dragon' | 'rider' | 'bond' | 'melee') => void;
         __scalebornQaAdvanceCombat?: (frames: number) => void;
       };
       host.__scalebornQaLand = (): void => {
@@ -424,9 +424,15 @@ export class Game {
       host.__scalebornQaStageCombat = (mode): void => {
         // Only actor placement is staged for screenshot speed. Every cast,
         // AI reaction and damage change still passes through gameplay code.
-        const x = mode === 'bond' ? -422 : mode === 'melee' ? -394 : -434;
-        const z = mode === 'melee' ? -39 : -55;
-        const form = mode === 'melee' ? 'rideable' : 'small';
+        const victim = mode === 'melee' ? this.combat.hounds[1]
+          : this.combat.hounds.find((hound) => hound.hp > 0);
+        if (!victim || victim.hp <= 0) {
+          throw new Error('QA target not alive for ' + mode);
+        }
+        const offset = mode === 'bond' ? 6 : mode === 'melee' ? 2.5
+          : mode === 'rider' ? 11 : 13;
+        const x = victim.x - offset, z = victim.z;
+        const form = mode === 'dragon' || mode === 'melee' ? 'rideable' : 'small';
         this.flight.x = x; this.flight.z = z;
         this.flight.y = heightAt(x, z) + FORMS[form].standHeight;
         this.flight.yaw = Math.PI / 2;
