@@ -105,4 +105,51 @@ describe('deterministic foliage instance visibility',()=>{
     mesh.geometry.dispose();
     (mesh.material as THREE.Material).dispose();
   });
+
+  it('preserves nearby canopy and refreshes far-tree visibility when camera FOV changes',()=>{
+    const camera=new THREE.PerspectiveCamera(60,16/9,.2,2000);
+    camera.position.set(0,2,0);
+    camera.lookAt(0,2,-300);
+    const sites=[{x:140,z:0},{x:15,z:0},{x:0,z:-150}];
+    const mesh=new THREE.InstancedMesh(
+      new THREE.BoxGeometry(1,1,1),new THREE.MeshBasicMaterial(),sites.length);
+    const object=new THREE.Object3D();
+    sites.forEach((site,i)=>{
+      object.position.set(site.x,0,site.z);
+      object.updateMatrix();
+      mesh.setMatrixAt(i,object.matrix);
+    });
+    const visibility=new InstanceVisibility();
+    visibility.register(mesh,sites,250);
+    const matrix=new THREE.Matrix4(),position=new THREE.Vector3();
+    const visibleX=():number[]=>{
+      const result:number[]=[];
+      for(let i=0;i<mesh.count;i++){
+        mesh.getMatrixAt(i,matrix);
+        position.setFromMatrixPosition(matrix);
+        result.push(position.x);
+      }
+      return result.sort((a,b)=>a-b);
+    };
+    try{
+      // Nearby off-axis foliage must remain while the distant side tree
+      // falls outside the camera's field of view and conservative margin.
+      visibility.update(0,0,camera);
+      expect(visibleX()).toEqual([0,15]);
+      // Zooming out without moving the player or camera invalidates the
+      // FOV-dependent cache and reveals the previous side tree.
+      camera.fov=130;
+      camera.updateProjectionMatrix();
+      visibility.update(0,0,camera);
+      expect(visibleX()).toEqual([0,15,140]);
+      camera.fov=60;
+      camera.updateProjectionMatrix();
+      visibility.update(0,0,camera);
+      expect(visibleX()).toEqual([0,15]);
+    }finally{
+      mesh.geometry.dispose();
+      (mesh.material as THREE.Material).dispose();
+    }
+  });
+
 });
