@@ -689,3 +689,19 @@ approximately 4 metres above the collision terrain, facing into the planted
 shallows. `scripts/visual-capture.mjs` saves its actual WebGL output as
 `artifacts/mirrorfall-lakebed-browser.png` alongside the deep midwater
 frame. No gameplay or production camera behavior was changed.
+
+### Layered waterfall streams (cascade volume approximation)
+
+The broad cascade curtains could still resemble flat transparent boards in
+actual lake and shoreline captures. `waterfallFilaments.ts` adds a single
+indexed buffer combining multiple irregular, tapered crossed strands along
+the *same accelerating waterfall path* used by the main water sheets and
+plunge-current field. Two opposing angles keep small flow ropes visible from
+frontal and lateral third-person views, while the existing animated foam
+and scene-fog shader breaks them into turbulent, translucent streaks.
+The high preset uses more strand geometry but still only one new waterfall
+draw group; no extra materials, image assets or particle pools.
+
+This improves surface layering but does not make the waterfall a fluid
+volume or implement mass-conserving turbulence; actual WebGL rendering and
+hardware alpha overdraw still require review.

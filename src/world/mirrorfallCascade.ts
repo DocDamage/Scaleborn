@@ -6,6 +6,7 @@ import { waterWaveOffsetAt } from './waterWaves';
 import { MIRRORFALL_IMPACT } from './waterDynamics';
 import { PlungePoolFoam } from './plungePoolFoam';
 import { makeSprayStreakGeometry, makeSprayStreakTexture } from './sprayStreak';
+import { createCascadeFilaments } from './waterfallFilaments';
 
 const crestX=MIRRORFALL.x-1;
 const plungeX=MIRRORFALL_IMPACT.x;
@@ -176,6 +177,13 @@ export class MirrorfallCascade {
     for(const [i,width,offset] of [[0,78,0],[1,42,-21],[2,32,24]] as const){
       this.group.add(ribbon(width,offset,i*2.3,this.waterMat));
     }
+    // Waterfall threads are layered inside the three established veils,
+    // but batch all the crossed narrow ropes into a single geometry.
+    const threads=new THREE.Mesh(createCascadeFilaments(quality),this.waterMat);
+    threads.name='water.azure.mirrorfall-filament-ropes';
+    threads.renderOrder=3;
+    threads.frustumCulled=false;
+    this.group.add(threads);
     this.sprayTexture=makeSprayStreakTexture();
     const material=new THREE.MeshBasicMaterial({
       color:0xe2f5f0,map:this.sprayTexture,transparent:true,
