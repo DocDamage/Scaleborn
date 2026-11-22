@@ -109,6 +109,8 @@ export class DragonVisual {
     rightLeg: this.rider.getObjectByName('rider.rightLeg') as THREE.Group,
     leftElbow: this.rider.getObjectByName('rider.leftElbow') as THREE.Group,
     rightElbow: this.rider.getObjectByName('rider.rightElbow') as THREE.Group,
+    leftWrist: this.rider.getObjectByName('rider.leftWrist') as THREE.Group,
+    rightWrist: this.rider.getObjectByName('rider.rightWrist') as THREE.Group,
     leftKnee: this.rider.getObjectByName('rider.leftKnee') as THREE.Group,
     rightKnee: this.rider.getObjectByName('rider.rightKnee') as THREE.Group,
     leftAnkle: this.rider.getObjectByName('rider.leftAnkle') as THREE.Group,
@@ -245,7 +247,7 @@ export class DragonVisual {
     // Hinged procedural legs: diagonal pairs step in opposition on land.
     for (const side of [-1, 1] as const) {
       for (const front of [true, false]) {
-        const sculpt = createDragonLegSculpt(front, skin, ridges, highlight);
+        const sculpt = createDragonLegSculpt(front, skin, ridges, highlight,side);
         const leg = sculpt.group;
         const z = front ? -1.05 : 1.03;
         leg.name = 'leg.' + (front ? 'front' : 'hind') + (side < 0 ? 'Left' : 'Right');
@@ -411,6 +413,8 @@ export class DragonVisual {
     this.riderLimbs.rightLeg.rotation.z = riderMotion.legSpread;
     this.riderLimbs.leftElbow.rotation.x = riderMotion.leftElbow;
     this.riderLimbs.rightElbow.rotation.x = riderMotion.rightElbow;
+    this.riderLimbs.leftWrist.rotation.x = riderMotion.leftWrist;
+    this.riderLimbs.rightWrist.rotation.x = riderMotion.rightWrist;
     this.riderLimbs.leftKnee.rotation.x = riderMotion.leftKnee;
     this.riderLimbs.rightKnee.rotation.x = riderMotion.rightKnee;
     this.riderLimbs.leftKnee.rotation.z = -riderMotion.kneeSpread;

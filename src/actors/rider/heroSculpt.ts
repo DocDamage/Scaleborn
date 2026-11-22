@@ -141,10 +141,36 @@ function createRiderArm(
   elbow.add(shapedTorso([
     [-.22,.059,.067,-.021],[-.258,.057,.065,-.022],
   ],trim,'rider.cuff',9));
-  elbow.add(shapedTorso([
-    [-.253,.052,.054,-.022],[-.31,.052,.053,-.024],
-    [-.359,.028,.040,-.027],
-  ],skin,'rider.hand',17));
+  const wrist=new THREE.Group();
+  wrist.name=side<0?'rider.leftWrist':'rider.rightWrist';
+  wrist.position.set(0,-.285,-.024);
+  // A smaller palm and four gently curled digits replace the one-piece
+  // conical mitten. All fingers follow the existing elbow/wrist socket.
+  wrist.add(shapedTorso([
+    [.034,.047,.053,.002],[0,.050,.055,-.002],
+    [-.043,.043,.039,-.009],
+  ],skin,'rider.hand',19));
+  for(let i=0;i<4;i++){
+    const x=(i-1.5)*.027;
+    const length=[.048,.060,.057,.045][i]!;
+    const digit=new THREE.Mesh(taperedSpine([
+      [x,-.032,-.012],
+      [x,-.047,-.027],
+      [x*.96,-.050-length*.57,-.044],
+      [x*.93,-.042-length,-.060],
+    ],.012-i*.001,10,22),skin);
+    digit.name='rider.finger.'+i;
+    digit.castShadow=true;
+    wrist.add(digit);
+  }
+  const thumb=new THREE.Mesh(taperedSpine([
+    [side*.044,-.008,-.004],[side*.067,-.025,-.019],
+    [side*.073,-.045,-.046],[side*.066,-.055,-.058],
+  ],.015,12,20),skin);
+  thumb.name='rider.thumb';
+  thumb.castShadow=true;
+  wrist.add(thumb);
+  elbow.add(wrist);
   arm.add(elbow);
   parent.add(arm);
   return arm;

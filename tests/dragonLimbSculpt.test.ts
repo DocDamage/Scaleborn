@@ -67,4 +67,27 @@ describe('sculpted dragon limbs', () => {
     dragon.update(state);
     expect(ankle.rotation.x).toBe(0);
   });
+  it('embeds paired shoulder roots inside the actual torso rather than exposing cap disks',()=>{
+    const dragon=new DragonVisual();
+    try {
+      for (const side of ['Left','Right'] as const) {
+        for(const position of ['front','hind'] as const) {
+          const leg=dragon.root.getObjectByName('leg.'+position+side) as THREE.Group;
+          const flesh=leg.getObjectByName('creature.dragon.leg-surface') as THREE.Mesh;
+          expect(flesh).toBeInstanceOf(THREE.Mesh);
+          const geo=flesh.geometry;
+          const attr=geo.getAttribute('position');
+          const first=attr.getX(0);
+          // First root point curves inward, relative to the same old hip.
+          const sign=side==='Left'?-1:1;
+          const minX=leg.position.x + first;
+          expect(minX*sign).toBeLessThan(.55);
+          expect(attr.getY(0)).toBeGreaterThan(.2);
+          const foot=leg.getObjectByName('creature.dragon.ankle') as THREE.Group;
+          expect(foot).toBeInstanceOf(THREE.Group);
+          expect(foot.position.y).toBeCloseTo(-.63,6);
+        }
+      }
+    }finally{dragon.dispose();}
+  });
 });

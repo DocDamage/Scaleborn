@@ -101,3 +101,22 @@ intersecting the fixed-scale rider or actual terrain; quality gate BLOCKING.
 ### Rider cloak surface fidelity and bank response — 2026-11-22
 
 The existing live `makeScalebornRider` travel cloak had a woven albedo/normal/roughness material but **no UV attribute**, so the texture detail could not be sampled meaningfully. The cloak is now UV-unwrapped with tiled fabric maps, shallow painted vertex-pigment variation, pinned mantle shoulders, an asymmetrically folded back surface and an irregular weighted hem. Its persistent vertex buffer deforms with speed and bank, without changing the child-scale rider, mount sockets or traversal simulation; a conservative culling bound protects the mobile hem. Added `tests/riderCloakSurface.test.ts` covering geometry, texture sampling attributes, pinned seams, roll response and live `DragonVisual` integration. Full automated checks and genuine rider-height WebGL appearance remain **unverified** for this batch; no final character-art signoff.
+
+### Original rider hand silhouette and wrist contact
+The heroine's original small hand geometry is now a fitted continuous palm
+with four individual softly tapered fingers and a separate thumb on each arm,
+instead of one mitten mesh. The named wrist pivots receive restrained mounted
+grip rotation from renderer-neutral rider pose channels, reset for independent
+walking and swimming, and retarget to the corresponding bones in future
+authored, approved original GLBs. Scale/age/costume identities unchanged.
+Verify real WebGL face and mount close-ups for clipping and hand readability.
+
+### Giant Onyx shoulder-cap integration (from actual WebGL defect)
+The real giant-form side image at `46f8674` still showed flat pale
+oval end caps on all four upper limbs. The leg lofts now originate at a
+deeper, inward-bent local shoulder/hip root, with a progressively curved
+muscular path out to the unchanged original feet. Existing four hip
+sockets, gait channels, claws, water physics and three form scales remain.
+Paired left/right regression tests assert embedded first control rings.
+Visual acceptance requires new real WebGL close-ups; avoid claiming the
+disk seams are fully resolved until review.

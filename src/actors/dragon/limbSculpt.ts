@@ -80,17 +80,22 @@ export interface DragonLegSculpt {
  */
 export function createDragonLegSculpt(
   front: boolean, hide: THREE.Material, scute: THREE.Material, keratin: THREE.Material,
+  side: -1 | 1 = 1,
 ): DragonLegSculpt {
   const group = new THREE.Group();
+  // The first root lies INSIDE the torso's real x/y cross-section, hiding
+  // the flat exposed shoulder cap present in real giant Onyx WebGL renders.
+  // A curved deltoid/hock path gradually emerges to the original limb
+  // socket; it does not modify collision, joint names or foot animation.
   const hip = [
-    new THREE.Vector3(0, .15, .005),
-    new THREE.Vector3(0, -.08, front ? .08 : .16),
+    new THREE.Vector3(-side * .16, .34, -.045),
+    new THREE.Vector3(-side * .075, -.015, front ? .06 : .13),
     new THREE.Vector3(0, -.27, front ? .14 : .26),
     new THREE.Vector3(0, -.47, front ? -.07 : .09),
     new THREE.Vector3(0, -.68, -.12),
   ];
   const flesh = new THREE.Mesh(sweptSurface(hip, [
-    [.19, .22], [.275, .30], [.23, .24], [.165, .18], [.115, .125],
+    [.19, .22], [.29, .31], [.24, .255], [.165, .18], [.115, .125],
   ], 32, 22), hide);
   flesh.name = 'creature.dragon.leg-surface';
   flesh.castShadow = true;

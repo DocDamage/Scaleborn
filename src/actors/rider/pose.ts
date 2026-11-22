@@ -10,6 +10,8 @@ export interface RiderPose {
   rightLeg: number;
   leftElbow: number;
   rightElbow: number;
+  leftWrist: number;
+  rightWrist: number;
   leftKnee: number;
   rightKnee: number;
   leftAnkle: number;
@@ -58,6 +60,8 @@ export function riderPose(state: FlightState): RiderPose {
       rightArm: .49 + .06 * air - .08 * bank - .035 * stride + landingBrace,
       leftElbow: .31 + .06 * air - .09 * bank + launchBrace,
       rightElbow: .31 + .06 * air + .09 * bank + launchBrace,
+      leftWrist: -.19 - .05 * air + .025 * bank,
+      rightWrist: -.19 - .05 * air - .025 * bank,
       // True knees turn the lower legs down the flank, retaining a planted
       // pelvis and avoiding a straight-legged 'standing on dragon' silhouette.
       leftLeg: (giant ? 1.35 : .78) + .035 * air - .028 * bank + .02 * stride,
@@ -88,6 +92,8 @@ export function riderPose(state: FlightState): RiderPose {
     rightArm: swimming ? -0.88 - swimStroke : rightStep,
     leftElbow: swimming ? .19 + .13 * swimStroke : .06 * swing,
     rightElbow: swimming ? .19 - .13 * swimStroke : .06 * swing,
+    leftWrist: swimming ? .10 : 0,
+    rightWrist: swimming ? .10 : 0,
     leftLeg: swimming ? -0.18 + kick : -leftStep * 0.72,
     rightLeg: swimming ? -0.18 - kick : -rightStep * 0.72,
     leftKnee: swimming ? .12 : Math.max(0, leftStep) * .54,

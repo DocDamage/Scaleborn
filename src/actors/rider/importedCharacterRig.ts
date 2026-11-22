@@ -191,6 +191,8 @@ export class ImportedCharacterRig {
       [['RightUpLeg', 'Thigh_R', 'RightUpperLeg'], pose.rightLeg],
       [['LeftForeArm', 'LeftLowerArm', 'Forearm_L'], pose.leftElbow],
       [['RightForeArm', 'RightLowerArm', 'Forearm_R'], pose.rightElbow],
+      [['LeftHand', 'Hand_L'], pose.leftWrist],
+      [['RightHand', 'Hand_R'], pose.rightWrist],
       [['LeftLeg', 'LeftCalf', 'Shin_L'], pose.leftKnee],
       [['RightLeg', 'RightCalf', 'Shin_R'], pose.rightKnee],
       [['LeftFoot', 'Foot_L'], pose.leftAnkle],
