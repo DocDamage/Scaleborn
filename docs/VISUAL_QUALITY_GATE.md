@@ -393,3 +393,19 @@ The wave-following geometry is not two-way fluid displacement or a
 fluid-pressure wake. Confirm contact and foam breakup in an **actual**
 rider-height moving-water browser capture; keep final quality blocked until
 that evidence and dedicated-GPU profiling exist.
+
+
+### Underwater suspended material (visual pass 7 foundation)
+
+- A camera-local but **world-cell stable** silt/particle field follows actual
+  camera immersion and lake/ocean optical state, not a scripted dive trigger.
+  Its deterministic hashed jitter reuses world-space cell locations as the
+  camera moves, so it avoids whole-field random popping and per-frame buffers.
+- The one-draw-call point shader clips at the same irregular Mirrorfall shore,
+  prevents water particles floating above the waterline, softly fades the
+  camera-near/far and particle-disc edges, and attenuates brightness at depth.
+- High uses 5,733 points; low uses 1,521. Points are camera-local with a fixed
+  per-quality budget, and the system disposes its GPU resources explicitly.
+  Visual screenshot inspection and real hardware GPU profiling remain open.
+- This is a surface/detail optical approximation, **not** volumetric fluid
+  scattering or mass-conserving sediment transport.
