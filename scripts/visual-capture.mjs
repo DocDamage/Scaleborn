@@ -37,6 +37,9 @@ async function main() {
       }
       window.__scalebornQaShore();
     });
+    // QA-only software rendering is throttled to keep the main thread responsive.
+    // Allow a fresh real WebGL frame after teleport before capturing the shore.
+    await page.waitForTimeout(350);
     await page.screenshot({ path: 'artifacts/mirrorfall-shoreline-browser.png', timeout: 120000 });
     assert.deepEqual(errors, [], 'WebGL/JavaScript renderer errors');
     console.log('PASS: Mirrorfall actual browser screenshot rendered without console errors.');
