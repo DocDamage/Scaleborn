@@ -31,7 +31,9 @@ describe('actual saddle contact and mounted limb clearance',()=>{
     try{
       state.mode='ground';state.speed=0;state.form='giant';
       for(let i=1;i<=60;i++){state.time=i*.05;dragon.update(state);}
-      dragon.rider.updateMatrixWorld(true);
+      // Refresh the root's world matrix before transforming knees into
+      // dragon-local coordinates; the actor can be far above world zero.
+      dragon.root.updateMatrixWorld(true);
       const inv=dragon.root.matrixWorld.clone().invert();
       const saddle=ONYX_SADDLE_DORSAL_Y*dragon.body.scale.x;
       for(const side of ['left','right']){
