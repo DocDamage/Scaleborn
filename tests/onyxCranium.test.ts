@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { DragonVisual } from '../src/actors/dragon/visual';
 import { loftDragon, ONYX_HEAD } from '../src/actors/dragon/organicSculpt';
