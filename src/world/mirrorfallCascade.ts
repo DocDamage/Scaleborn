@@ -16,7 +16,8 @@ const vertex=`
   void main(){
     vFlowUv=uv;
     vFlowWorld=(modelMatrix*vec4(position,1.0)).xyz;
-    gl_Position=projectionMatrix*viewMatrix*vec4(vFlowWorld,1.0);
+    vec4 mvPosition=viewMatrix*vec4(vFlowWorld,1.0);
+    gl_Position=projectionMatrix*mvPosition;
     #include <fog_vertex>
   }
 `;
