@@ -345,3 +345,13 @@ or cliffs to cut between the rider/dragon and the viewpoint. First-person
 dragon-eye mode is unaffected. This is deterministic geometry-proxy
 occlusion, not full mesh-triangle raycasting or a cinematic camera system;
 verify framing near steep Mirrorfall banks and structures in the actual game.
+
+### Flight interaction with the falling waterfall curtain
+
+`waterfallCurtainDragAt` now maps a bounded airflow/water-pressure-like
+deflection around the same curved X/Y trajectory and Z width as the actual
+Mirrorfall curtain mesh. Airborne dragon flight is pushed gently downward
+and outward when crossing it, then terrain and structure floor clearance
+remain authoritative. Outside the falling sheet or below the lake surface,
+the force is exactly zero. This is an arcade contact approximation, not a
+full physical waterfall volume, pressure simulation or damage system.

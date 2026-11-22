@@ -104,6 +104,43 @@ export function plungeCurrentStep(
   return canMove(nx,nz)?{x:nx,z:nz}:{x,z};
 }
 
+export interface WaterfallCurtainDrag { x:number; y:number; z:number; strength:number }
+
+/**
+ * A bounded contact force near the actual curved waterfall ribbon. Flying
+ * through the falling sheet deflects the dragon toward the lake and pushes it
+ * gently downward. No arbitrary force at a distance or near the lakebed.
+ *
+ * This is a lightweight arcade approximation, not collision with a 3D
+ * Navier–Stokes waterfall volume. It shares the rendered ribbon trajectory.
+ */
+export function waterfallCurtainDragAt(
+  x:number,y:number,z:number,radius=0,
+):WaterfallCurtainDrag {
+  const still={x:0,y:0,z:0,strength:0};
+  if(![x,y,z,radius].every(Number.isFinite)||radius<0)return still;
+  const drop=MIRRORFALL.topY-GRAND_LAKE.surfaceY;
+  if(y>MIRRORFALL.topY+3||y<GRAND_LAKE.surfaceY+4)return still;
+  const t=Math.max(0,Math.min(1,(MIRRORFALL.topY-y)/drop));
+  const arc=t*t*.91+t*.09;
+  const crestX=MIRRORFALL.x-1;
+  const fallX=crestX+(MIRRORFALL_IMPACT.x-crestX)*arc;
+  const depthX=Math.abs(x-fallX);
+  const depthZ=Math.abs(z-MIRRORFALL.z);
+  const xBand=3.6+radius*.45;
+  const halfWidth=MIRRORFALL.width*.5*(.74+t*.49)+radius*.45;
+  if(depthX>=xBand||depthZ>=halfWidth)return still;
+  const fadeX=1-smooth(clamp01(depthX/xBand));
+  const fadeZ=1-smooth(clamp01(depthZ/halfWidth));
+  const feather=smooth(clamp01((y-GRAND_LAKE.surfaceY-4)/8))
+    *smooth(clamp01((MIRRORFALL.topY-y+3)/13));
+  const strength=fadeX*fadeZ*feather;
+  // X points away from the cliff, into the freshwater basin. Z is a
+  // much smaller lateral bias, preventing a rigid single-axis push.
+  const lateral=(z-MIRRORFALL.z)/Math.max(1,halfWidth);
+  return {x:-8.5*strength,y:-11*strength,z:lateral*1.9*strength,strength};
+}
+
 export function lakeVolumeEstimateCubicMeters():number {
   // Elliptical first-order basin approximation, used only for debugging
   // and never as a hydrology / simulation conservation invariant.

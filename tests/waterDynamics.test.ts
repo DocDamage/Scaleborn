@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { MIRRORFALL_IMPACT, plungeCurrentAt, plungeWaveAt,
-  plungeFoamAt, plungeCurrentStep, plungeVelocityAt } from '../src/world/waterDynamics';
-import { GRAND_LAKE, lakeContains } from '../src/world/highlandLake';
+  plungeFoamAt, plungeCurrentStep, plungeVelocityAt,
+  waterfallCurtainDragAt } from '../src/world/waterDynamics';
+import { GRAND_LAKE, MIRRORFALL, lakeContains } from '../src/world/highlandLake';
 import { newFlightState, stepFlight } from '../src/actors/dragon/flight';
 
 describe('Mirrorfall waterfall-to-lake coupling', () => {
@@ -70,6 +71,23 @@ describe('Mirrorfall waterfall-to-lake coupling', () => {
     expect(state.waterTargetY).toBeGreaterThan(yTarget);
     const center = plungeVelocityAt(x, GRAND_LAKE.surfaceY - 10, z);
     expect(center.magnitude).toBeGreaterThan(0);
+  });
+
+  it('localizes airborne waterfall drag to the rendered curved falling sheet',()=>{
+    const t=.70, y=MIRRORFALL.topY-
+      (MIRRORFALL.topY-GRAND_LAKE.surfaceY)*t;
+    const crest=MIRRORFALL.x-1;
+    const arc=t*t*.91+t*.09;
+    const x=crest+(MIRRORFALL_IMPACT.x-crest)*arc;
+    const flow=waterfallCurtainDragAt(x,y,MIRRORFALL.z,3.3);
+    expect(flow.strength).toBeGreaterThan(.8);
+    expect(flow.x).toBeLessThan(-4);
+    expect(flow.y).toBeLessThan(-5);
+    expect(Math.abs(flow.z)).toBeLessThan(.1);
+    expect(waterfallCurtainDragAt(x+150,y,MIRRORFALL.z).strength).toBe(0);
+    expect(waterfallCurtainDragAt(x,y,MIRRORFALL.z+300).strength).toBe(0);
+    expect(waterfallCurtainDragAt(x,GRAND_LAKE.surfaceY-20,MIRRORFALL.z).strength).toBe(0);
+    expect(waterfallCurtainDragAt(NaN,y,MIRRORFALL.z).strength).toBe(0);
   });
 
   it('limits current displacement through collision and invalid timesteps', () => {
