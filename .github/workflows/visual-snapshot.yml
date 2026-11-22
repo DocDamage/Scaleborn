@@ -1,0 +1,27 @@
+name: Mirrorfall visual snapshot
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  mirrorfall:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Start local game
+        run: |
+          npm run dev -- --host 127.0.0.1 >/tmp/scaleborn-vite.log 2>&1 &
+      - run: npm run test:visual
+      - name: Attach actual game screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mirrorfall-actual-render
+          path: artifacts/mirrorfall-actual-browser.png
+          if-no-files-found: warn
