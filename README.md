@@ -1,12 +1,38 @@
 # Scaleborn
 
-**VISUAL OVERHAUL IN PROGRESS:** the large HUD and primitive tree/terrain/water rendering are being replaced by an original painterly PBR environment, Mirrorfall Lake and Cascade. See [visual acceptance gate](docs/VISUAL_QUALITY_GATE.md). Gameplay G3 continues to work but the art is not finished.
+**VISUAL QUALITY GATE STILL BLOCKING:** The real playable world has procedural painterly PBR terrain, foliage, Mirrorfall Lake, headwaters, underwater effects and the waterfall, but final character/environment art and hardware performance have not been approved. See [visual acceptance gate](docs/VISUAL_QUALITY_GATE.md).
 
 **Scaleborn** is an original painterly 3D fantasy adventure about a 13-year-old dragon-human hybrid and her bonded dragon. The project begins with a **desktop-browser Azure Coast flight prototype** and is structured for a later **Unreal Engine implementation**. Browser gameplay will not automatically transfer to Unreal.
 
-## Current state: G0–G3, expanding G3.2 multi-location Tidal Echo Trial
+## Current state: G0–G4 playable vertical slice, still early art
 
-This branch contains a playable **first-flight preview**: an original code-generated dragon and rider, deterministic seam-stitched Azure Coast terrain streamed in tiles, animated shader ocean and coastal foam, layered cloud banks, clustered trees, coastal rocks, generated harbor cottages and piers, lighthouse, ancient temple and sea arch, four discoverable landmarks, three dragon forms with distinct flight profiles, animated landing/takeoff over fixed time, a directly controlled small dragon on land, separately scaled rider, deforming three-bone wings and multiple cameras. This branch adds independent rider walking, coast-to-water movement, dragon swimming/surface/diving, water transitions and a procedural submerged shrine. This G3.2 branch adds a multi-location underwater-to-land quest and small local progress checkpoints. It does **not** yet include a general quest journal/save-slot system, rider-on-shoulder behavior, combat, audio, asset-export tooling or finished painterly textures. Dragon transformations are an early G2 implementation: small form requires landing before dismount; full free midair remounting, shoulder riding and co-op puzzles are later. These remain planned work, not hidden or simulated features.
+**The integration development branch adds a tested G4 combat foundation to
+the existing Azure Coast exploration game.** It contains three original
+Onyx dragon forms, independent hybrid rider, mounted and ground traversal,
+swimming/diving, five cameras, coast/forest/ruins discovery, the Tidegate
+two-character rune trial, the Sunken Shrine Tidal Echo quest and limited
+versioned local progress checkpoints. The seeded procedural world has an
+interactive deep Mirrorfall freshwater lake, connecting feeder river,
+waterfall, shore foam, vegetation, weathered PBR materials and underwater
+optical passes.
+
+**New G4:** Onyx has directional fire breath; the independent rider uses
+Tidal Sigil; both can coordinate a dry-ground Bond Surge. Three original
+Gloam hounds pursue and strike with attack telegraphs, damage/hit reactions,
+and forgiving recovery. One-time clearing grants +15 maximum Ember for the
+current session. Real WebGL screenshot workflows test all four encounter
+effects, plus visual and traversal routes. Open `?start=combat` to play
+the encounter. G4 does **not** mean bosses, lock-on, all elements, full
+combat animation or world-state persistence are complete.
+
+The original skinned dragon tail, articulated claws, expressive features,
+portrait-ready hybrid rider, dynamic cloak, curved painted wings, enemy
+anatomy, feathered combat effects and proportion-correct responsive grass
+are live game code. These are still first procedural art passes, not the
+final approved professional assets. No general quest journal/save slots,
+rider shoulder-perch, authored sounds, Unreal asset-export pipeline or
+coupled 3D fluid dynamics are delivered. Final shader quality requires
+real RTX 3060 gameplay inspection, not only passing software-WebGL tests.
 
 The 4 × 4 km world and all objects use meters with Y up. The packaged seed is `0x5ca1e0`. Geometry is procedurally generated and currently requires no third-party art/audio files.
 
@@ -32,7 +58,7 @@ Open the URL printed by Vite. Click **Take flight**. Press Esc to release pointe
 | F | Land / take off on land; splash down or launch from deep water |
 | 1 / 2 / 3 | Small / rideable / giant dragon; growth checks world clearance |
 | C | Dive / surface in water, for either rider or dragon |
-| G | Invoke or examine a nearby Tidegate rune stone |
+| G | Invoke or examine a nearby Tidegate rune stone |\n| R / primary mouse button | Directional dragon fire or independent rider Tidal Sigil |\n| X | Short-range Bond Surge while both companions are on dry ground |\n| M | Show/hide the contextual controls palette |
 | Q / E | Dive deeper / swim upward while underwater |
 | Tab | Switch control between the grounded small dragon and independent rider |
 | V | Cycle five cameras |
@@ -45,7 +71,7 @@ Open the URL printed by Vite. Click **Take flight**. Press Esc to release pointe
 - **G1** — painterly Azure Coast, recognizable landmarks, world-streaming quality/LOD, water, foliage and coastal architecture. **In progress:** stitched 32:8 terrain LOD edges, shader ocean, foam contours, temple/arch and discoverable landmarks; painterly art direction and benchmarks remain.
 - **G2** — polished flight dynamics, original procedural dragon/rider rigs, expressive animation and all three dragon sizes. **In progress:** 3 size modes, distinct physics profiles, conservative collision proxies, eased landing/takeoff, diagonal ground gait, controllable small dragon, independent rider scale and animated skinned wing deformation. Real skeletal rig export, transitions, complete locomotion and animation QA remain.
 - **G3** — seamless on-foot, riding, swimming and underwater traversal, co-op exploration. **In progress:** the Tidegate two-character trial now leads into the Sunken Shrine Tidal Echo recovery and rider attunement at Tidegate. Local progress checkpoints store completed flags and discovered landmarks. More complex co-op puzzles, authored animation and fluid simulation remain.
-- **G4** — fire/elemental combat, threats and rider/dragon bond interactions.
+- **G4** — first playable fire, rider magic, Gloam enemies, damage, recovery and bonded attack implemented on the integration branch. Expanded enemy types, AI, audio, lock-on and bosses remain.
 - **G5** — story opening, villages/NPCs, quests, progression and persistent saves.
 - **G6** — optimization, replacement art pipeline, accessibility, packaging and Unreal port plan.
 
