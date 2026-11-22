@@ -303,6 +303,17 @@ export class DragonVisual {
     this.disposed = true;
     this.importedDragon?.dispose();
     this.importedRider?.dispose();
+    // Each original sculpt/wing is a per-instance geometry, not a singleton.
+    // Deduplicate shared geometry in case two sockets reference one mesh.
+    const geometry=new Set<THREE.BufferGeometry>();
+    const disposeGeometry=(node:THREE.Object3D):void=>{
+      node.traverse(child=>{
+        if(child instanceof THREE.Mesh)geometry.add(child.geometry);
+      });
+    };
+    disposeGeometry(this.root);
+    disposeGeometry(this.rider); // Independent rider may be parented to Scene.
+    geometry.forEach(g=>g.dispose());
     this.rider.removeFromParent();
     this.root.removeFromParent();
     this.scene = null;
