@@ -30,9 +30,15 @@ try {
     window.__scalebornQaAdvance(100);
   });
   await page.waitForFunction(()=>document.querySelector('#mode-name')?.textContent==='ON LAND');
+  // Actual chase camera, for character readability at gameplay distance.
+  await captureQaScreenshot(page, {path:'artifacts/characters-onyx-gameplay.png',timeout:120000});
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('rideable'));
   await page.waitForTimeout(500);
   await captureQaScreenshot(page, {path:'artifacts/characters-onyx-rideable.png',timeout:120000});
+
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('mounted-rideable'));
+  await page.waitForTimeout(400);
+  await captureQaScreenshot(page, {path:'artifacts/characters-rider-mounted-rideable.png',timeout:120000});
 
   await page.keyboard.press('1');
   await page.evaluate(()=>window.__scalebornQaAdvance(8));
@@ -56,6 +62,10 @@ try {
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('giant'));
   await page.waitForTimeout(550);
   await captureQaScreenshot(page, {path:'artifacts/characters-onyx-giant.png',timeout:120000});
+
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('mounted-giant'));
+  await page.waitForTimeout(450);
+  await captureQaScreenshot(page, {path:'artifacts/characters-rider-mounted-giant.png',timeout:120000});
 
   assert.deepEqual(errors,[],'Browser/shader errors during real character rendering');
   console.log('PASS: actual skinned wing, three form changes and hybrid rider rendered.');

@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import type { FlightState } from '../actors/dragon/flight';
 import { FORMS, type DragonForm } from '../actors/dragon/forms';
 
-export type PortraitSubject = 'dragon' | 'rider';
-export type PortraitPose = DragonForm | 'rider';
+export type PortraitSubject = 'dragon' | 'rider' | 'mounted';
+export type PortraitPose = DragonForm | 'rider' | 'mounted-rideable' | 'mounted-giant';
 
 /**
  * Repeatable *development-only* character art review position. The open
@@ -15,7 +15,8 @@ export function stageCharacterPortrait(
   height: (x: number, z: number) => number,
 ): PortraitSubject {
   const x = -521, z = -104;
-  const form = pose === 'rider' ? 'small' : pose;
+  const form = pose === 'rider' ? 'small' : pose === 'mounted-rideable'
+    ? 'rideable' : pose === 'mounted-giant' ? 'giant' : pose;
   state.x = x;
   state.z = z;
   state.form = form;
@@ -34,7 +35,8 @@ export function stageCharacterPortrait(
   state.riderYaw = 0;
   state.riderSpeed = 0;
   state.riderMode = 'ground';
-  return state.controlTarget;
+  return pose === 'mounted-rideable' || pose === 'mounted-giant'
+    ? 'mounted' : state.controlTarget;
 }
 
 /**
@@ -48,16 +50,20 @@ export function poseCharacterPortraitCamera(
   height: (x: number, z: number) => number,
 ): void {
   const rider = subject === 'rider';
+  const mounted = subject === 'mounted';
   const yaw = rider ? state.riderYaw : state.yaw;
   const scale = rider ? 1 : FORMS[state.form].visualScale;
-  const distance = rider ? 2.75 :
-    state.form === 'small' ? 1.65 : state.form === 'giant' ? 13.5 : 5.6;
-  const rise = rider ? .6 :
-    state.form === 'small' ? .62 : state.form === 'giant' ? 4.7 : 2.25;
+  const distance = mounted ? (state.form === 'giant' ? 8.2 : 3.8)
+    : rider ? 2.75 :
+      state.form === 'small' ? 1.65 : state.form === 'giant' ? 13.5 : 5.6;
+  const rise = mounted ? (state.form === 'giant' ? 2.4 : 1.35)
+    : rider ? .6 :
+      state.form === 'small' ? .62 : state.form === 'giant' ? 4.7 : 2.25;
   const originX = rider ? state.riderX : state.x;
   const originY = rider ? state.riderY : state.y;
   const originZ = rider ? state.riderZ : state.z;
-  const focusY = originY + (rider ? 1.08 : .46 * scale);
+  const focusY = originY + (mounted ? .63 * scale + .36
+    : rider ? 1.08 : .46 * scale);
   const forwardX = Math.sin(yaw), forwardZ = -Math.cos(yaw);
   const rightX = Math.cos(yaw), rightZ = Math.sin(yaw);
   const x = originX + forwardX * distance + rightX * distance * .32;
@@ -66,7 +72,7 @@ export function poseCharacterPortraitCamera(
   camera.position.set(x,y,z);
   camera.up.set(0,1,0);
   camera.lookAt(originX,focusY,originZ - (rider ? .02 : scale * .24));
-  const fov = rider ? 40 : state.form === 'small' ? 42 :
+  const fov = rider ? 40 : mounted ? 45 : state.form === 'small' ? 42 :
     state.form === 'giant' ? 51 : 46;
   if (camera.fov !== fov) {
     camera.fov = fov;

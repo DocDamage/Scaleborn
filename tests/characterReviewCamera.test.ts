@@ -43,4 +43,22 @@ describe('real-character close-up visual acceptance cameras', () => {
     expect(Math.hypot(camera.position.x-state.riderX,camera.position.z-state.riderZ))
       .toBeLessThan(3.2);
   });
+  it('frames the original child in mounted rideable and giant review cameras',()=>{
+    const state=newFlightState();
+    const camera=new THREE.PerspectiveCamera(71,16/9,.2,6500);
+    for(const [pose,form] of [
+      ['mounted-rideable','rideable'],['mounted-giant','giant'],
+    ] as const){
+      expect(stageCharacterPortrait(state,pose,heightAt)).toBe('mounted');
+      expect(state.form).toBe(form);
+      expect(state.controlTarget).toBe('dragon');
+      poseCharacterPortraitCamera(camera,state,'mounted',heightAt);
+      expect(camera.fov).toBe(45);
+      expect(camera.position.y).toBeGreaterThan(state.y);
+      expect(Math.hypot(camera.position.x-state.x,camera.position.z-state.z))
+        .toBeLessThan(form==='giant'?9:4.5);
+      expect([camera.position.x,camera.position.y,camera.position.z]
+        .every(Number.isFinite)).toBe(true);
+    }
+  });
 });

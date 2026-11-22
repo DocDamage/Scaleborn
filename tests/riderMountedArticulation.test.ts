@@ -5,6 +5,7 @@ import { newFlightState } from '../src/actors/dragon/flight';
 import { FORMS } from '../src/actors/dragon/forms';
 import { mountedRiderSeat } from '../src/actors/rider/mountSeat';
 import { riderPose } from '../src/actors/rider/pose';
+import { beginTraversal } from '../src/actors/dragon/traversalTransition';
 
 describe('hybrid rider arm and leg contact animation', () => {
   it('reaches forward and bends the knees down the dragon flank in every mounted form', () => {
@@ -62,10 +63,11 @@ describe('hybrid rider arm and leg contact animation', () => {
   it('adds restrained and finite launch/landing bracing', () => {
     const state = newFlightState();
     const neutral=riderPose(state);
-    state.transition={phase:'takingOff',elapsed:0,duration:1};
+    beginTraversal(state,'takingOff',state.y+8,state.speed);
     const launch=riderPose(state);
     expect(launch.leftElbow).toBeGreaterThan(neutral.leftElbow);
-    state.transition={phase:'landing',elapsed:0,duration:1};
+    state.transition=null;
+    beginTraversal(state,'landing',state.y-8,state.speed);
     const landing=riderPose(state);
     expect(landing.leftArm).toBeGreaterThan(neutral.leftArm);
     expect(landing.leftKnee).toBeLessThan(-.8);
