@@ -865,3 +865,35 @@ and terrain-grounded bathymetry in view. The second screenshot is written
 to `artifacts/mirrorfall-impact-underwater-browser.png`. This remains
 an opt-in dev-only WebGL visual acceptance tool; it does not lengthen the
 ordinary browser smoke check or replace high-quality GPU measurements.
+
+### Terrain-safe review camera and view-dependent foliage submission
+
+The old shallow lakebed QA camera was fixed at a west-bank location whose
+actual depth fell below its 8 m minimum after terrain changes. The camera now
+uses `findLakebedReviewViewpoint()` to choose a deterministic, collision-safe
+11–25 m-deep freshwater shelf that also satisfies the aquatic vegetation
+slope budget. The tests verify water masking, neighboring lake coverage,
+slope, camera clearance and identical seeded selections.
+
+The waterfall 3D-current regression now checks its return-current band on
+the *interior* side of the lake. It also explicitly verifies that the same
+depth outside the irregular shore mask produces zero current, preventing a
+dry-bank sample from being mistaken for a simulation failure.
+
+`InstanceVisibility` now retains its 48 m actor-cell distance submission
+but accepts the actual render camera to drop distant leaf cards and tree wood
+behind the view. All instances within 90 m remain resident to avoid near-field
+turn popping, and near-vertical overhead views retain the full 360-degree
+population. A permissive 210-degree visible cone, 15-degree camera sectors and
+32 m camera cells reduce unnecessary CPU/GPU instance uploads. Original seeded
+instance matrices/colors are retained; revisiting a location reproduces the
+same forest. This must be verified with actual camera-turn captures for
+visible-edge popping, canopy density and GPU timing.
+
+The existing low-setting SwiftShader screenshots remain CI crash/geometry
+checks. The new opt-in `npm run test:visual:high` runs the actual game with
+high painterly materials, refuses browser software fallback, and captures
+seven hardware-GPU WebGL views, including the real feeder-river crest and
+underwater impact plume. It is still a QA-throttled screenshot path, not an
+FPS benchmark. **No GPU acceptance, final creature appearance, physically
+coupled fluid simulation or art-direction approval is claimed.**
