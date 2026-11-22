@@ -593,6 +593,7 @@ export class Game {
         if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
           throw new Error('QA combat frames must be between 1 and 180');
         }
+        this.consumeGameplayActions();
         const idle = { turn: 0, pitch: 0, bank: 0, boost: false, flap: false, move: 0 };
         for (let i = 0; i < frames; i++) {
           stepFlight(this.flight, idle, FIXED_DT);
@@ -608,6 +609,7 @@ export class Game {
         if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
           throw new Error('QA frames must be an integer between 1 and 180');
         }
+        this.consumeGameplayActions();
         const idle = { turn: 0, pitch: 0, bank: 0, boost: false, flap: false, move: 0 };
         for (let i = 0; i < frames; i++) stepFlight(this.flight, idle, FIXED_DT);
         this.accumulator = 0;
@@ -690,6 +692,26 @@ export class Game {
     this.actionToast.dataset.kind = result.ok ? 'ok' : 'blocked';
     this.actionToast.hidden = false;
     this.actionTimer = 3.1;
+  }
+
+  /**
+   * Sole action-consumption path for RAF and bounded browser QA stepping.
+   * QA still delivers actual keyboard events to FlightInput; it does not
+   * fake hits, mount state or terrain collision. The Set takes each once.
+   */
+  private consumeGameplayActions(): void {
+    if (this.paused || this.menuOpen) return;
+    if (this.input.take('land')) this.landAction();
+    if (this.input.take('switchFocus')) this.notify(toggleRiderControl(this.flight));
+    if (this.input.take('submerge')) this.diveAction();
+    if (this.input.take('interact')) this.interactWithRune();
+    if (this.input.take('fire')) this.fireAction();
+    if (this.input.take('claw')) this.clawAction();
+    if (this.input.take('mountedSigil')) this.mountedSigilAction();
+    if (this.input.take('bond')) this.bondAction();
+    for (const form of FORM_ORDER) {
+      if (this.input.take(form)) this.setForm(form);
+    }
   }
 
   private setForm(form: DragonForm): void {
@@ -984,19 +1006,7 @@ export class Game {
     }
     if (this.input.take('menu')) this.toggleMenu();
     if (this.input.take('camera')) this.cameraIndex = (this.cameraIndex + 1) % cameraModes.length;
-    if (!this.paused && !this.menuOpen) {
-      if (this.input.take('land')) this.landAction();
-      if (this.input.take('switchFocus')) this.notify(toggleRiderControl(this.flight));
-      if (this.input.take('submerge')) this.diveAction();
-      if (this.input.take('interact')) this.interactWithRune();
-      if (this.input.take('fire')) this.fireAction();
-      if (this.input.take('claw')) this.clawAction();
-      if (this.input.take('mountedSigil')) this.mountedSigilAction();
-      if (this.input.take('bond')) this.bondAction();
-      for (const form of FORM_ORDER) {
-        if (this.input.take(form)) this.setForm(form);
-      }
-    }
+    this.consumeGameplayActions();
     this.actionTimer = Math.max(0, this.actionTimer - elapsed);
     if (this.actionTimer === 0) this.actionToast.hidden = true;
     if (!this.paused && !this.menuOpen) {

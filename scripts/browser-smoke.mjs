@@ -108,6 +108,7 @@ async function main() {
     await page.evaluate(() => window.__scalebornQaAdvance(1));
     await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'SMALL COMPANION', null, { timeout: 12000 });
     await page.keyboard.press('g');
+    await page.evaluate(() => window.__scalebornQaAdvance(1));
     await page.waitForFunction(() => document.querySelector('#tidegate-status')?.textContent === '1 / 2 RUNES', null, { timeout: 12000 });
     await page.keyboard.press('Tab');
     await page.evaluate(() => window.__scalebornQaAdvance(1));
@@ -117,6 +118,7 @@ async function main() {
       window.__scalebornQaStageRiderRune();
     });
     await page.keyboard.press('g');
+    await page.evaluate(() => window.__scalebornQaAdvance(1));
     await page.waitForFunction(() => document.querySelector('#tidegate-status')?.textContent === 'TIDEBOUND SIGIL AWAKENED', null, { timeout: 12000 });
     await captureQaScreenshot(page, { timeout: 120000, path: 'artifacts/azure-coast-small-meadow.png' });
     await page.keyboard.press('Tab');

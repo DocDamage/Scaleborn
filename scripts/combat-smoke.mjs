@@ -56,6 +56,7 @@ try {
   // still hit the unchanged real moving enemy through normal keyboard input.
   await page.evaluate(() => window.__scalebornQaStageCombat('dragon'));
   await page.keyboard.press('r');
+  await page.evaluate(() => window.__scalebornQaAdvanceCombat(1));
   await page.waitForFunction(() =>
     window.__scalebornQaCombatSnapshot()?.fireSequence === 1,
   null, { timeout: 40000 });
@@ -71,6 +72,7 @@ try {
   // The QA hook only stages rider/dragon placement, never damage or cooldown.
   await page.evaluate(() => window.__scalebornQaStageCombat('claw'));
   await page.keyboard.press('z');
+  await page.evaluate(() => window.__scalebornQaAdvanceCombat(1));
   await page.waitForFunction(() =>
     window.__scalebornQaCombatSnapshot()?.clawSequence === 1,
   null, { timeout: 40000 });
@@ -86,6 +88,7 @@ try {
   // Staging changes player placement only; rider attack uses regular R input.
   await page.evaluate(() => window.__scalebornQaStageCombat('rider'));
   await page.keyboard.press('r');
+  await page.evaluate(() => window.__scalebornQaAdvanceCombat(1));
   await page.waitForFunction(() =>
     window.__scalebornQaCombatSnapshot()?.sigilSequence === 1,
   null, { timeout: 40000 });
@@ -96,6 +99,7 @@ try {
 
   await page.evaluate(() => window.__scalebornQaStageCombat('bond'));
   await page.keyboard.press('x');
+  await page.evaluate(() => window.__scalebornQaAdvanceCombat(1));
   await page.waitForFunction(() =>
     window.__scalebornQaCombatSnapshot()?.bondSequence === 1,
   null, { timeout: 40000 });
