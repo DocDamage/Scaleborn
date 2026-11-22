@@ -25,6 +25,8 @@ describe('actual creature/water contact, not effects in midair',()=>{
       const initial=splash.spray.count;
       splash.update(state,.09);
       expect(splash.spray.count).toBeLessThanOrEqual(initial);
+      expect((splash.spray.material as THREE.MeshBasicMaterial).vertexColors)
+        .toBe(false);
       expect(splash.group.children.length).toBe(1);
       splash.update(state,5);
       expect(splash.spray.count).toBe(0);

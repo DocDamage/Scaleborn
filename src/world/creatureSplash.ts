@@ -34,6 +34,7 @@ export class CreatureSplash {
   private next=0;
   private previousRiderMode:FlightState['riderMode']|null=null;
   private splashTransition:TraversalTransition|null=null;
+  private pendingSplashdown=false;
   private launchTransition:TraversalTransition|null=null;
   private lastTime=0;
 
@@ -44,7 +45,8 @@ export class CreatureSplash {
     this.material=new THREE.MeshBasicMaterial({
       map:this.texture,color:0xeaf6f2,transparent:true,opacity:.75,
       depthWrite:false,side:THREE.DoubleSide,alphaTest:.018,
-      vertexColors:true,
+      // Instance colors are supplied per-particle; no per-vertex color buffer.
+      vertexColors:false,
     });
     const capacity=quality==='high'?120:64;
     this.spray=new THREE.InstancedMesh(
@@ -95,11 +97,17 @@ export class CreatureSplash {
     const nearWater=state.y <= waterSurfaceAt(state.x,state.z)
       + FORMS[state.form].standHeight*.55
       + waterWaveOffsetAt(state.x,state.z,time)*.62 + 1.15;
-    if(transition?.phase==='splashdown'
-      && transition!==this.splashTransition && nearWater){
+    if(transition?.phase==='splashdown' &&
+      transition!==this.splashTransition){
+      this.pendingSplashdown=true;
+      this.splashTransition=transition;
+    }
+    // On very slow software-rendered frames, the animation may complete
+    // between renders. Keep its pending contact instead of losing the splash.
+    if(this.pendingSplashdown && state.mode==='surface' && nearWater){
       this.emit(state.x,state.z,FORMS[state.form].radius,
         state.form==='giant'?78:state.form==='small'?25:48,time);
-      this.splashTransition=transition;
+      this.pendingSplashdown=false;
     }
     if(transition?.phase==='waterLaunch'
       && transition!==this.launchTransition && transition.elapsed<.48){
@@ -107,7 +115,10 @@ export class CreatureSplash {
         state.form==='giant'?50:state.form==='small'?14:32,time);
       this.launchTransition=transition;
     }
-    if(transition?.phase!=='splashdown')this.splashTransition=null;
+    if(transition?.phase!=='splashdown'){
+      this.splashTransition=null;
+      if(state.mode!=='surface')this.pendingSplashdown=false;
+    }
     if(transition?.phase!=='waterLaunch')this.launchTransition=null;
 
     if(this.previousRiderMode==='ground' && state.riderMode==='surface'){
