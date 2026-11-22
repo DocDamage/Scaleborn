@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { LakeShoreFoam, PainterlyWaterSurface, makeFoamShader } from '../src/world/waterSurface';
 import { UnderwaterLightShafts } from '../src/world/underwaterLightShafts';
+import { MirrorfallCascade } from '../src/world/mirrorfallCascade';
 
 describe('submerged water-surface rendering contracts', () => {
   it('uses less opaque, tinted transmission when the camera is beneath water', () => {
@@ -14,6 +15,7 @@ describe('submerged water-surface rendering contracts', () => {
         expect(material.depthWrite).toBe(false);
         expect(material.fragmentShader).toContain('cameraPosition.y-vScWorld.y');
         expect(material.fragmentShader).toContain('undersideAlpha');
+        expect(material.fragmentShader).toContain('foam*=1.0-submergedView');
         expect(material.fragmentShader).toContain('mix(alpha,undersideAlpha,underside)');
       }
       expect(lake.mesh.position.y).toBeGreaterThan(ocean.mesh.position.y);
@@ -34,6 +36,20 @@ describe('submerged water-surface rendering contracts', () => {
     } finally {
       shore.dispose();
       seaFoam.dispose();
+    }
+  });
+
+  it('fades waterfall sheets into deep underwater fog instead of rendering full-bright', () => {
+    const cascade = new MirrorfallCascade();
+    try {
+      const curtain = cascade.group.getObjectByName('water.azure.mirrorfall-curtain');
+      expect(curtain).toBeInstanceOf(THREE.Mesh);
+      const material = (curtain as THREE.Mesh).material as THREE.ShaderMaterial;
+      expect(material.fog).toBe(true);
+      expect(material.vertexShader).toContain('#include <fog_vertex>');
+      expect(material.fragmentShader).toContain('#include <fog_fragment>');
+    } finally {
+      cascade.dispose();
     }
   });
 

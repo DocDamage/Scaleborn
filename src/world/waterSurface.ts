@@ -102,6 +102,10 @@ const frag=`
        waveFoam;
     float turbulence=0.55+0.45*sin(plungeDist*.225-t*1.63);
     foam=clamp(foam+plungeDecay*(0.38+0.34*turbulence),0.0,0.93);
+    // Crest foam is a TOP-side phenomenon. The back of the translucent
+    // water surface must not paint a bright shoreline ring beneath a diver.
+    float submergedView=1.0-smoothstep(-.25,1.15,cameraPosition.y-vScWorld.y);
+    foam*=1.0-submergedView;
     vec3 deep=uLake>0.5?vec3(.025,.19,.245):vec3(.027,.155,.19);
     vec3 turquoise=uLake>0.5?vec3(.105,.39,.415):vec3(.10,.34,.39);
     float BeerLambert=exp(-waterDepth*.071);
@@ -123,7 +127,7 @@ const frag=`
     // water reveals the terrain. Beneath the surface the opposite is needed:
     // the underside is a thin, transmitting canopy, not an opaque teal wall.
     float alpha=uLake>.5 ? mix(.97,.49,BeerLambert*.70) : .95;
-    float underside=1.0-smoothstep(-.25,1.15,cameraPosition.y-vScWorld.y);
+    float underside=submergedView;
     float undersideAlpha=.10+.25*pow(1.0-nv,2.0);
     vec3 transmitted=uLake>.5 ? vec3(.065,.31,.355) : vec3(.065,.27,.32);
     color=mix(color,transmitted,underside*.47);

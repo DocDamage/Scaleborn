@@ -10,16 +10,19 @@ const down=MIRRORFALL.topY-GRAND_LAKE.surfaceY;
 const gravity=9.81;
 
 const vertex=`
+  #include <fog_pars_vertex>
   varying vec2 vFlowUv;
   varying vec3 vFlowWorld;
   void main(){
     vFlowUv=uv;
     vFlowWorld=(modelMatrix*vec4(position,1.0)).xyz;
     gl_Position=projectionMatrix*viewMatrix*vec4(vFlowWorld,1.0);
+    #include <fog_vertex>
   }
 `;
 const fragment=`
   precision highp float;
+  #include <fog_pars_fragment>
   uniform float uTime;
   varying vec2 vFlowUv;
   varying vec3 vFlowWorld;
@@ -57,6 +60,7 @@ const fragment=`
       clamp(.20+.54*turbulence+.16*longFlow,0.0,.95));
     color+=vec3(.08,.09,.08)*wash;
     gl_FragColor=vec4(color,clamp(baseAlpha,0.0,.78));
+    #include <fog_fragment>
   }
 `;
 
@@ -119,7 +123,7 @@ export class MirrorfallCascade {
     this.group.name='water.azure.mirrorfall-cascade';
     this.waterMat=new THREE.ShaderMaterial({
       uniforms:{uTime:{value:0}},vertexShader:vertex,fragmentShader:fragment,
-      side:THREE.DoubleSide,transparent:true,depthWrite:false,
+      side:THREE.DoubleSide,transparent:true,depthWrite:false,fog:true,
     });
     for(const [i,width,offset] of [[0,78,0],[1,42,-21],[2,32,24]] as const){
       this.group.add(ribbon(width,offset,i*2.3,this.waterMat));

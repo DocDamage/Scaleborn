@@ -192,3 +192,12 @@ Mirrorfall's slopes. The cliff mask is retained for later triplanar **shader**
 blending, but mixed vertex UV projections are disabled. Both flat and steep
 terrain now use stable continuous world-XZ tiling; this trades some steep-face
 anisotropy for correct texture filtering and no projection-induced ripples.
+
+### Underwater visibility correction after real-image inspection
+
+The real submerged frame still showed a full-bright waterfall and thin distant
+shoreline line. Surface-shader crest foam is now suppressed from below (in
+addition to ribbon back-face suppression), and the waterfall's transparent
+curtains opt into the scene's depth-aware fog. The resulting optical behavior
+is still an approximation; the next captured frames must be reviewed for
+readability and improved masking.
