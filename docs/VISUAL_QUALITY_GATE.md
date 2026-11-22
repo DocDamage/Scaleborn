@@ -409,3 +409,15 @@ that evidence and dedicated-GPU profiling exist.
   Visual screenshot inspection and real hardware GPU profiling remain open.
 - This is a surface/detail optical approximation, **not** volumetric fluid
   scattering or mass-conserving sediment transport.
+
+### Dragon silhouette geometry pass (visual pass 7)
+
+- The procedural dragon now uses closed, UV-unwrapped, smoothly lofted torso
+  and tail meshes instead of segmented, visibly intersecting body spheres.
+- Both wing membranes are tessellated and cambered with scalloped trailing
+  edges, preserved three-bone weights and correctly mirrored skeletal spars.
+- Creature form scales, wing bone/socket names and animation channels remain
+  compatible with gameplay. This is a **geometry foundation**, not a claim of
+  final creature art, final rider art or production-ready animation quality.
+- Acceptance still requires an actual high-quality gameplay screenshot and
+  in-game motion review, followed by authored creature/rider assets and rigs.

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { FlightState } from './flight';
 import { FORMS } from './forms';
 import { createWingRig, poseWing } from './wingRig';
+import { makeOrganicLoft } from './organicLoft';
 import { dragonPose } from './animationPose';
 import { riderPose } from '../rider/pose';
 import { applyDragonScales, makeDragonScaleTextures } from './skinSurface';
@@ -114,9 +115,20 @@ export class DragonVisual {
     this.root.name = 'creature.dragon.onyx';
     this.root.userData.assetId = 'creature.dragon.onyx';
     this.body.name = 'creature.dragon.body';
-    ellipsoid(this.body, skin, [0, 0, 0], [0.79, 0.66, 1.72], 20);
-    ellipsoid(this.body, highlight, [0, 0.38, -0.32], [0.55, 0.28, 1.22], 18);
-    ellipsoid(this.body, skin, [0, 0.30, -1.28], [0.49, 0.52, 0.78]);
+    // One smoothly tapered, UV-unwrapped torso replaces visibly intersecting
+    // oval primitives. Keep the same physical pivot and animation sockets.
+    const torso = new THREE.Mesh(makeOrganicLoft([
+      { z:-2.04, y:.38, width:.22, height:.25 },
+      { z:-1.67, y:.31, width:.46, height:.47 },
+      { z:-1.25, y:.17, width:.64, height:.59 },
+      { z:-.67, y:.06, width:.78, height:.67 },
+      { z:.22, y:.00, width:.79, height:.66 },
+      { z:.94, y:-.05, width:.59, height:.51 },
+      { z:1.43, y:-.07, width:.37, height:.35 },
+      { z:1.77, y:-.09, width:.22, height:.22 },
+    ], 32, 8), skin);
+    torso.name = 'creature.dragon.torso';
+    this.body.add(torso);
     this.head.name = 'head';
     this.head.position.set(0, 0.42, -1.83);
     ellipsoid(this.head, skin, [0, 0.10, -0.19], [0.62, 0.44, 0.73], 20);
@@ -169,11 +181,19 @@ export class DragonVisual {
     this.body.add(this.wingL.root, this.wingR.root);
     this.tail.name = 'tailTip';
     this.tail.position.set(0, 0, 1.38);
-    for (let i = 0; i < 6; i++) {
-      ellipsoid(this.tail, i % 2 ? skin : highlight,
-        [0, -i * 0.04, i * 0.44],
-        [0.38 - i * 0.05, 0.34 - i * 0.045, 0.45]);
-    }
+    // Continuous tail surface preserves the existing articulated tail socket
+    // without segmented ball-joint gaps during swimming or banking.
+    const tailMesh = new THREE.Mesh(makeOrganicLoft([
+      { z:-.13, y:.00, width:.39, height:.34 },
+      { z:.36, y:-.03, width:.33, height:.30 },
+      { z:.90, y:-.08, width:.27, height:.24 },
+      { z:1.47, y:-.13, width:.19, height:.17 },
+      { z:2.02, y:-.16, width:.12, height:.11 },
+      { z:2.56, y:-.17, width:.065, height:.065 },
+      { z:3.02, y:-.13, width:.025, height:.034 },
+    ], 24, 7), skin);
+    tailMesh.name='creature.dragon.tail-surface';
+    this.tail.add(tailMesh);
     tailFin(this.tail);
     this.body.add(this.tail);
     this.root.add(this.body, this.rider);
