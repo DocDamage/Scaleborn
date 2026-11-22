@@ -19,6 +19,7 @@ const binding = {
   switchFocus: 'Tab',
   submerge: 'KeyC',
   interact: 'KeyG',
+  fire: 'KeyR',
   menu: 'KeyM',
 } as const;
 
@@ -41,7 +42,13 @@ export class FlightInput {
       }
     });
     window.addEventListener('keyup', (event) => this.pressed.delete(event.code));
-    window.addEventListener('blur', () => this.pressed.clear());
+    window.addEventListener('blur', () => { this.pressed.clear(); this.toggles.clear(); });
+    canvas.addEventListener('pointerdown', (event) => {
+      if (event.button === 0 && this.locked) {
+        event.preventDefault();
+        this.toggles.add(binding.fire);
+      }
+    });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === canvas;
       if (!this.locked) { this.mouseX = 0; this.mouseY = 0; }
@@ -71,7 +78,7 @@ export class FlightInput {
     };
   }
 
-  take(action: 'camera' | 'help' | 'diagnostics' | 'land' | 'small' | 'rideable' | 'giant' | 'switchFocus' | 'submerge' | 'interact' | 'menu'): boolean {
+  take(action: 'camera' | 'help' | 'diagnostics' | 'land' | 'small' | 'rideable' | 'giant' | 'switchFocus' | 'submerge' | 'interact' | 'fire' | 'menu'): boolean {
     const code = binding[action];
     const found = this.toggles.has(code);
     this.toggles.delete(code);

@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { DragonVisual } from '../actors/dragon/visual';
+import { newCombatState, castDragonFire, stepCombat, combatNearby, combatRemaining } from '../combat/combat';
+import { CombatVisual } from '../combat/visuals';
 import { newFlightState, stepFlight, requestDragonForm, toggleLanding, type InteractionResult } from '../actors/dragon/flight';
 import { FORMS, FORM_ORDER, type DragonForm } from '../actors/dragon/forms';
 import { assertManifestUnique } from '../data/assets';
@@ -43,6 +45,15 @@ export class Game {
   private readonly camera: THREE.PerspectiveCamera;
   private readonly coast: AzureCoast;
   private readonly dragon = new DragonVisual();
+  private readonly combat = newCombatState();
+  private readonly combatVisual: CombatVisual;
+  private combatNoticeSeen = 0;
+  private readonly combatHud = requireElement<HTMLElement>('#combat-hud');
+  private readonly combatHealth = requireElement<HTMLElement>('#combat-health-fill');
+  private readonly combatEmber = requireElement<HTMLElement>('#combat-ember-fill');
+  private readonly combatHealthBar = requireElement<HTMLElement>('#combat-health-bar');
+  private readonly combatEmberBar = requireElement<HTMLElement>('#combat-ember-bar');
+  private readonly combatThreats = requireElement<HTMLElement>('#combat-threats');
   private readonly discoveries = new CoastDiscovery();
   private readonly tidegate = newTidegateState();
   private readonly echo = newTidalEchoState();
@@ -131,6 +142,16 @@ export class Game {
       this.flight.z = 100;
       this.flight.y = heightAt(-555, 100) + 18;
       this.flight.yaw = 0;
+    } else if (start === 'combat') {
+      // Repeatable ground-level combat without staging or fake enemy hits.
+      this.flight.x = -446;
+      this.flight.z = -52;
+      this.flight.y = heightAt(-446, -52) + FORMS.rideable.standHeight;
+      this.flight.yaw = Math.PI / 2;
+      this.flight.pitch = 0;
+      this.flight.roll = 0;
+      this.flight.speed = 0;
+      this.flight.mode = 'ground';
     } else if (start === 'water') {
       this.flight.x = 1900;
       this.flight.z = 1900;
@@ -147,6 +168,7 @@ export class Game {
     }
     this.coast = new AzureCoast(this.scene, this.quality);
     this.dragon.attach(this.scene);
+    this.combatVisual = new CombatVisual(this.scene, this.combat);
     this.coast.update(this.flight.x, this.flight.z);
     this.dragon.update(this.flight);
     this.input = new FlightInput(canvas);
@@ -397,6 +419,9 @@ export class Game {
         }
       });
     });
+    requireElement<HTMLButtonElement>('#fire-button').addEventListener('click', () => {
+      if (!this.paused) this.fireAction();
+    });
     requireElement<HTMLButtonElement>('#land-button').addEventListener('click', () => {
       if (!this.paused) this.landAction();
     });
@@ -456,6 +481,11 @@ export class Game {
 
   private setForm(form: DragonForm): void {
     this.notify(requestDragonForm(this.flight, form));
+  }
+
+  private fireAction(): void {
+    const fired = castDragonFire(this.combat, this.flight);
+    if (!fired.ok) this.notify(fired);
   }
 
   private landAction(): void {
@@ -584,6 +614,18 @@ export class Game {
       : swimming || (rider ? this.flight.riderMode === 'ground' : this.flight.mode === 'ground')
         ? '0' : String(Math.round(Math.max(0, current.y - Math.max(0, heightAt(current.x, current.z)))));
     this.speedText.textContent = Math.round(Math.abs(rider ? this.flight.riderSpeed : this.flight.speed)).toString();
+    const combatActive = combatNearby(this.combat, this.flight) ||
+      this.combat.hp < this.combat.maxHp || this.combat.ember < this.combat.maxEmber - 0.5;
+    this.combatHud.hidden = !combatActive;
+    const hpPercent = Math.round(100 * this.combat.hp / this.combat.maxHp);
+    const emberPercent = Math.round(100 * this.combat.ember / this.combat.maxEmber);
+    this.combatHealth.style.width = hpPercent + '%';
+    this.combatEmber.style.width = emberPercent + '%';
+    this.combatHealthBar.setAttribute('aria-valuenow', String(this.combat.hp));
+    this.combatEmberBar.setAttribute('aria-valuenow', String(Math.round(this.combat.ember)));
+    const enemiesLeft = combatRemaining(this.combat);
+    this.combatThreats.textContent = enemiesLeft === 0 ? 'GLOAM DEN CLEARED'
+      : 'GLOAM HOUNDS · ' + enemiesLeft + ' REMAIN';
     this.formName.textContent = FORMS[this.flight.form].label.toUpperCase();
     this.focusName.textContent = rider ? 'RIDER' : 'DRAGON';
     this.tidegatePanel.hidden = !tidegateNearby(this.flight);
@@ -642,6 +684,9 @@ export class Game {
       'RIDER ' + this.flight.riderMode,
       'TIDEGATE ' + (this.tidegate.solved ? 'AWAKENED' : this.tidegate.dragonAnchored ? 'ANCHORED' : 'INACTIVE'),
       'ECHO ' + echoPhase(this.echo, this.tidegate),
+      'BOND HP ' + this.combat.hp + '/' + this.combat.maxHp,
+      'EMBER ' + Math.round(this.combat.ember),
+      'HOSTILES ' + combatRemaining(this.combat),
       'TERRAIN TILES ' + this.coast.tileCount(),
       'DISCOVERED ' + this.discoveries.count() + '/' + LANDMARKS.length,
       'DRAWS ' + render.calls,
@@ -649,7 +694,7 @@ export class Game {
       'WEBGL ' + this.renderer.capabilities.isWebGL2,
       'QUALITY ' + this.quality,
       'INTERNAL DPR ' + this.resolution.pixelRatio.toFixed(2),
-      'CURRENT GATE G3 WATER / RIDER PREVIEW',
+      'CURRENT GATE G4 COMBAT FOUNDATION (VISUAL HOLD)',
     ].join('\n');
   }
 
@@ -689,6 +734,7 @@ export class Game {
       if (this.input.take('switchFocus')) this.notify(toggleRiderControl(this.flight));
       if (this.input.take('submerge')) this.diveAction();
       if (this.input.take('interact')) this.interactWithRune();
+      if (this.input.take('fire')) this.fireAction();
       for (const form of FORM_ORDER) {
         if (this.input.take(form)) this.setForm(form);
       }
@@ -701,6 +747,7 @@ export class Game {
       let steps = 0;
       while (this.accumulator >= FIXED_DT && steps < MAX_STEPS) {
         stepFlight(this.flight, controls, FIXED_DT);
+        stepCombat(this.combat, this.flight, FIXED_DT);
         stepTidegate(this.tidegate, this.flight);
         this.accumulator -= FIXED_DT;
         steps++;
@@ -716,12 +763,17 @@ export class Game {
       this.revealTimer = Math.max(0, this.revealTimer - elapsed);
       this.reveal.hidden = this.revealTimer === 0;
     } else this.accumulator = 0;
+    if (this.combat.notice && this.combat.notice.sequence !== this.combatNoticeSeen) {
+      this.combatNoticeSeen = this.combat.notice.sequence;
+      this.notify({ ok: this.combat.notice.kind !== 'hurt', message: this.combat.notice.message });
+    }
     const focus = this.focusPosition();
     this.coast.setUnderwater(this.isWaterborne());
     this.coast.animate(this.flight.time, focus.x, focus.y, focus.z, this.flight);
     this.coast.updateTidegate(this.tidegate, this.flight.time, this.echo.attuned);
     this.coast.updateEcho(echoPhase(this.echo, this.tidegate), this.flight.time);
     this.dragon.update(this.flight);
+    this.combatVisual.update(this.combat, this.flight.time, this.paused || this.menuOpen ? 0 : elapsed);
     this.updateCamera(elapsed);
     const immersion = this.coast.updateAtmosphere(this.flight.time, this.camera.position);
     this.waterTint.hidden = immersion < .06;

@@ -150,3 +150,8 @@ Procedural broadleaf branches now carry leaf planes that remain visible from low
 ### Adaptive rendering for live gameplay
 
 Scaleborn now samples its actual frame rate and uses hysteresis to lower internal rendering resolution when performance remains under 28 FPS, or gradually restore it above 56 FPS. This **does not** change controls, character speed, the world heightfield, collisions, saved quest progress, or the graphics material preset. The renderer reports its current internal pixel ratio under **F3**. Automated visual QA disables adaptation for comparable screenshots; integrated-GPU and RTX 3060 results must be measured in real gameplay.
+
+
+## G4 — first playable combat encounter (in progress)
+
+Open `/?start=combat` to begin on land near three Gloam hounds east of Tidegate. Press **R** or primary click (while pointer-locked) to breathe directed fire. Ember regenerates; enemies pursue, telegraph melee and can damage the shared bond vitality. Retreat, fly above their reach, or fight back. If vitality runs out, the dragon and rider return to the meadow without losing quest progress or defeated enemies. The compact HUD appears only during nearby combat or while recovering. See [`docs/COMBAT_G4.md`](docs/COMBAT_G4.md) for exact mechanics and outstanding G4/visual acceptance work.
