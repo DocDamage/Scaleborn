@@ -12,17 +12,17 @@ import { makeScalebornRider } from '../rider/heroSculpt';
 
 const scaleTextures=makeDragonScaleTextures();
 const skin = applyDragonScales(
-  new THREE.MeshStandardMaterial({ color: 0x263f4a, roughness: 0.65, metalness: 0.05 }),
+  new THREE.MeshStandardMaterial({ color: 0x212738, roughness: 0.52, metalness: 0.12 }),
   scaleTextures,
 );
 const bodySkin = skin.clone();
 bodySkin.vertexColors = true;
 const highlight = applyDragonScales(
-  new THREE.MeshStandardMaterial({ color: 0x426b74, roughness: 0.62, metalness: 0.06 }),
+  new THREE.MeshStandardMaterial({ color: 0x494265, roughness: 0.56, metalness: 0.11 }),
   scaleTextures,
 );
 const ridges = applyDragonScales(
-  new THREE.MeshStandardMaterial({ color: 0x1c313b, roughness: 0.80 }),
+  new THREE.MeshStandardMaterial({ color: 0x171f32, roughness: 0.74 }),
   scaleTextures,
 );
 const iris = new THREE.MeshStandardMaterial({
