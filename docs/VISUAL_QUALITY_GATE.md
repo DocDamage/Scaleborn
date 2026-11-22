@@ -355,3 +355,25 @@ and outward when crossing it, then terrain and structure floor clearance
 remain authoritative. Outside the falling sheet or below the lake surface,
 the force is exactly zero. This is an arcade contact approximation, not a
 full physical waterfall volume, pressure simulation or damage system.
+
+### Visual pass 6 continuation — cliff material projection and camera collision
+
+- All terrain presets now use world-space triplanar sampling of the existing
+  painted albedo, normal and roughness maps, with slope-weighted XY/XZ/YZ
+  projections. The projection is evaluated in the fragment shader rather than
+  interpolating horizontal/vertical UV coordinates across steep triangles.
+  Tile borders and LODs share fixed world coordinates and 13 m texture scale.
+  This directly targets the stretched grain on Mirrorfall's high escarpments.
+- The higher preset retains its additional procedural PBR microstructure and
+  wet-material treatment. The low preset retains standard lit materials but
+  no longer depends on top-down UVs for steep-slope texture appearance.
+- Chase-camera clearance now solves structure-cylinder intersections along the
+  complete sight segment (including roof-height crossings), rather than
+  checking discrete samples alone. Terrain still uses bounded ray sampling.
+  Narrow obstacles between samples no longer pass through the chase camera.
+
+**Remaining visual gate:** these are source-level changes, not proof of
+attractive rendered output or stable frame rate. Review actual browser captures
+from rider height and near the cliff, shader compile logs and dedicated-GPU
+frame budgets before accepting the visual overhaul. Original procedural maps
+are not equivalent to high-resolution authored or scanned environment assets.
