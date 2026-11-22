@@ -1,5 +1,7 @@
 # Scaleborn implementation gates — acceptance checklist
 
+**VISUAL HOLD:** visuals, world materials, vegetation, ocean/lake and waterfall quality are now blocking. See `docs/VISUAL_QUALITY_GATE.md`. No new gameplay milestone should be called complete until the environment clears its visual review.
+
 These gates describe **completion criteria**, not completed claims. Deliver one working, verified milestone at a time.
 
 | Gate | Required user-visible result | Evidence before calling complete |

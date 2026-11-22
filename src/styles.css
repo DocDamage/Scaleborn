@@ -195,3 +195,180 @@ button:focus-visible { outline: 3px solid white; outline-offset:3px; }
   #echo-panel p {font-size:10px;}
   #echo-panel .echo-foot {font-size:9px;}
 }
+
+/* VISUAL QUALITY PASS: unobtrusive dark-fantasy exploration HUD.
+   Never show fake HP/stamina/magic values until gameplay implements them.
+   The existing numbers and action buttons remain accessible in M / Controls. */
+.titlebar {top:19px;left:27px;}
+.titlebar .eyebrow{font:600 9px Georgia,serif;letter-spacing:.3em;color:#ddcbb1;opacity:.84;}
+.titlebar h1{font-size:26px;letter-spacing:.21em;text-transform:uppercase;color:#e6d7bd;text-shadow:0 2px 11px #152626;}
+#minimal-compass{
+  position:absolute;z-index:5;top:16px;left:50%;width:230px;
+  transform:translateX(-50%);display:flex;align-items:center;gap:13px;justify-content:center;
+  color:#e6d0a9;font:14px Georgia,serif;letter-spacing:.11em;pointer-events:none;
+  text-shadow:0 2px 8px rgba(0,0,0,.8);
+}
+#minimal-compass .compass-rule{height:1px;width:69px;background:linear-gradient(90deg,transparent,#af9774,transparent);}
+#minimal-compass small{position:absolute;top:21px;font:9px Georgia,serif;letter-spacing:.33em;white-space:nowrap;}
+#menu-toggle{
+  position:absolute;z-index:9;bottom:19px;right:27px;padding:7px 9px;
+  border:1px solid rgba(210,198,160,.25);border-radius:3px;
+  background:rgba(11,24,27,.20);color:#dfcfb6;font:11px Georgia,serif;
+  letter-spacing:.08em;cursor:pointer;
+}
+#menu-toggle:hover{background:rgba(22,32,33,.72);}
+#hud{
+  left:27px;top:95px;right:auto;width:214px;grid-template-columns:repeat(2,1fr);
+  gap:4px;
+}
+#hud .stat{
+  min-height:0;padding:4px 6px;border:0;border-top:1px solid rgba(208,188,151,.25);
+  border-radius:0;background:none;box-shadow:none;backdrop-filter:none;
+}
+#hud .stat span{font-size:9px;color:rgba(225,212,186,.8);}
+#hud .stat strong{font:17px Georgia,serif;color:#ebdfc9;margin:5px 3px 0 0;}
+#hud .stat small{font-size:9px;}
+#hud .stat:nth-child(n+3){display:none;}
+#waypoint-panel{display:none!important;}
+#controls-hint{display:none;}
+#echo-panel{
+  position:absolute;top:39px;right:27px;width:290px;
+  background:none;box-shadow:none;border:0;border-radius:0;padding:0;
+  backdrop-filter:none;text-align:right;pointer-events:none;
+  text-shadow:0 2px 8px rgba(5,13,16,.85);
+}
+#echo-panel .eyebrow{color:#ccab79;font-size:9px;}
+#echo-stage{font-size:8px;color:#dbc798;letter-spacing:.12em;}
+#echo-panel strong{font-size:18px;color:#f3e4c7;margin:5px 0;}
+#echo-panel p{font-size:11px;line-height:1.45;color:#e0dccf;margin:0 0 4px;}
+#echo-panel .echo-foot{font-size:9px;color:#cdc2a5;justify-content:flex-end;}
+#echo-panel #echo-save-status{display:none;}
+#echo-panel #echo-distance{display:none;}
+#echo-panel #echo-action{
+  pointer-events:auto;display:inline-block;width:auto;margin-top:10px;
+  font:12px Georgia,serif;padding:7px 11px;
+  background:rgba(12,25,27,.65);color:#ebdfc9;border:1px solid #766c56;
+}
+#echo-panel #echo-action[hidden]{display:none;}
+#tidegate-panel{
+  top:auto;bottom:71px;left:auto;right:27px;width:245px;
+  border:0;background:none;box-shadow:none;padding:0;backdrop-filter:none;text-align:right;
+  pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.8);
+}
+#tidegate-panel .eyebrow{font-size:9px;}
+#tidegate-panel strong{font:14px Georgia,serif;margin:3px 0;}
+#tidegate-panel p{font-size:11px;margin-bottom:5px;}
+#tidegate-action{
+  pointer-events:auto;display:inline-block;width:auto;padding:6px 10px;
+  font:12px Georgia,serif;background:rgba(14,34,35,.65);color:#e9d3a9;border:1px solid #82735a;
+}
+#dragon-panel{
+  display:none;bottom:55px;left:20px;width:280px;
+  border:1px solid rgba(231,213,171,.33);background:rgba(16,24,27,.88);
+  border-radius:4px;box-shadow:0 14px 46px rgba(0,0,0,.27);backdrop-filter:blur(10px);
+}
+.hud-menu-open #dragon-panel{display:block;}
+#crosshair{opacity:.20;transform:translate(-50%,-50%) scale(.65);}
+#action-toast{
+  top:auto;bottom:17%;max-width:430px;border:0;background:rgba(9,19,23,.65);
+  border-radius:2px;color:#f6e8c9;font:13px Georgia,serif;
+  padding:9px 15px;pointer-events:none;
+}
+#discovery-toast{
+  top:19%;font:12px Georgia,serif;letter-spacing:.1em;
+  border:0;border-radius:2px;background:rgba(9,19,23,.53);padding:10px 18px;
+}
+@media(max-width:660px){
+  .titlebar{top:17px;left:12px;}.titlebar h1{font-size:16px;}
+  #minimal-compass{top:11px;width:155px;left:54%;}
+  #minimal-compass .compass-rule{width:29px;}
+  #hud{left:10px;top:67px;width:145px;}
+  #hud .stat strong{font-size:13px;}
+  #echo-panel{right:10px;top:59px;width:155px;}
+  #echo-panel strong{font-size:13px;}
+  #echo-panel p{font-size:10px;}
+  #menu-toggle{right:10px;bottom:10px;}
+  #tidegate-panel{bottom:64px;right:10px;width:180px;}
+  #dragon-panel{bottom:54px;left:10px;}
+}
+
+/* After the title screen, scenery—not the UI—gets the screen space.
+   Combat bars are deliberately absent until real combat attributes exist. */
+.game-started .titlebar {
+  opacity:0;
+  transition:opacity 700ms ease;
+  pointer-events:none;
+}
+.game-started #hud {
+  display:none;
+}
+.game-started.hud-menu-open #hud {
+  display:grid;
+  left:20px;
+  bottom:330px;
+  top:auto;
+}
+.game-started #echo-panel {
+  top:24px;
+  right:26px;
+  width:240px;
+  opacity:.72;
+  transition:opacity .2s ease;
+}
+.game-started #echo-panel p {
+  display:none;
+}
+.game-started #echo-panel .eyebrow{
+  font-size:8px;
+  letter-spacing:.13em;
+}
+.game-started #echo-panel strong{
+  font-size:14px;
+  font-weight:400;
+  margin-top:1px;
+}
+.game-started #echo-panel:hover {
+  opacity:1;
+}
+.game-started #minimal-compass {
+  top:16px;
+  opacity:.84;
+}
+.game-started #menu-toggle {
+  background:rgba(8,18,20,.12);
+  border-color:rgba(220,202,161,.12);
+  opacity:.52;
+  transition:opacity .2s ease,background .2s ease;
+}
+.game-started #menu-toggle:hover,
+.game-started.hud-menu-open #menu-toggle{
+  opacity:1;
+  background:rgba(10,22,24,.8);
+}
+@media(max-width:660px){
+  .game-started #echo-panel{
+    top:46px;
+    right:10px;
+    width:160px;
+  }
+  .game-started #echo-panel strong{
+    font-size:12px;
+  }
+  .game-started.hud-menu-open #hud {
+    bottom:380px;
+    left:10px;
+  }
+}
+
+/* Objective appears contextually and fades away during open exploration. */
+.game-started #echo-panel.quest-ambient {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+.game-started.hud-menu-open #echo-panel.quest-ambient {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+#echo-panel { transition: opacity 380ms ease, transform 380ms ease; }

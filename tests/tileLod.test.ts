@@ -31,23 +31,23 @@ describe('seam-aware streamed terrain', () => {
   it('interpolates fine edges onto the coarse mesh between coarse vertices', () => {
     const fine = tileSpec(0, 0, 2, 0);
     const coarse = tileSpec(0, 0, 3, 0);
-    expect(fine.segments).toBe(32);
-    expect(coarse.segments).toBe(8);
-    for (let row = 0; row <= 32; row++) {
+    expect(fine.segments).toBe(64);
+    expect(coarse.segments).toBe(16);
+    for (let row = 0; row <= 64; row++) {
       const t = row / 4;
-      const low = Math.min(7, Math.floor(t));
+      const low = Math.min(15, Math.floor(t));
       const frac = t - low;
-      const zA = (0 + low / 8) * TILE_METERS;
-      const zB = (0 + (low + 1) / 8) * TILE_METERS;
+      const zA = (0 + low / 16) * TILE_METERS;
+      const zB = (0 + (low + 1) / 16) * TILE_METERS;
       const expected = heightAt(3 * TILE_METERS, zA) * (1 - frac)
         + heightAt(3 * TILE_METERS, zB) * frac;
-      expect(stitchedHeight(2, 0, 32, row, fine)).toBeCloseTo(expected, 6);
+      expect(stitchedHeight(2, 0, 64, row, fine)).toBeCloseTo(expected, 6);
     }
   });
   it('never reads outside bounds on a high-to-low corner', () => {
     const edge = tileSpec(0, 0, 2, 2);
-    expect(Number.isFinite(stitchedHeight(2, 2, 32, 32, edge))).toBe(true);
-    expect(stitchedHeight(2, 2, 32, 32, edge)).toBeCloseTo(heightAt(750, 750), 6);
+    expect(Number.isFinite(stitchedHeight(2, 2, 64, 64, edge))).toBe(true);
+    expect(stitchedHeight(2, 2, 64, 64, edge)).toBeCloseTo(heightAt(750, 750), 6);
   });
   it('uses the same world positions for north/south neighbor boundaries', () => {
     const high = tileSpec(0, 0, 0, 2);

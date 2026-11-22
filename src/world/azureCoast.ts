@@ -2,7 +2,14 @@ import * as THREE from 'three';
 import { TILE_METERS, TILE_RADIUS, specKey, tileSpec } from './tileLod';
 import { makeTerrainTile, disposeTerrainTile } from './terrainTile';
 import { addCoastalDressing } from './dressing';
-import { PainterlyOcean } from './ocean';
+import { PainterlyWaterSurface, LakeShoreFoam, makeFoamShader } from './waterSurface';
+import { MirrorfallCascade } from './mirrorfallCascade';
+import { PainterlyNature } from './painterlyNature';
+import { PainterlyClouds } from './painterlyClouds';
+import { MirrorfallCliffs } from './mirrorfallCliffs';
+import { SurfaceWake } from './surfaceWake';
+import type { FlightState } from '../actors/dragon/flight';
+import { makeTerrainMaterial } from './materials';
 import { PainterlySky } from './sky';
 import { addMarineDressing } from './marineDressing';
 import { TidegateVisual } from './tidegateVisual';
@@ -17,18 +24,23 @@ export class AzureCoast {
   private tiles = new Map<string, TerrainTile>();
   private lastTileX = Number.NaN;
   private lastTileZ = Number.NaN;
-  private readonly terrainMaterial = new THREE.MeshLambertMaterial({
-    vertexColors: true, flatShading: false, side: THREE.DoubleSide,
-  });
-  private readonly foamMaterial = new THREE.MeshBasicMaterial({
-    color: 0xccece7, transparent: true, opacity: 0.63,
-    depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
-  });
-  private readonly water = new PainterlyOcean();
+  private readonly terrainMaterial: THREE.MeshStandardMaterial;
+  private readonly foamMaterial = makeFoamShader();
+  private readonly water = new PainterlyWaterSurface('ocean');
+  private readonly lake = new PainterlyWaterSurface('lake');
+  private readonly lakeFoam = new LakeShoreFoam();
+  private readonly waterfall = new MirrorfallCascade();
+  private readonly nature: PainterlyNature;
+  private readonly clouds: PainterlyClouds;
+  private readonly cliffs: MirrorfallCliffs;
+  private readonly wake: SurfaceWake;
   private readonly sky = new PainterlySky();
+  private readonly sun = new THREE.DirectionalLight(0xffd3a5, 2.1);
+  private readonly sunTarget = new THREE.Object3D();
+  private readonly quality: 'high' | 'low';
   private readonly tidegate = new TidegateVisual();
   private readonly echoVisual = new TidalEchoVisual();
-  private readonly airFog = new THREE.FogExp2(0xb6cbd4, 0.00055);
+  private readonly airFog = new THREE.FogExp2(0xb6cbd4, 0.00038);
   private readonly seaFog = new THREE.FogExp2(0x1b5866, 0.012);
   private readonly airBackground = new THREE.Color(0xc4d9df);
   private readonly seaBackground = new THREE.Color(0x1b5866);
@@ -36,17 +48,37 @@ export class AzureCoast {
   readonly scene: THREE.Scene;
   readonly ocean: THREE.Mesh;
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, quality: 'high' | 'low' = 'high') {
+    this.quality = quality;
+    this.terrainMaterial = makeTerrainMaterial(quality);
     this.scene = scene;
     scene.background = this.airBackground;
     scene.fog = this.airFog;
-    scene.add(new THREE.HemisphereLight(0xbde7ee, 0x716251, 2.2));
-    const sun = new THREE.DirectionalLight(0xffd3a5, 2.0);
-    sun.position.set(-420, 600, -520);
-    scene.add(sun);
+    scene.add(new THREE.HemisphereLight(0xbde7ee, 0x716251, quality==='high' ? 1.17 : 1.4));
+    this.sun.position.set(-420,600,-520);
+    this.sun.castShadow = quality === 'high';
+    if (this.sun.castShadow) {
+      this.sun.shadow.mapSize.set(2048,2048);
+      this.sun.shadow.camera.left=-215;
+      this.sun.shadow.camera.right=215;
+      this.sun.shadow.camera.top=215;
+      this.sun.shadow.camera.bottom=-215;
+      this.sun.shadow.camera.near=1;
+      this.sun.shadow.camera.far=1500;
+      this.sun.shadow.bias=-0.00017;
+      this.sun.shadow.normalBias=0.052;
+      this.sun.shadow.blurSamples=5;
+    }
+    this.sun.target=this.sunTarget;
+    scene.add(this.sun,this.sunTarget);
     this.ocean = this.water.mesh;
-    scene.add(this.sky.mesh, this.ocean);
-    addCoastalDressing(scene);
+    scene.add(this.sky.mesh, this.ocean, this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group);
+    this.nature = new PainterlyNature(scene, quality);
+    this.clouds = new PainterlyClouds(scene, quality);
+    this.cliffs = new MirrorfallCliffs(quality);
+    this.wake = new SurfaceWake(scene,quality);
+    scene.add(this.cliffs.group);
+    addCoastalDressing(scene, false);
     addMarineDressing(scene);
     scene.add(this.tidegate.root, this.echoVisual.root);
   }
@@ -96,9 +128,23 @@ export class AzureCoast {
     this.sky.mesh.visible = !active;
   }
 
-  animate(time: number, x: number, y: number, z: number): void {
+  animate(time: number, x: number, y: number, z: number, state?: FlightState): void {
     this.water.update(time);
+    this.lake.update(time);
+    this.lakeFoam.update(time);
+    this.waterfall.update(time);
+    if(state)this.wake.update(state,time);
+    this.nature.update(time);
+    this.clouds.update(time);
+    this.foamMaterial.uniforms.uTime!.value=time;
+    this.sky.update(time);
     this.sky.moveWithCamera(x, y, z);
+    if (this.quality === 'high') {
+      // Camera-centered shadow frustum avoids blurry 1km-wide texture maps.
+      this.sun.position.set(x-350,y+650,z-440);
+      this.sunTarget.position.set(x,0,z);
+      this.sunTarget.updateMatrixWorld();
+    }
   }
 
   tileCount(): number {
@@ -116,7 +162,16 @@ export class AzureCoast {
     this.terrainMaterial.dispose();
     this.foamMaterial.dispose();
     this.water.dispose();
+    this.lake.dispose();
+    this.lakeFoam.dispose();
+    this.waterfall.dispose();
+    this.nature.dispose();
+    this.clouds.dispose();
+    this.cliffs.dispose();
+    this.wake.dispose();
     this.sky.dispose();
     this.echoVisual.dispose();
+    this.sun.removeFromParent();
+    this.sunTarget.removeFromParent();
   }
 }

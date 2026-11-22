@@ -1,12 +1,16 @@
 import * as THREE from 'three';
-import { AZURE_SEED, SEA_LEVEL } from './terrain';
+import { AZURE_SEED, SEA_LEVEL, heightAt } from './terrain';
 import { fbm } from '../core/random';
+import { GRAND_LAKE, lakeContains, lakeRadius, lakeShoreDistance } from './highlandLake';
 import { stitchedHeight, TILE_METERS, type TileSpec } from './tileLod';
 
-const sand = new THREE.Color(0xe8cfa6);
-const grass = new THREE.Color(0x9bba8e);
-const forest = new THREE.Color(0x62847c);
-const stone = new THREE.Color(0x918b88);
+const sand = new THREE.Color(0xc5b698);
+const grass = new THREE.Color(0x668d61);
+const forest = new THREE.Color(0x496e5b);
+const stone = new THREE.Color(0x737c7d);
+const schist = new THREE.Color(0x53636d);
+const limestone = new THREE.Color(0x96938b);
+const lichen = new THREE.Color(0x455c4b);
 const deep = new THREE.Color(0x376c79);
 const ochre = new THREE.Color(0xb9a57c);
 const blueSage = new THREE.Color(0x6e9c95);
@@ -21,10 +25,56 @@ function paintTerrain(x: number, z: number, h: number, target: THREE.Color): voi
   else if (h < 8) target.copy(sand);
   else if (h < 32) target.copy(sand).lerp(grass, Math.min(1, (h - 8) / 24));
   else if (h < 88) target.copy(grass).lerp(forest, Math.min(1, (h - 32) / 56));
-  else target.copy(forest).lerp(stone, Math.min(1, (h - 88) / 45));
-  if (h > 9) target.lerp(wash > 0 ? ochre : blueSage, Math.min(0.24, Math.abs(wash) * 0.42));
-  target.lerp(white, Math.max(0, variation) * 0.06);
-  target.multiplyScalar(0.95 + variation * 0.14);
+  else target.copy(forest).lerp(stone,
+    Math.min(.72,Math.max(0,(h-118)/100)));
+  // Freshwater lake and ocean have different bed color. The bathymetry
+  // texture in waterSurface samples these same terrain heights.
+  if (lakeContains(x,z) && h < GRAND_LAKE.surfaceY + 1) {
+    const depth = Math.max(0, GRAND_LAKE.surfaceY - h);
+    target.copy(sand).lerp(deep, Math.min(.92, depth / 54));
+  }
+  const lakeEdge = lakeShoreDistance(x,z);
+  if (Math.abs(lakeEdge) < 17 && Math.abs(h-GRAND_LAKE.surfaceY)<11) {
+    target.copy(sand).lerp(stone, .18 + Math.abs(wash)*.22);
+  }
+
+  // The steep Mirrorfall escarpment needs geological material, NOT grass.
+  // Heightfield slope is sampled only around the rocky shoreline to keep
+  // the entire procedural world fast to stream.
+  const r=lakeRadius(x,z);
+  const east=(x-GRAND_LAKE.x)/GRAND_LAKE.radiusX;
+  const cliffZone=east>.38 && r>.94 && r<1.52 &&
+    Math.abs(z-GRAND_LAKE.z)<330;
+  let rockWeight=0;
+  if(cliffZone) {
+    const e=3.5;
+    const gx=(heightAt(x+e,z)-heightAt(x-e,z))/(2*e);
+    const gz=(heightAt(x,z+e)-heightAt(x,z-e))/(2*e);
+    const slope=Math.hypot(gx,gz);
+    const towardFall=Math.max(0,Math.min(1,(east-.38)/.39));
+    const steep=Math.max(0,Math.min(1,(slope-.26)/.84));
+    rockWeight=steep*towardFall;
+    // Do not paint *every* high bank gray. Expose schist where the
+    // actual local slope is steep, and leave walkable terraces grassy.
+    if(h>GRAND_LAKE.surfaceY+9 && h<GRAND_LAKE.surfaceY+146) {
+      rockWeight=Math.max(rockWeight,towardFall*steep*.90);
+    }
+  }
+  if(rockWeight>.005) {
+    const grain=fbm(x*.035+7.0,z*.047-4.0,AZURE_SEED+718,4);
+    const seams=Math.sin(h*.29+grain*6.2)*.11;
+    const mineral=Math.max(0,Math.min(1,.44+grain*.67+seams));
+    const patina=fbm(x*.014,z*.018,AZURE_SEED+1999,3);
+    const ledges=Math.abs(Math.sin(h*.112+patina*.63));
+    const blend=Math.max(0,Math.min(1,rockWeight));
+    temp.copy(schist).lerp(limestone,mineral*.75+.10);
+    temp.lerp(lichen,Math.max(0,patina-.16)*.16*ledges);
+    target.lerp(temp,blend);
+  } else if (h > 9) {
+    target.lerp(wash > 0 ? ochre : blueSage, Math.min(0.17, Math.abs(wash)*.28));
+  }
+  target.lerp(white,Math.max(0,variation)*.034);
+  target.multiplyScalar(.93+variation*.15);
 }
 
 type Point = { x: number; z: number; h: number };
@@ -116,11 +166,28 @@ export function makeTerrainTile(
   }
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geometry.computeVertexNormals();
+  // Alpine escarpments must remain stone even on the inexpensive renderer.
+  // Shader-based slope blending covers high mode, vertex color acts as a
+  // cheaper but physically grounded fallback for low / software WebGL.
+  const normals=geometry.getAttribute('normal');
+  const colorsAttr=geometry.getAttribute('color');
+  const slate=new THREE.Color(0x738183);
+  for(let i=0;i<normals.count;i++){
+    const steep=1-Math.abs(normals.getY(i));
+    const weather=Math.max(0,Math.min(1,(steep-.20)/.54));
+    if(weather<.01)continue;
+    temp.setRGB(colorsAttr.getX(i),colorsAttr.getY(i),colorsAttr.getZ(i));
+    const variation=0.04*Math.sin(i*7.13);
+    temp.lerp(slate,Math.min(.96,weather*.89+variation));
+    colorsAttr.setXYZ(i,temp.r,temp.g,temp.b);
+  }
+  colorsAttr.needsUpdate=true;
   const group = new THREE.Group();
   group.position.set((tx + 0.5) * TILE_METERS, 0, (tz + 0.5) * TILE_METERS);
   group.name = 'terrain.azure.tile.' + tx + '.' + tz;
   const surface = new THREE.Mesh(geometry, terrainMaterial);
   surface.name = 'terrain.azure.coast';
+  surface.receiveShadow = true;
   group.add(surface);
   const foam = coastlineFoam(points);
   if (foam) {

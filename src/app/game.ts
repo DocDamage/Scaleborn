@@ -9,7 +9,9 @@ import { heightAt } from '../world/terrain';
 import { CoastDiscovery } from '../world/discoveries';
 import { toggleDragonDive } from '../actors/dragon/swimming';
 import { toggleRiderControl, toggleRiderDive } from '../actors/rider/movement';
-import { SEA_LEVEL, LANDMARKS } from '../world/terrain';
+import { LANDMARKS } from '../world/terrain';
+import { GRAND_LAKE, waterSurfaceAt } from '../world/highlandLake';
+import { AdaptiveResolution } from './adaptiveResolution';
 import { TIDEGATE, newTidegateState, stepTidegate, interactTidegate, tidegateNearby, tidegateHint } from '../world/tidegate';
 import {
   ECHO_SHRINE, newTidalEchoState, echoPhase, echoObjective,
@@ -32,6 +34,9 @@ function requireElement<T extends HTMLElement>(selector: string): T {
 
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
+  private readonly quality: 'high' | 'low';
+  private readonly resolution: AdaptiveResolution;
+  private readonly qaRender: boolean;
   private readonly scene = new THREE.Scene();
   private readonly camera: THREE.PerspectiveCamera;
   private readonly coast: AzureCoast;
@@ -43,6 +48,7 @@ export class Game {
   private saveAvailable = false;
   private readonly echoTitle = requireElement<HTMLElement>('#echo-title');
   private readonly echoStage = requireElement<HTMLElement>('#echo-stage');
+  private readonly echoPanel = requireElement<HTMLElement>('#echo-panel');
   private readonly echoHintText = requireElement<HTMLElement>('#echo-hint');
   private readonly echoDistance = requireElement<HTMLElement>('#echo-distance');
   private readonly echoSaveStatus = requireElement<HTMLElement>('#echo-save-status');
@@ -67,6 +73,10 @@ export class Game {
   private readonly altLabel = requireElement<HTMLElement>('#altitude-label');
   private readonly waterTint = requireElement<HTMLElement>('#water-tint');
   private readonly actionToast = requireElement<HTMLElement>('#action-toast');
+  private readonly menuButton = requireElement<HTMLButtonElement>('#menu-toggle');
+  private readonly compass = requireElement<HTMLElement>('#compass-heading');
+  private readonly app = requireElement<HTMLElement>('#app');
+  private menuOpen = false;
   private actionTimer = 0;
   private lastTime = 0;
   private accumulator = 0;
@@ -76,9 +86,22 @@ export class Game {
   private fps = 0;
   private fpsAccum = 0;
   private hudAccum = 0;
+  private lastQaRenderTime = Number.NEGATIVE_INFINITY;
 
   constructor(canvas: HTMLCanvasElement) {
     assertManifestUnique();
+    // Low-quality rendering retains functionality, collision, water physics and
+    // the same world seed; only GPU cost, vegetation density and shading change.
+    const params=new URLSearchParams(window.location.search);
+    this.quality = params.get('quality') === 'low' ? 'low' : 'high';
+    this.qaRender=params.get('qa')==='1';
+    const requestedDpr=Math.min(window.devicePixelRatio||1,
+      this.quality === 'low' ? 0.68 : 1.4);
+    this.resolution=new AdaptiveResolution({
+      min:Math.min(requestedDpr,this.quality === 'low' ? 0.48 : 0.72),
+      max:requestedDpr,
+      starting:requestedDpr,
+    });
     let browserStorage: ProgressStorage | null = null;
     try { browserStorage = window.localStorage; } catch { /* Private mode may deny access. */ }
     this.progressStorage = browserStorage;
@@ -91,11 +114,13 @@ export class Game {
     this.renderer = new THREE.WebGLRenderer({
       canvas, antialias: true, powerPreference: 'high-performance',
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.4));
+    this.renderer.setPixelRatio(this.resolution.pixelRatio);
+    this.renderer.shadowMap.enabled = this.quality === 'high';
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.22;
+    this.renderer.toneMappingExposure = 1.04;
     this.camera = new THREE.PerspectiveCamera(71, window.innerWidth / window.innerHeight, 0.2, 6500);
     // A seeded, safe location for repeatable manual and browser landing QA.
     const start = new URLSearchParams(window.location.search).get('start');
@@ -110,8 +135,15 @@ export class Game {
       this.flight.y = 16;
       this.flight.yaw = 0.7;
       this.flight.speed = 0;
+    } else if (start === 'lake' || start === 'mirrorfall') {
+      this.flight.x = GRAND_LAKE.x + 78;
+      this.flight.z = GRAND_LAKE.z + 76;
+      this.flight.y = GRAND_LAKE.surfaceY + 77;
+      this.flight.yaw = 1.31;
+      this.flight.pitch = -0.07;
+      this.flight.speed = 25;
     }
-    this.coast = new AzureCoast(this.scene);
+    this.coast = new AzureCoast(this.scene, this.quality);
     this.dragon.attach(this.scene);
     this.coast.update(this.flight.x, this.flight.z);
     this.dragon.update(this.flight);
@@ -128,6 +160,8 @@ export class Game {
         __scalebornQaStageRiderRune?: () => void;
         __scalebornQaStageShrine?: () => void;
         __scalebornQaStageEchoReturn?: () => void;
+        __scalebornQaLake?: () => void;
+        __scalebornQaShore?: () => void;
       };
       host.__scalebornQaLand = (): void => {
         // Stage and trigger atomically: no frame-rate-dependent input race.
@@ -223,6 +257,47 @@ export class Game {
         this.coast.update(this.flight.x, this.flight.z);
         this.updateHud(0.2);
       };
+      host.__scalebornQaShore = (): void => {
+        // A distinct view of detailed shoreline material, vegetation and
+        // natural lake contours; no reload or second WebGL context.
+        this.flight.x = GRAND_LAKE.x + 258;
+        this.flight.z = GRAND_LAKE.z + 320;
+        this.flight.y = Math.max(heightAt(this.flight.x,this.flight.z)+14,
+          GRAND_LAKE.surfaceY+19);
+        this.flight.yaw = 0.51;
+        this.flight.pitch = -0.08;
+        this.flight.roll = 0;
+        this.flight.speed = 0;
+        this.flight.form = 'rideable';
+        this.flight.mode = 'air';
+        this.flight.controlTarget = 'dragon';
+        this.flight.transition = null;
+        this.cameraIndex = 0;
+        this.coast.update(this.flight.x,this.flight.z);
+        this.coast.setUnderwater(false);
+        this.dragon.update(this.flight);
+        this.updateCamera(1,true);
+        this.updateHud(0.2);
+      };
+      host.__scalebornQaLake = (): void => {
+        this.flight.x = GRAND_LAKE.x + 78;
+        this.flight.z = GRAND_LAKE.z + 76;
+        this.flight.y = GRAND_LAKE.surfaceY + 77;
+        this.flight.yaw = 1.31;
+        this.flight.pitch = -0.07;
+        this.flight.roll = 0;
+        this.flight.speed = 0;
+        this.flight.form = 'rideable';
+        this.flight.mode = 'air';
+        this.flight.controlTarget = 'dragon';
+        this.flight.transition = null;
+        this.cameraIndex = 0;
+        this.coast.update(this.flight.x, this.flight.z);
+        this.coast.setUnderwater(false);
+        this.dragon.update(this.flight);
+        this.updateCamera(1, true);
+        this.updateHud(0.2);
+      };
       host.__scalebornQaAdvance = (frames: number): void => {
         if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
           throw new Error('QA frames must be an integer between 1 and 180');
@@ -257,6 +332,7 @@ export class Game {
     this.echoAction.addEventListener('click', () => {
       if (!this.paused) this.interactWithRune();
     });
+    this.menuButton.addEventListener('click', () => this.toggleMenu());
     requireElement<HTMLButtonElement>('#start').addEventListener('click', () => this.begin(canvas));
     canvas.addEventListener('click', () => {
       if (!this.paused && !this.input.isLocked()) void canvas.requestPointerLock();
@@ -266,9 +342,18 @@ export class Game {
     this.cameraText.textContent = cameraModes[this.cameraIndex] ?? 'CHASE';
   }
 
+  private toggleMenu(): void {
+    this.menuOpen = !this.menuOpen;
+    this.app.classList.toggle('hud-menu-open', this.menuOpen);
+    this.menuButton.setAttribute('aria-expanded', String(this.menuOpen));
+    this.menuButton.textContent = this.menuOpen ? 'Close · M' : 'Controls · M';
+    if (this.menuOpen && document.pointerLockElement) void document.exitPointerLock();
+  }
+
   private begin(canvas: HTMLCanvasElement): void {
     this.paused = false;
     this.intro.hidden = true;
+    this.app.classList.add('game-started');
     void canvas.requestPointerLock().catch(() => {
       // Keyboard flight remains available when pointer lock is refused.
     });
@@ -353,10 +438,10 @@ export class Game {
     const root = new THREE.Vector3(position.x, position.y + (rider ? 1 : 0), position.z);
     const mode = cameraModes[this.cameraIndex] ?? 'CHASE';
     const scale = rider ? 1 : FORMS[state.form].visualScale;
-    const distance = rider ? 7 : submerged ? 11 :
-      state.form === 'small' ? 5.8 : state.form === 'giant' ? 37 : 17;
+    const distance = rider ? 7 : submerged ? 10 :
+      state.form === 'small' ? 5.8 : state.form === 'giant' ? 34 : 11;
     const rise = rider ? (submerged ? 0.45 : 2.1) : submerged ? 0.75 :
-      state.form === 'small' ? 2 : state.form === 'giant' ? 14 : 6.8;
+      state.form === 'small' ? 2 : state.form === 'giant' ? 13 : 4.5;
     const target = root.clone().addScaledVector(forward, rider ? 2.5 : 7);
     let desired: THREE.Vector3;
     if (mode === 'WIDE') desired = root.clone().addScaledVector(forward, -distance * 1.9)
@@ -369,8 +454,16 @@ export class Game {
       desired = root.clone().add(new THREE.Vector3(
         Math.sin(angle) * distance * 1.5, rise * 1.9, Math.cos(angle) * distance * 1.5,
       ));
-    } else desired = root.clone().addScaledVector(forward, -distance)
-      .add(new THREE.Vector3(0, rise, 0));
+    } else {
+      desired = root.clone().addScaledVector(forward, -distance)
+        .add(new THREE.Vector3(0, rise, 0));
+      // An original over-shoulder exploration composition, revealing
+      // the vista instead of covering waterfalls with the player's dragon.
+      if (!rider && !submerged && state.form !== 'giant') {
+        const right = new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));
+        desired.addScaledVector(right,-distance*.28);
+      }
+    }
     desired.y = Math.max(desired.y, heightAt(desired.x, desired.z) + 1.25);
     this.camera.up.set(0, 1, 0);
     this.camera.position.lerp(desired, instant ? 1 : 1 - Math.exp(-dt * 4.5));
@@ -389,7 +482,7 @@ export class Game {
     const belowSurface = this.isUnderwater();
     this.altLabel.textContent = belowSurface ? 'DEPTH' : swimming ? 'SEA LEVEL' : 'GROUND CLEARANCE';
     this.altitudeText.textContent = belowSurface
-      ? String(Math.round(Math.max(0, SEA_LEVEL - current.y)))
+      ? String(Math.round(Math.max(0, waterSurfaceAt(current.x, current.z) - current.y)))
       : swimming || (rider ? this.flight.riderMode === 'ground' : this.flight.mode === 'ground')
         ? '0' : String(Math.round(Math.max(0, current.y - Math.max(0, heightAt(current.x, current.z)))));
     this.speedText.textContent = Math.round(Math.abs(rider ? this.flight.riderSpeed : this.flight.speed)).toString();
@@ -406,8 +499,16 @@ export class Game {
       : phase === 'seek-shrine' ? 'SEEK THE SHRINE' : 'LOCKED';
     this.echoTitle.textContent = objective.title;
     this.echoHintText.textContent = objective.instruction;
+    const goalDistance=Math.hypot(current.x-objective.x,current.z-objective.z);
     this.echoDistance.textContent = phase === 'complete' ? 'Trial completed'
-      : Math.round(Math.hypot(current.x - objective.x, current.z - objective.z)) + ' m to objective';
+      : Math.round(goalDistance) + ' m to objective';
+    // Dark-fantasy minimal HUD: present the quest during the opening,
+    // near interactions, or while the M menu is open. Otherwise let the
+    // environment own the screen rather than pinning a constant quest card.
+    const questContext=goalDistance < 105 || tidegateNearby(this.flight)
+      || echoShrineNearby(this.flight) || this.menuOpen;
+    const questAmbient=this.flight.time>13 && !questContext;
+    this.echoPanel.classList.toggle('quest-ambient',questAmbient);
     this.echoSaveStatus.textContent = this.saveAvailable ? 'Local checkpoints enabled' : 'Session progress only';
     this.echoAction.hidden = !echoShrineNearby(this.flight) &&
       !(tidegateNearby(this.flight) && this.tidegate.solved && this.echo.collected);
@@ -424,6 +525,10 @@ export class Game {
       button.setAttribute('aria-pressed', String(selected));
     });
     this.cameraText.textContent = cameraModes[this.cameraIndex] ?? 'CHASE';
+    const yaw = this.flight.controlTarget === 'rider' ? this.flight.riderYaw : this.flight.yaw;
+    const deg = ((yaw * 180 / Math.PI) % 360 + 360) % 360;
+    const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+    this.compass.textContent = dirs[Math.round(deg / 45) % 8] ?? 'N';
     const target = this.discoveries.nearest(current.x, current.z);
     this.waypointName.textContent = target?.name ?? 'Coast fully charted';
     this.waypointDistance.textContent = target ? Math.round(target.meters) + ' m' : LANDMARKS.length + ' discoveries found';
@@ -444,11 +549,21 @@ export class Game {
       'DRAWS ' + render.calls,
       'TRIANGLES ' + render.triangles,
       'WEBGL ' + this.renderer.capabilities.isWebGL2,
+      'QUALITY ' + this.quality,
+      'INTERNAL DPR ' + this.resolution.pixelRatio.toFixed(2),
       'CURRENT GATE G3 WATER / RIDER PREVIEW',
     ].join('\n');
   }
 
   private frame = (now: number): void => {
+    // CI uses SwiftShader (CPU WebGL). Rendering every RAF starves Playwright's
+    // main-thread DOM polling on large scenes. Keep the real world/shaders and
+    // deterministic QA simulation, but limit QA-only rendering to 8 FPS.
+    // Normal playable builds retain unrestricted requestAnimationFrame.
+    if (this.qaRender && now - this.lastQaRenderTime < 125) {
+      requestAnimationFrame(this.frame);
+      return;
+    }
     if (!this.lastTime) this.lastTime = now;
     const elapsed = Math.min(0.10, Math.max(0, (now - this.lastTime) / 1000));
     this.lastTime = now;
@@ -458,6 +573,10 @@ export class Game {
       this.fps = Math.round(this.frames / this.fpsAccum);
       this.fpsAccum = 0;
       this.frames = 0;
+      if(!this.qaRender){
+        const ratio=this.resolution.recordFps(this.fps);
+        if(ratio!==null)this.renderer.setPixelRatio(ratio);
+      }
     }
     if (this.input.take('diagnostics')) this.diagnostics.hidden = !this.diagnostics.hidden;
     if (this.input.take('help')) {
@@ -465,8 +584,9 @@ export class Game {
       this.intro.hidden = !this.paused;
       if (this.paused && document.pointerLockElement) void document.exitPointerLock();
     }
+    if (this.input.take('menu')) this.toggleMenu();
     if (this.input.take('camera')) this.cameraIndex = (this.cameraIndex + 1) % cameraModes.length;
-    if (!this.paused) {
+    if (!this.paused && !this.menuOpen) {
       if (this.input.take('land')) this.landAction();
       if (this.input.take('switchFocus')) this.notify(toggleRiderControl(this.flight));
       if (this.input.take('submerge')) this.diveAction();
@@ -477,7 +597,7 @@ export class Game {
     }
     this.actionTimer = Math.max(0, this.actionTimer - elapsed);
     if (this.actionTimer === 0) this.actionToast.hidden = true;
-    if (!this.paused) {
+    if (!this.paused && !this.menuOpen) {
       this.accumulator = Math.min(0.1, this.accumulator + elapsed);
       const controls = this.input.sample();
       let steps = 0;
@@ -501,12 +621,15 @@ export class Game {
     const focus = this.focusPosition();
     this.coast.setUnderwater(this.isUnderwater());
     this.waterTint.hidden = !this.isUnderwater();
-    this.coast.animate(this.flight.time, focus.x, focus.y, focus.z);
+    this.coast.animate(this.flight.time, focus.x, focus.y, focus.z, this.flight);
     this.coast.updateTidegate(this.tidegate, this.flight.time, this.echo.attuned);
     this.coast.updateEcho(echoPhase(this.echo, this.tidegate), this.flight.time);
     this.dragon.update(this.flight);
     this.updateCamera(elapsed);
     this.renderer.render(this.scene, this.camera);
+    // Begin the QA cooldown *after* software rasterization. Measuring from
+    // frame entry fails to yield when one SwiftShader frame exceeds 125 ms.
+    if (this.qaRender) this.lastQaRenderTime = performance.now();
     this.updateHud(elapsed);
     requestAnimationFrame(this.frame);
   };

@@ -1,11 +1,11 @@
 import { AZURE_SEED, heightAt } from './terrain';
 
-/** Tiles are 250 meters wide; 32:8 is a deliberate 4:1 supported seam ratio. */
+/** Tiles are 250 meters wide; 64:16 is a deliberate 4:1 supported seam ratio. */
 export const TILE_METERS = 250;
 export const TILE_RADIUS = 4;
 export const NEAR_RADIUS = 2;
-export const NEAR_SEGMENTS = 32;
-export const FAR_SEGMENTS = 8;
+export const NEAR_SEGMENTS = 64;
+export const FAR_SEGMENTS = 16;
 
 export interface TileSpec {
   segments: number;

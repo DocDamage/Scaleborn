@@ -1,5 +1,7 @@
 # Scaleborn
 
+**VISUAL OVERHAUL IN PROGRESS:** the large HUD and primitive tree/terrain/water rendering are being replaced by an original painterly PBR environment, Mirrorfall Lake and Cascade. See [visual acceptance gate](docs/VISUAL_QUALITY_GATE.md). Gameplay G3 continues to work but the art is not finished.
+
 **Scaleborn** is an original painterly 3D fantasy adventure about a 13-year-old dragon-human hybrid and her bonded dragon. The project begins with a **desktop-browser Azure Coast flight prototype** and is structured for a later **Unreal Engine implementation**. Browser gameplay will not automatically transfer to Unreal.
 
 ## Current state: G0–G3, expanding G3.2 multi-location Tidal Echo Trial
@@ -124,3 +126,27 @@ The original Tidegate now leads into a three-stage adventure spanning land and d
 The existing asset-independent design remains unchanged. All new effects use generated rings and motes in Three.js; portable quest rules live separately in `src/world/tidalEcho.ts`. Software-WebGL QA uses development-only staging hooks to exercise both interactions without spending minutes flying between coordinates. Ordinary gameplay still requires actual travel and correct proximity.
 
 **Limitations:** the Sunken Shrine is still a simple open-air submerged ruin, not a fully explorable interior; there are no underwater enemies, key inventory, dialog sequences, animated cutscenes or level transitions. The returned Echo is a narrative flag, not a physical carryable item. Full save slots, richer story and character assets remain future gates.
+
+## Mirrorfall visual test location
+
+`http://localhost:5173/?start=lake` places the rider above Mirrorfall Lake looking toward the waterfall. It is a real in-game camera, not a concept image. The lake and ocean use their own surface elevations; the game supports swimming and diving into the lake basin. M opens the control palette; F3 toggles diagnostic statistics. Existing keyboard and clickable actions remain wired. See `docs/VISUAL_QUALITY_GATE.md` for the accuracy limitations of the water simulation and the next visual quality acceptance checks.
+
+### Graphics quality
+
+The game runs **high** painterly PBR shaders by default. Add `?quality=low` to reduce foliage density, internal pixel ratio and shader cost on integrated GPUs or software renderers. The lake shape, collision, traversal and quest data are identical. `?start=lake&quality=high` is the dedicated visual acceptance view. CI tests lower-resolution software WebGL; high-mode screenshots require real-GPU review.
+
+### Waterfall flow coupling
+
+The lake waterfall now drives a shared, fixed-step local current field in `src/world/waterDynamics.ts` and an accompanying ripple/foam distortion in the lake shader. Swimming dragons and independently swimming riders are nudged away from the plunge point, with a collision-safety check. Impact current fades with distance and does not affect the ocean. This is not a fully coupled 3D fluid or water-pressure solver and will require additional work before being labeled realistic water physics.
+
+### Surface texture generation
+
+Rock, bark and terrain now have deterministic tileable original **albedo, normal and roughness maps** generated in memory. Both Low and High settings receive texture detail; High also uses the world-space procedural shader. The rock escarpment's UVs match its geometry, so procedural striations are visible rather than a smooth colored slab. There are still no third-party or temporary image assets. Textures are disposed when their materials are disposed.
+
+### Shoreline foliage and interaction wake
+
+Procedural broadleaf branches now carry leaf planes that remain visible from low third-person camera angles, and the wooded shores receive denser rooted tree stands with slope checks. Swimming riders and dragons create fading, spreading rings at the **moving water-surface elevation** using a bounded pool of generated geometry. These are local interactions, distinct from the waterfall's shared plunge current. Full fluid displacement and high-fidelity vegetation wind/bone simulation still require further work.
+
+### Adaptive rendering for live gameplay
+
+Scaleborn now samples its actual frame rate and uses hysteresis to lower internal rendering resolution when performance remains under 28 FPS, or gradually restore it above 56 FPS. This **does not** change controls, character speed, the world heightfield, collisions, saved quest progress, or the graphics material preset. The renderer reports its current internal pixel ratio under **F3**. Automated visual QA disables adaptation for comparable screenshots; integrated-GPU and RTX 3060 results must be measured in real gameplay.

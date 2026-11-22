@@ -4,10 +4,21 @@ import { FORMS } from './forms';
 import { createWingRig, poseWing } from './wingRig';
 import { dragonPose } from './animationPose';
 import { riderPose } from '../rider/pose';
+import { applyDragonScales, makeDragonScaleTextures } from './skinSurface';
 
-const skin = new THREE.MeshStandardMaterial({ color: 0x263f4a, roughness: 0.65, metalness: 0.11 });
-const highlight = new THREE.MeshStandardMaterial({ color: 0x426b74, roughness: 0.62, metalness: 0.09 });
-const ridges = new THREE.MeshStandardMaterial({ color: 0x1c313b, roughness: 0.80 });
+const scaleTextures=makeDragonScaleTextures();
+const skin = applyDragonScales(
+  new THREE.MeshStandardMaterial({ color: 0x263f4a, roughness: 0.65, metalness: 0.05 }),
+  scaleTextures,
+);
+const highlight = applyDragonScales(
+  new THREE.MeshStandardMaterial({ color: 0x426b74, roughness: 0.62, metalness: 0.06 }),
+  scaleTextures,
+);
+const ridges = applyDragonScales(
+  new THREE.MeshStandardMaterial({ color: 0x1c313b, roughness: 0.80 }),
+  scaleTextures,
+);
 const iris = new THREE.MeshStandardMaterial({
   color: 0x8fe3c0, emissive: 0x2e5a50, emissiveIntensity: 0.62, roughness: 0.39,
 });
@@ -18,7 +29,7 @@ const glimmer = new THREE.MeshStandardMaterial({
 
 function ellipsoid(parent: THREE.Group, material: THREE.Material,
   pos: [number, number, number], scale: [number, number, number], detail = 14): THREE.Mesh {
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, detail, 10), material);
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, Math.max(26,detail), Math.max(18,Math.round(detail*.7))), material);
   mesh.position.set(...pos);
   mesh.scale.set(...scale);
   parent.add(mesh);
@@ -123,6 +134,19 @@ export class DragonVisual {
       ear.rotation.z = side * -0.55;
     }
     this.body.add(this.head);
+    // Original tapered ridge scales break up the smooth back silhouette
+    // without adding a low-resolution box-like plate mesh.
+    for (let i=0;i<9;i++) {
+      const z=-1.13+i*.37;
+      const ridge=new THREE.Mesh(
+        new THREE.ConeGeometry(.14+i*.006,.34+Math.sin(i*.47)*.11,11),
+        ridges,
+      );
+      ridge.name='creature.dragon.dorsal-ridge.'+i;
+      ridge.position.set(0,.62-.05*(i/9),z);
+      ridge.rotation.x=-.23;
+      this.body.add(ridge);
+    }
     // Hinged procedural legs: diagonal pairs step in opposition on land.
     for (const side of [-1, 1]) {
       for (const front of [true, false]) {

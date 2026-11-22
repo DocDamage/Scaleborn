@@ -14,6 +14,8 @@ const labels: Record<string, string> = {
   'azure.sea-arch': 'The Skybreak Arch',
   'azure.sunken-shrine': 'The Sunken Shrine',
   'azure.tidegate': 'Tidegate Runestones',
+  'azure.grand-lake': 'Mirrorfall Lake',
+  'azure.mirrorfall': 'Mirrorfall Cascade',
 };
 
 function display(anchor: WorldAnchor, x: number, z: number): NearbyLandmark {

@@ -3,6 +3,7 @@ import { newFlightState, requestDragonForm, stepFlight, toggleLanding } from '..
 import { toggleRiderControl, toggleRiderDive } from '../src/actors/rider/movement';
 import { heightAt } from '../src/world/terrain';
 import { RIDER_SURFACE_Y, riderFloorY } from '../src/world/waterPhysics';
+import { waterWaveOffsetAt } from '../src/world/waterWaves';
 const idle = { turn: 0, pitch: 0, bank: 0, boost: false, flap: false, move: 0 };
 const land = () => {
   const s = newFlightState();
@@ -51,7 +52,9 @@ describe('independent young dragonkin rider', () => {
     expect(s.riderMode).toBe('underwater');
     expect(toggleRiderDive(s).ok).toBe(true);
     for (let i = 0; i < 510; i++) stepFlight(s, idle, 1 / 60);
-    expect(s.riderY).toBeCloseTo(RIDER_SURFACE_Y, 2);
+    const movingSurface=RIDER_SURFACE_Y
+      + waterWaveOffsetAt(s.riderX,s.riderZ,s.time)*.43;
+    expect(Math.abs(s.riderY-movingSurface)).toBeLessThan(.7);
   });
   it('does not grant unlimited underwater movement through terrain', () => {
     const s = land();

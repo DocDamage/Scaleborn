@@ -1,7 +1,10 @@
 import type { FlightControls, FlightState, InteractionResult } from '../dragon/flight';
 import { canStand, OBSTACLES } from '../../world/collision';
-import { heightAt, SEA_LEVEL } from '../../world/terrain';
-import { approach, RIDER_DIVE_Y, RIDER_SURFACE_Y, riderCanSwim, riderFloorY } from '../../world/waterPhysics';
+import { heightAt } from '../../world/terrain';
+import { waterSurfaceAt } from '../../world/highlandLake';
+import { plungeCurrentStep } from '../../world/waterDynamics';
+import { waterWaveOffsetAt } from '../../world/waterWaves';
+import { approach, riderSurfaceY, riderDiveY, riderCanSwim, riderFloorY } from '../../world/waterPhysics';
 
 const clamp = (value: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, value));
 
@@ -21,15 +24,15 @@ export function toggleRiderDive(state: FlightState): InteractionResult {
   if (state.controlTarget !== 'rider') return { ok: false, message: 'Switch to rider control first.' };
   if (state.riderMode === 'ground') return { ok: false, message: 'Enter the sea before diving.' };
   if (state.riderMode === 'surface') {
-    if (riderFloorY(state.riderX, state.riderZ) >= RIDER_DIVE_Y - 0.6) {
+    if (riderFloorY(state.riderX, state.riderZ) >= riderDiveY(state.riderX, state.riderZ) - 0.6) {
       return { ok: false, message: 'The water is too shallow to dive.' };
     }
     state.riderMode = 'underwater';
-    state.riderTargetY = RIDER_DIVE_Y;
+    state.riderTargetY = riderDiveY(state.riderX, state.riderZ);
     return { ok: true, message: 'The rider dives beneath the waves.' };
   }
   state.riderMode = 'surface';
-  state.riderTargetY = RIDER_SURFACE_Y;
+  state.riderTargetY = riderSurfaceY(state.riderX, state.riderZ);
   return { ok: true, message: 'The rider swims toward the surface.' };
 }
 
@@ -42,18 +45,24 @@ export function stepRider(state: FlightState, controls: FlightControls, dt: numb
   const goal = direction * maxSpeed * (direction < 0 ? 0.55 : 1);
   state.riderSpeed += (goal - state.riderSpeed) * Math.min(1, dt * 7.5);
   state.riderYaw += clamp(controls.turn, -1, 1) * dt * (water ? 1.9 : 2.4);
-  const nx = state.riderX + Math.sin(state.riderYaw) * state.riderSpeed * dt;
-  const nz = state.riderZ - Math.cos(state.riderYaw) * state.riderSpeed * dt;
+  let nx = state.riderX + Math.sin(state.riderYaw) * state.riderSpeed * dt;
+  let nz = state.riderZ - Math.cos(state.riderYaw) * state.riderSpeed * dt;
+  if (water) {
+    const flow=plungeCurrentStep(nx,nz,dt,(x,z)=>
+      riderCanSwim(x,z) && riderFloorY(x,z)<state.riderY-.1);
+    nx=flow.x; nz=flow.z;
+  }
   const nextHeight = heightAt(nx, nz);
-  const aboveWater = nextHeight >= SEA_LEVEL + 2;
+  const nextWaterLevel = waterSurfaceAt(nx, nz);
+  const aboveWater = nextHeight >= nextWaterLevel + 2;
   const clearStructures = !OBSTACLES.some((o) =>
     Math.hypot(o.x - nx, o.z - nz) < o.radius + 0.5 && o.top > nextHeight + 1.0);
   const canWalk = aboveWater && canStand(nx, nz, 'small').ok;
-  const shallows = nextHeight > SEA_LEVEL - 1.1 && nextHeight < SEA_LEVEL + 2;
+  const shallows = nextHeight > nextWaterLevel - 1.1 && nextHeight < nextWaterLevel + 2;
   const canWade = shallows && clearStructures &&
     Math.abs(nextHeight - heightAt(state.riderX, state.riderZ)) < 1.0;
-  const canSwim = riderCanSwim(nx, nz) && nextHeight < Math.min(0, state.riderY - 0.2);
-  if (canWalk && (!water || state.riderY >= RIDER_SURFACE_Y - 0.3)) {
+  const canSwim = riderCanSwim(nx, nz) && nextHeight < Math.min(nextWaterLevel, state.riderY - 0.2);
+  if (canWalk && (!water || state.riderY >= riderSurfaceY(state.riderX, state.riderZ) - 0.3)) {
     state.riderX = nx; state.riderZ = nz;
     state.riderMode = 'ground';
     state.riderTargetY = nextHeight + 0.05;
@@ -61,7 +70,7 @@ export function stepRider(state: FlightState, controls: FlightControls, dt: numb
     state.riderX = nx; state.riderZ = nz;
     if (state.riderMode === 'ground') {
       state.riderMode = 'surface';
-      state.riderTargetY = RIDER_SURFACE_Y;
+      state.riderTargetY = riderSurfaceY(state.riderX, state.riderZ);
     }
   } else if (Math.abs(state.riderSpeed) > 0.0001) {
     state.riderSpeed = 0;
@@ -73,19 +82,21 @@ export function stepRider(state: FlightState, controls: FlightControls, dt: numb
     return;
   }
   const bottom = riderFloorY(state.riderX, state.riderZ);
+  const crest = riderSurfaceY(state.riderX, state.riderZ)
+    + waterWaveOffsetAt(state.riderX, state.riderZ, state.time)*.43;
   if (state.riderMode === 'underwater') {
     state.riderTargetY += clamp(controls.bank, -1, 1) * dt * 3.2;
-    if (state.riderTargetY >= RIDER_SURFACE_Y) {
+    if (state.riderTargetY >= crest) {
       state.riderMode = 'surface';
-      state.riderTargetY = RIDER_SURFACE_Y;
+      state.riderTargetY = crest;
     }
   } else {
-    state.riderTargetY = RIDER_SURFACE_Y;
+    state.riderTargetY = crest;
   }
-  if (bottom > RIDER_SURFACE_Y) {
+  if (bottom > crest) {
     state.riderY = bottom;
     return;
   }
-  state.riderTargetY = clamp(state.riderTargetY, bottom, RIDER_SURFACE_Y);
+  state.riderTargetY = clamp(state.riderTargetY, bottom, crest);
   state.riderY = Math.max(bottom, approach(state.riderY, state.riderTargetY, dt * 3.8));
 }
