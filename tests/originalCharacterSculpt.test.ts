@@ -25,6 +25,12 @@ describe('original Scaleborn dragon and young hybrid heroine sculpts',()=>{
     expect(ONYX_HEAD.length).toBeGreaterThan(5);
     const standalone=loftDragon(ONYX_HEAD,30,20);
     expect(standalone.getAttribute('color').count).toBe(standalone.getAttribute('position').count);
+    const ring=standalone.getAttribute('position');
+    const normals=standalone.getAttribute('normal');
+    const midpoint=15*(20+1);
+    // The first radial sample faces +X: verify faces are OUTWARD.
+    expect(ring.getX(midpoint)).toBeGreaterThan(0);
+    expect(normals.getX(midpoint)).toBeGreaterThan(.4);
     standalone.dispose();
     visual.dispose();
   });
