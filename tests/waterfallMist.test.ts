@@ -33,8 +33,10 @@ describe('batched Mirrorfall waterfall plume', () => {
         expect(mist.mesh.frustumCulled).toBe(false);
         expect(mist.mesh.instanceMatrix.usage).toBe(THREE.DynamicDrawUsage);
         const geometry = mist.mesh.geometry;
-        expect(geometry.getAttribute('instanceOpacity').count).toBe(mist.count);
-        expect(geometry.getAttribute('instanceOpacity').usage)
+        const opacity = geometry.getAttribute('instanceOpacity');
+        expect(opacity).toBeInstanceOf(THREE.InstancedBufferAttribute);
+        expect(opacity.count).toBe(mist.count);
+        expect((opacity as THREE.InstancedBufferAttribute).usage)
           .toBe(THREE.DynamicDrawUsage);
         const material = mist.mesh.material as THREE.ShaderMaterial;
         expect(material.depthWrite).toBe(false);
