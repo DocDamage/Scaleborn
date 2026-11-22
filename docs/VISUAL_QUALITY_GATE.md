@@ -971,3 +971,21 @@ This is procedural asset quality improvement, **not** photogrammetric marine
 art, real underwater hydrodynamics or proof of acceptable GPU performance.
 The actual submerged-ocean screenshot and target-hardware benchmark remain
 open quality-gate checks.
+
+
+### Wing-membrane pigment and relief (dragon visual pass)
+
+`src/actors/dragon/wingMembrane.ts` now generates an original, deterministic
+mipmapped albedo/roughness/tangent-normal texture set in the existing skinned
+wing's span/chord UV space. Pigmented structural vein traces and low-amplitude
+webbing relief bend with the **actual animated wing bones**, avoiding detached
+static decoration or unlit flat membranes. The established dark teal dragon
+palette, wing anatomy, logical rig sockets and rider proportions are unchanged;
+both wings share the same material maps. Regression tests assert deterministic
+channel variation, normal direction, texture filtering and skinned UV weights.
+
+This is a procedural visual improvement, **not** an approved replacement for
+the user's intended authored dragon/rider design. Art acceptance still requires
+real browser close-ups from flight/ground, especially membrane appearance under
+dynamic light, aliasing, GPU cost and rig deformation. The overall visual gate
+remains blocking.

@@ -1,13 +1,22 @@
 import * as THREE from 'three';
 import type { DragonPose } from './animationPose';
+import { makeWingMembraneTextures } from './wingMembrane';
 
 /**
  * Original code-built deforming dragon wing.
  * Each wing has three actual skin bones and vertex weights, allowing a future
  * model swap to retain the logical leftWing/rightWing sockets.
  */
+const membraneTextures = makeWingMembraneTextures();
 const membraneMaterial = new THREE.MeshStandardMaterial({
-  side: THREE.DoubleSide, vertexColors: true, roughness: 0.81, metalness: 0.05,
+  side: THREE.DoubleSide,
+  vertexColors: true,
+  metalness: 0.02,
+  roughness: 1.0,
+  map: membraneTextures.color,
+  normalMap: membraneTextures.normal,
+  normalScale: new THREE.Vector2(0.48, 0.48),
+  roughnessMap: membraneTextures.roughness,
 });
 const sparMaterial = new THREE.MeshStandardMaterial({
   color: 0x3c6972, roughness: 0.63, metalness: 0.07,
