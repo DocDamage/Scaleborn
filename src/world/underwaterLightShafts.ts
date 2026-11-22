@@ -26,7 +26,7 @@ const fragmentShader = `
   varying float vSeed;
   void main() {
     // Volumetric-looking translucent curtains, not light-emitting solid cones.
-    float feather = pow(max(0.0, 1.0 - abs(vBeamUv.x * 2.0 - 1.0)), 2.7);
+    float feather = pow(max(0.0, 1.0 - abs(vBeamUv.x * 2.0 - 1.0)), 1.65);
     float entrance = smoothstep(0.0, .11, vBeamUv.y);
     float exitFade = 1.0 - smoothstep(.69, 1.0, vBeamUv.y);
     float drift = .79 + .21 * sin(
@@ -36,9 +36,9 @@ const fragmentShader = `
     float distanceFade = 1.0 - smoothstep(
       22.0, 96.0, length(cameraPosition - vWorld)
     );
-    float alpha = .18 * uStrength * feather * entrance
+    float alpha = .105 * uStrength * feather * entrance
       * exitFade * drift * grain * distanceFade;
-    gl_FragColor = vec4(.49, .84, .89, clamp(alpha, 0.0, .19));
+    gl_FragColor = vec4(.49, .84, .89, clamp(alpha, 0.0, .12));
   }
 `;
 

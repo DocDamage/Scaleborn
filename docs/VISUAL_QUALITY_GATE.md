@@ -173,3 +173,13 @@ tests must not be mistaken for passing the artistic visual-quality gate.
   and gently vegetated shelves, without introducing visible debug primitives.
 - GPU-frame benchmarks and human review of new screenshots remain mandatory;
   generated textures and procedural rocks are still not photogrammetric assets.
+
+### Underwater-facing water surface and foam correction
+
+The initial real underwater screenshot exposed a dark solid-looking surface
+and shoreline foam seen from below as a bright unnatural ring. The lake and
+ocean shaders now use lower-alpha transmitted coloring for underwater-facing
+fragments; surface-only breaking foam is discarded from below. Lake sunshaft
+cards also use broader feathering and lower opacity to avoid vertical
+laser-like streaks. These are shader approximations, not physical refraction,
+and require a fresh **actual** browser screenshot before acceptance.

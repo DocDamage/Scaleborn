@@ -119,8 +119,15 @@ const frag=`
     vec3 color=mix(base,reflected,skyFresnel);
     color+=vec3(.97,.88,.62)*sparkle*.87;
     color=mix(color,vec3(.82,.94,.87),clamp(foam,0.0,.91));
-    // Transparent shallow water reveals painted lake-floor terrain.
+    // Above water: deep regions remain reflective and opaque while shallow
+    // water reveals the terrain. Beneath the surface the opposite is needed:
+    // the underside is a thin, transmitting canopy, not an opaque teal wall.
     float alpha=uLake>.5 ? mix(.97,.49,BeerLambert*.70) : .95;
+    float underside=1.0-smoothstep(-.25,1.15,cameraPosition.y-vScWorld.y);
+    float undersideAlpha=.10+.25*pow(1.0-nv,2.0);
+    vec3 transmitted=uLake>.5 ? vec3(.065,.31,.355) : vec3(.065,.27,.32);
+    color=mix(color,transmitted,underside*.47);
+    alpha=mix(alpha,undersideAlpha,underside);
     gl_FragColor=vec4(color,alpha);
   }
 `;
@@ -160,6 +167,9 @@ const foamFrag=`
   varying vec3 vWorld;
   varying vec2 vFoamUv;
   void main() {
+    // White surf belongs on top of the water. A submerged viewer should
+    // not see the back of the foam ribbon as a bright polygon horizon.
+    if (cameraPosition.y < vWorld.y-.35) discard;
     float noiseA=sin(vWorld.x*.41+uTime*1.3+sin(vWorld.z*.31))*
                  sin(vWorld.z*.57-uTime*.83+sin(vWorld.x*.29));
     float turbulence=.5+.5*noiseA;
