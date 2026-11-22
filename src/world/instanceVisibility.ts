@@ -109,10 +109,13 @@ export class InstanceVisibility {
           if(radiusSq>90*90 && vx*fx+vz*fz<viewCos*Math.sqrt(radiusSq))continue;
         }
         const from=i*16,to=count*16;
-        dst.set(batch.matrices.subarray(from,from+16),to);
+        // Do not allocate a typed-array view for every visible tree or blade.
+        // Repacking can happen during flight/camera turns, so thousands of
+        // transient subarrays would otherwise cause avoidable GC hitches.
+        for(let j=0;j<16;j++)dst[to+j]=batch.matrices[from+j]!;
         if(dstColors&&batch.colors){
           const colorFrom=i*3,colorTo=count*3;
-          dstColors.set(batch.colors.subarray(colorFrom,colorFrom+3),colorTo);
+          for(let j=0;j<3;j++)dstColors[colorTo+j]=batch.colors[colorFrom+j]!;
         }
         count++;
       }

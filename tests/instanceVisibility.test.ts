@@ -152,4 +152,51 @@ describe('deterministic foliage instance visibility',()=>{
     }
   });
 
+
+  it('reuses original instance matrices and paint colors when camera direction changes',()=>{
+    const camera=new THREE.PerspectiveCamera(65,16/9,.2,1500);
+    camera.position.set(0,2,0);
+    const sites=[{x:0,z:-130},{x:0,z:130},{x:0,z:15}];
+    const mesh=new THREE.InstancedMesh(
+      new THREE.BoxGeometry(1,1,1),new THREE.MeshBasicMaterial(),sites.length);
+    const object=new THREE.Object3D();
+    const palette=[0xcc3322,0x3399cc,0x66aa55] as const;
+    sites.forEach((site,i)=>{
+      object.position.set(site.x,0,site.z);object.updateMatrix();
+      mesh.setMatrixAt(i,object.matrix);
+      mesh.setColorAt(i,new THREE.Color(palette[i]!));
+    });
+    const controller=new InstanceVisibility();
+    controller.register(mesh,sites,200);
+    const matrix=new THREE.Matrix4(),position=new THREE.Vector3(),color=new THREE.Color();
+    const snapshot=():number[]=>{
+      const packed:number[]=[];
+      for(let i=0;i<mesh.count;i++){
+        mesh.getMatrixAt(i,matrix);
+        position.setFromMatrixPosition(matrix);
+        mesh.getColorAt(i,color);
+        packed.push(position.z,Math.round(color.r*1000),
+          Math.round(color.g*1000),Math.round(color.b*1000));
+      }
+      return packed;
+    };
+    try{
+      camera.lookAt(0,2,-100);
+      controller.update(0,0,camera);
+      expect(mesh.count).toBe(2);
+      const first=snapshot();
+      camera.lookAt(0,2,100);
+      controller.update(0,0,camera);
+      expect(mesh.count).toBe(2);
+      const other=snapshot();
+      expect(other).not.toEqual(first);
+      camera.lookAt(0,2,-100);
+      controller.update(0,0,camera);
+      expect(snapshot()).toEqual(first);
+    }finally{
+      mesh.geometry.dispose();
+      (mesh.material as THREE.Material).dispose();
+    }
+  });
+
 });
