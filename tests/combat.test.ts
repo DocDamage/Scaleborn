@@ -5,7 +5,7 @@ import { heightAt } from '../src/world/terrain';
 import { steerGroundThreat } from '../src/combat/houndNavigation';
 import {
   GLOAM_SPAWNS, castDragonFire, castRiderSigil, castMountedRiderSigil, castBondSurge, combatNearby, combatRemaining,
-  newCombatState, stepCombat,
+  newCombatState, restoreGloamVictory, stepCombat,
 } from '../src/combat/combat';
 
 function groundDragon(x = -446, z = -52): FlightState {
@@ -149,6 +149,25 @@ describe('G4 deterministic encounter and dragon breath', () => {
     expect(s.y).toBeCloseTo(heightAt(-555, 100) + 18, 5);
     expect(c.notice?.kind).toBe('respawn');
     expect(c.invulnerableUntil).toBeGreaterThan(s.time);
+  });
+
+  it('restores cleared Gloam Den and +15 Ember only once from progress', () => {
+    const c = newCombatState(), s = groundDragon();
+    restoreGloamVictory(c, false);
+    expect(c.maxEmber).toBe(100);
+    restoreGloamVictory(c, true);
+    expect(c.gloamCleared).toBe(true);
+    expect(c.maxEmber).toBe(115);
+    expect(c.ember).toBe(115);
+    expect(c.notice).toBeNull();
+    expect(c.hounds.every((h) => h.hp === 0 && h.deathAge === 1)).toBe(true);
+    expect(combatRemaining(c)).toBe(0);
+    restoreGloamVictory(c, true);
+    expect(c.maxEmber).toBe(115);
+    s.time = 10;
+    expect(castDragonFire(c, s).ok).toBe(true);
+    expect(c.maxEmber).toBe(115);
+    expect(combatNearby(c, s)).toBe(false);
   });
 
   it('reports actual encounter proximity and living threats, not a permanent HUD', () => {

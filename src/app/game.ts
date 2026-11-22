@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { DragonVisual } from '../actors/dragon/visual';
-import { newCombatState, castDragonFire, castRiderSigil, castMountedRiderSigil, castBondSurge, stepCombat, combatNearby, combatRemaining } from '../combat/combat';
+import { newCombatState, castDragonFire, castRiderSigil, castMountedRiderSigil, castBondSurge, stepCombat, combatNearby, combatRemaining, restoreGloamVictory } from '../combat/combat';
 import { CombatVisual } from '../combat/visuals';
 import { newFlightState, stepFlight, requestDragonForm, toggleLanding, type InteractionResult } from '../actors/dragon/flight';
 import { FORMS, FORM_ORDER, type DragonForm } from '../actors/dragon/forms';
@@ -66,6 +66,7 @@ export class Game {
   private readonly echo = newTidalEchoState();
   private readonly progressStorage: ProgressStorage | null;
   private saveAvailable = false;
+  private gloamVictoryStored = false;
   private readonly echoTitle = requireElement<HTMLElement>('#echo-title');
   private readonly echoStage = requireElement<HTMLElement>('#echo-stage');
   private readonly echoPanel = requireElement<HTMLElement>('#echo-panel');
@@ -131,6 +132,8 @@ export class Game {
     this.echo.collected = saved.echo.collected;
     this.echo.attuned = saved.echo.attuned;
     this.discoveries.restore(saved.discovered);
+    restoreGloamVictory(this.combat, saved.gloamCleared);
+    this.gloamVictoryStored = saved.gloamCleared;
     this.renderer = new THREE.WebGLRenderer({
       canvas, antialias: true, powerPreference: 'high-performance',
     });
@@ -688,20 +691,27 @@ export class Game {
     this.notify(requestDragonForm(this.flight, form));
   }
 
+  private finishCombatAction(result: InteractionResult): void {
+    if (!result.ok) this.notify(result);
+    // A victory can occur on the R, T or X action path, outside the fixed
+    // simulation loop. Persist it immediately and retry if storage is denied.
+    if (this.combat.gloamCleared && !this.gloamVictoryStored) {
+      this.persistProgress();
+    }
+  }
+
   private fireAction(): void {
     const result = this.flight.controlTarget === 'rider'
       ? castRiderSigil(this.combat, this.flight) : castDragonFire(this.combat, this.flight);
-    if (!result.ok) this.notify(result);
+    this.finishCombatAction(result);
   }
 
   private mountedSigilAction(): void {
-    const result = castMountedRiderSigil(this.combat, this.flight);
-    if (!result.ok) this.notify(result);
+    this.finishCombatAction(castMountedRiderSigil(this.combat, this.flight));
   }
 
   private bondAction(): void {
-    const result = castBondSurge(this.combat, this.flight);
-    if (!result.ok) this.notify(result);
+    this.finishCombatAction(castBondSurge(this.combat, this.flight));
   }
 
   private landAction(): void {
@@ -719,7 +729,9 @@ export class Game {
 
   private persistProgress(): void {
     this.saveAvailable = saveAzureProgress(this.progressStorage,
-      snapshotAzureProgress(this.tidegate, this.echo, this.discoveries.visitedIds()));
+      snapshotAzureProgress(this.tidegate, this.echo,
+        this.discoveries.visitedIds(), this.combat.gloamCleared));
+    if (this.saveAvailable && this.combat.gloamCleared) this.gloamVictoryStored = true;
   }
 
   private interactWithRune(): void {

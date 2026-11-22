@@ -78,3 +78,15 @@ Grounded shots follow terrain; airborne shots use pitch and can miss.
 Swimming, small-form, rider-control and transition exploits are rejected.
 The existing combat HUD reports remaining Focus beside Ember while mounted.
 This extends G4 combat but is not a complete mounted melee or lock-on system.
+
+### Persistent Gloam Den victory (backward-compatible Azure Coast v1)
+
+The existing Azure Coast progress payload now includes an additive boolean
+`gloamCleared` and defaults it to false for older version-one saves. On
+reload, the three original Gloam hound identities remain defeated and the
+earned +15 maximum Ember is restored once without replaying the kill notice.
+Victory persists directly from the successful R/T/X combat action; if local
+storage is blocked, play continues and the write is retried on future actions.
+The existing Tidegate, Tidal Echo and discovery milestones retain their
+current key, schema version and validation behavior. This does not yet
+implement multiple save slots or equipment/inventory progression.

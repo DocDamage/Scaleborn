@@ -118,6 +118,26 @@ function grantGloamVictory(c: CombatState): void {
   notice(c, 'kill', 'Gloam Den cleansed. Onyx gains 15 Ember capacity.');
 }
 
+/**
+ * Restore a permanently cleansed Gloam Den without replaying the victory
+ * notification or re-awarding its +15 Ember when the player reloads a save.
+ * Original enemy IDs and the fixed-step state shape remain unchanged.
+ */
+export function restoreGloamVictory(c: CombatState, cleared: boolean): void {
+  if (!cleared || c.gloamCleared) return;
+  c.gloamCleared = true;
+  c.maxEmber += 15;
+  c.ember = c.maxEmber;
+  for (const hound of c.hounds) {
+    hound.hp = 0;
+    hound.deathAge = 1;
+    hound.alert = false;
+    hound.windup = 0;
+    hound.stagger = 0;
+    hound.flash = 0;
+  }
+}
+
 function actorPosition(s: FlightState): { x: number; y: number; z: number } {
   return s.controlTarget === 'rider'
     ? { x: s.riderX, y: s.riderY + 0.9, z: s.riderZ }
