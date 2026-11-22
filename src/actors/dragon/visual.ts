@@ -4,6 +4,7 @@ import { FORMS } from './forms';
 import { createWingRig, poseWing } from './wingRig';
 import { makeOrganicLoft } from './organicLoft';
 import { createDragonLegSculpt } from './limbSculpt';
+import { sculptDragonHead } from './headSculpt';
 import { dragonPose } from './animationPose';
 import { riderPose } from '../rider/pose';
 import { RiderVisual } from '../rider/visual';
@@ -29,15 +30,6 @@ const pupil = new THREE.MeshStandardMaterial({ color: 0x102329, roughness: 0.35 
 const glimmer = new THREE.MeshStandardMaterial({
   color: 0xe3f8e3, emissive: 0x648b84, emissiveIntensity: 0.20,
 });
-
-function ellipsoid(parent: THREE.Group, material: THREE.Material,
-  pos: [number, number, number], scale: [number, number, number], detail = 14): THREE.Mesh {
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, Math.max(26,detail), Math.max(18,Math.round(detail*.7))), material);
-  mesh.position.set(...pos);
-  mesh.scale.set(...scale);
-  parent.add(mesh);
-  return mesh;
-}
 
 function tailFin(parent: THREE.Group): void {
   const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.36, 1.4, 6), highlight);
@@ -68,7 +60,7 @@ export class DragonVisual {
   private readonly wingR = createWingRig(1);
   private readonly tail = new THREE.Group();
   private readonly head = new THREE.Group();
-  private readonly eyes: THREE.Mesh[] = [];
+  private readonly eyes: THREE.Group[] = [];
   private readonly riderLimbs = {
     leftArm: this.rider.getObjectByName('rider.leftArm') as THREE.Group,
     rightArm: this.rider.getObjectByName('rider.rightArm') as THREE.Group,
@@ -99,20 +91,9 @@ export class DragonVisual {
     this.body.add(torso);
     this.head.name = 'head';
     this.head.position.set(0, 0.42, -1.83);
-    ellipsoid(this.head, skin, [0, 0.10, -0.19], [0.62, 0.44, 0.73], 20);
-    ellipsoid(this.head, highlight, [0, -0.12, -0.60], [0.48, 0.26, 0.65], 18);
-    for (const side of [-1, 1]) {
-      ellipsoid(this.head, iris, [side * 0.51, 0.20, -0.35], [0.165, 0.22, 0.10], 16);
-      const eye = ellipsoid(this.head, pupil, [side * 0.57, 0.21, -0.41], [0.065, 0.16, 0.05], 12);
-      this.eyes.push(eye);
-      ellipsoid(this.head, glimmer, [side * 0.60, 0.31, -0.45], [0.04, 0.047, 0.025], 8);
-      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.19, 0.79, 7), ridges);
-      horn.position.set(side * 0.40, 0.66, 0.28);
-      horn.rotation.set(0.43, 0, side * -0.24);
-      this.head.add(horn);
-      const ear = ellipsoid(this.head, highlight, [side * 0.68, 0.38, 0.07], [0.17, 0.31, 0.17]);
-      ear.rotation.z = side * -0.55;
-    }
+    this.eyes.push(...sculptDragonHead(this.head, {
+      skin, highlight, ridges, iris, pupil, glimmer,
+    }).eyes);
     this.body.add(this.head);
     // Original tapered ridge scales break up the smooth back silhouette
     // without adding a low-resolution box-like plate mesh.
@@ -202,7 +183,7 @@ export class DragonVisual {
     this.head.rotation.x = pose.neckAngle;
     this.head.rotation.y = -state.roll * 0.15 + Math.sin(state.time * 0.7) * 0.028;
     const blinking = (state.time % 7.3) > 7.08;
-    for (const eye of this.eyes) eye.scale.y = blinking ? 0.025 : 0.16;
+    for (const eye of this.eyes) eye.scale.y = blinking ? 0.09 : 1;
 
     const riderMotion = riderPose(state);
     this.riderVisual.updateCape(state.time,

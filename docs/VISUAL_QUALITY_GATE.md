@@ -1025,3 +1025,16 @@ simulated aerosol dynamics or final visual acceptance. Transparency blending
 within a single instance batch is not individually depth sorted; inspect
 actual near/far mist overlap in WebGL and measure the effect on the target
 RTX 3060 before claiming performance or quality improvements as verified.
+
+### Dragon skull and facial anatomy (visual pass follow-up, 2026-11-22)
+
+The playable dragon's head no longer uses two overlapping sphere beads and
+straight cone horns. `headSculpt.ts` supplies a continuous lofted cranium,
+separate tapered lower jaw, swept asymmetrical horns, cheek spurs, raised brow
+ridges, a mouth seam and small nostrils with the existing scale-map PBR
+materials. Both eye sockets blink as units and remain parented to the original
+`head` transform; flight physics, rider sockets and species silhouette IDs
+are unchanged. New regression tests validate indexed topology, finite normals,
+mirrored horns and animation continuity. This remains authored procedural art,
+not an approved production creature model: actual third-person and close-up
+WebGL captures still require human visual acceptance and RTX 3060 profiling.
