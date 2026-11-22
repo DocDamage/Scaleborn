@@ -296,10 +296,10 @@ export class PainterlyNature {
     this.root.add(rock);this.meshes.push(rock);
     this.visibility.register(rock,rocks,quality==='high'?780:520);
   }
-  update(time:number,x?:number,z?:number):void{
+  update(time:number,x?:number,z?:number,camera?:THREE.Camera):void{
     if(this.grassWind)this.grassWind.value=time;
     if(this.leafWind)this.leafWind.value=time;
-    if(x!==undefined&&z!==undefined)this.visibility.update(x,z);
+    if(x!==undefined&&z!==undefined)this.visibility.update(x,z,camera);
   }
   dispose():void{
     this.meshes.forEach(mesh=>mesh.geometry.dispose());
