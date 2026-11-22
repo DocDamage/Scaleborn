@@ -207,7 +207,7 @@ export class DragonVisual {
         .20,ridges,'creature.dragon.dorsal-ridge.'+i,16));
     }
     // Hinged procedural legs: diagonal pairs step in opposition on land.
-    for (const side of [-1, 1]) {
+    for (const side of [-1, 1] as const) {
       for (const front of [true, false]) {
         const sculpt = createDragonLegSculpt(front, skin, ridges, highlight);
         const leg = sculpt.group;
