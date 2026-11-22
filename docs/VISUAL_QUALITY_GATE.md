@@ -117,3 +117,7 @@ Color-only terrain polygons failed the user's visual test. `surfaceTextures.ts` 
 A procedural tree may look full from above but skeletal at rider height if all leaves lie horizontally. The visual pass reorients leaf planes in three dimensions and increases woodland density around Mirrorfall while rejecting roots on extreme slopes. Acceptance requires inspection from low third-person camera positions, not exclusively aerial panoramas.
 
 Swimming wakes are now generated around the controlled dragon and independent rider with a bounded pool of rings. The ring centers follow the same wave surface as physics and graphics. These are generated wake effects, not pressure-coupled volumetric water simulation.
+
+### Responsive render budget (follow-up pass)
+
+`src/app/adaptiveResolution.ts` independently controls internal pixel density using sustained frame-rate thresholds with cooldown. High-quality PBR materials remain enabled as resolution falls; this is a usability safety net rather than a replacement for profiling. Benchmark actual render GPU time, world-stream generation, and shader compilation, not just FPS. Quality screenshots with `?qa=1` lock their selected pixel ratio so regressions can be compared reliably.

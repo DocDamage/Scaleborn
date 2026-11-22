@@ -146,3 +146,7 @@ Rock, bark and terrain now have deterministic tileable original **albedo, normal
 ### Shoreline foliage and interaction wake
 
 Procedural broadleaf branches now carry leaf planes that remain visible from low third-person camera angles, and the wooded shores receive denser rooted tree stands with slope checks. Swimming riders and dragons create fading, spreading rings at the **moving water-surface elevation** using a bounded pool of generated geometry. These are local interactions, distinct from the waterfall's shared plunge current. Full fluid displacement and high-fidelity vegetation wind/bone simulation still require further work.
+
+### Adaptive rendering for live gameplay
+
+Scaleborn now samples its actual frame rate and uses hysteresis to lower internal rendering resolution when performance remains under 28 FPS, or gradually restore it above 56 FPS. This **does not** change controls, character speed, the world heightfield, collisions, saved quest progress, or the graphics material preset. The renderer reports its current internal pixel ratio under **F3**. Automated visual QA disables adaptation for comparable screenshots; integrated-GPU and RTX 3060 results must be measured in real gameplay.

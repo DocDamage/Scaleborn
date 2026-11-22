@@ -11,6 +11,7 @@ import { toggleDragonDive } from '../actors/dragon/swimming';
 import { toggleRiderControl, toggleRiderDive } from '../actors/rider/movement';
 import { LANDMARKS } from '../world/terrain';
 import { GRAND_LAKE, waterSurfaceAt } from '../world/highlandLake';
+import { AdaptiveResolution } from './adaptiveResolution';
 import { TIDEGATE, newTidegateState, stepTidegate, interactTidegate, tidegateNearby, tidegateHint } from '../world/tidegate';
 import {
   ECHO_SHRINE, newTidalEchoState, echoPhase, echoObjective,
@@ -34,6 +35,8 @@ function requireElement<T extends HTMLElement>(selector: string): T {
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly quality: 'high' | 'low';
+  private readonly resolution: AdaptiveResolution;
+  private readonly qaRender: boolean;
   private readonly scene = new THREE.Scene();
   private readonly camera: THREE.PerspectiveCamera;
   private readonly coast: AzureCoast;
@@ -87,8 +90,16 @@ export class Game {
     assertManifestUnique();
     // Low-quality rendering retains functionality, collision, water physics and
     // the same world seed; only GPU cost, vegetation density and shading change.
-    this.quality = new URLSearchParams(window.location.search).get('quality') === 'low'
-      ? 'low' : 'high';
+    const params=new URLSearchParams(window.location.search);
+    this.quality = params.get('quality') === 'low' ? 'low' : 'high';
+    this.qaRender=params.get('qa')==='1';
+    const requestedDpr=Math.min(window.devicePixelRatio||1,
+      this.quality === 'low' ? 0.68 : 1.4);
+    this.resolution=new AdaptiveResolution({
+      min:Math.min(requestedDpr,this.quality === 'low' ? 0.48 : 0.72),
+      max:requestedDpr,
+      starting:requestedDpr,
+    });
     let browserStorage: ProgressStorage | null = null;
     try { browserStorage = window.localStorage; } catch { /* Private mode may deny access. */ }
     this.progressStorage = browserStorage;
@@ -101,7 +112,7 @@ export class Game {
     this.renderer = new THREE.WebGLRenderer({
       canvas, antialias: true, powerPreference: 'high-performance',
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.quality === 'low' ? 0.68 : 1.4));
+    this.renderer.setPixelRatio(this.resolution.pixelRatio);
     this.renderer.shadowMap.enabled = this.quality === 'high';
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -529,6 +540,7 @@ export class Game {
       'TRIANGLES ' + render.triangles,
       'WEBGL ' + this.renderer.capabilities.isWebGL2,
       'QUALITY ' + this.quality,
+      'INTERNAL DPR ' + this.resolution.pixelRatio.toFixed(2),
       'CURRENT GATE G3 WATER / RIDER PREVIEW',
     ].join('\n');
   }
@@ -543,6 +555,10 @@ export class Game {
       this.fps = Math.round(this.frames / this.fpsAccum);
       this.fpsAccum = 0;
       this.frames = 0;
+      if(!this.qaRender){
+        const ratio=this.resolution.recordFps(this.fps);
+        if(ratio!==null)this.renderer.setPixelRatio(ratio);
+      }
     }
     if (this.input.take('diagnostics')) this.diagnostics.hidden = !this.diagnostics.hidden;
     if (this.input.take('help')) {
