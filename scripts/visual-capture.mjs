@@ -41,8 +41,22 @@ async function main() {
     // Allow a fresh real WebGL frame after teleport before capturing the shore.
     await page.waitForTimeout(350);
     await page.screenshot({ path: 'artifacts/mirrorfall-shoreline-browser.png', timeout: 120000 });
+    // The new depth-optics pass must render from an actual submerged camera.
+    // This is a third real WebGL screenshot, not a generated concept image.
+    await page.evaluate(() => {
+      if (typeof window.__scalebornQaLakeDive !== 'function') {
+        throw new Error('Freshwater dive camera hook missing');
+      }
+      window.__scalebornQaLakeDive();
+    });
+    await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'DIVING',
+      null, { timeout: 15000 });
+    await page.waitForTimeout(450);
+    await page.screenshot({
+      path: 'artifacts/mirrorfall-underwater-browser.png', timeout: 120000,
+    });
     assert.deepEqual(errors, [], 'WebGL/JavaScript renderer errors');
-    console.log('PASS: Mirrorfall actual browser screenshot rendered without console errors.');
+    console.log('PASS: Mirrorfall aerial, shoreline and real underwater WebGL screenshots rendered without console errors.');
   } finally {
     await browser.close();
   }

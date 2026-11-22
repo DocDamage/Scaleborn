@@ -5,6 +5,8 @@ import { addCoastalDressing } from './dressing';
 import { PainterlyWaterSurface, LakeShoreFoam, makeFoamShader } from './waterSurface';
 import { MirrorfallCascade } from './mirrorfallCascade';
 import { LakeCaustics } from './lakeCaustics';
+import { UnderwaterLightShafts } from './underwaterLightShafts';
+import { underwaterOpticsAt } from './underwaterOptics';
 import { PainterlyNature } from './painterlyNature';
 import { PainterlyClouds } from './painterlyClouds';
 import { MirrorfallCliffs } from './mirrorfallCliffs';
@@ -31,6 +33,7 @@ export class AzureCoast {
   private readonly lake = new PainterlyWaterSurface('lake');
   private readonly lakeFoam = new LakeShoreFoam();
   private readonly caustics: LakeCaustics;
+  private readonly shafts: UnderwaterLightShafts;
   private readonly waterfall = new MirrorfallCascade();
   private readonly nature: PainterlyNature;
   private readonly clouds: PainterlyClouds;
@@ -38,6 +41,7 @@ export class AzureCoast {
   private readonly wake: SurfaceWake;
   private readonly sky = new PainterlySky();
   private readonly sun = new THREE.DirectionalLight(0xffd3a5, 2.1);
+  private readonly hemisphere: THREE.HemisphereLight;
   private readonly sunTarget = new THREE.Object3D();
   private readonly quality: 'high' | 'low';
   private readonly tidegate = new TidegateVisual();
@@ -56,7 +60,9 @@ export class AzureCoast {
     this.scene = scene;
     scene.background = this.airBackground;
     scene.fog = this.airFog;
-    scene.add(new THREE.HemisphereLight(0xbde7ee, 0x716251, quality==='high' ? 1.17 : 1.4));
+    this.hemisphere = new THREE.HemisphereLight(0xbde7ee, 0x716251,
+      quality === 'high' ? 1.17 : 1.4);
+    scene.add(this.hemisphere);
     this.sun.position.set(-420,600,-520);
     this.sun.castShadow = quality === 'high';
     if (this.sun.castShadow) {
@@ -75,7 +81,8 @@ export class AzureCoast {
     scene.add(this.sun,this.sunTarget);
     this.ocean = this.water.mesh;
     this.caustics = new LakeCaustics(quality);
-    scene.add(this.sky.mesh, this.ocean, this.caustics.mesh,
+    this.shafts = new UnderwaterLightShafts(quality);
+    scene.add(this.sky.mesh, this.ocean, this.caustics.mesh, this.shafts.mesh,
       this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group);
     this.nature = new PainterlyNature(scene, quality);
     this.clouds = new PainterlyClouds(scene, quality);
@@ -125,11 +132,34 @@ export class AzureCoast {
   }
 
   setUnderwater(active: boolean): void {
-    if (active === this.underwater) return;
     this.underwater = active;
-    this.scene.fog = active ? this.seaFog : this.airFog;
-    this.scene.background = active ? this.seaBackground : this.airBackground;
-    this.sky.mesh.visible = !active;
+  }
+
+  /**
+   * Sample the actual chase-camera water depth after the camera moves. Player
+   * dive mode may place the camera above water during transitions, so toggling
+   * a binary blue filter from character state produces visibly wrong scenes.
+   */
+  updateAtmosphere(time: number, camera: THREE.Vector3): number {
+    const optics = underwaterOpticsAt(
+      camera.x, camera.y, camera.z, this.underwater,
+    );
+    this.shafts.update(time, optics.shaftStrength);
+    if (optics.immersion > 0) {
+      this.seaFog.density = optics.fogDensity;
+      this.seaFog.color.copy(this.airFog.color).lerp(optics.tint, optics.immersion);
+      this.seaBackground.copy(this.airBackground).lerp(optics.tint, optics.immersion);
+      this.scene.fog = this.seaFog;
+      this.scene.background = this.seaBackground;
+    } else {
+      this.scene.fog = this.airFog;
+      this.scene.background = this.airBackground;
+    }
+    this.sky.mesh.visible = optics.immersion < .08;
+    this.sun.intensity = 2.1 * optics.lightTransmission;
+    this.hemisphere.intensity = (this.quality === 'high' ? 1.17 : 1.4)
+      * optics.lightTransmission;
+    return optics.immersion;
   }
 
   animate(time: number, x: number, y: number, z: number, state?: FlightState): void {
@@ -170,6 +200,7 @@ export class AzureCoast {
     this.lake.dispose();
     this.lakeFoam.dispose();
     this.caustics.dispose();
+    this.shafts.dispose();
     this.waterfall.dispose();
     this.nature.dispose();
     this.clouds.dispose();
@@ -177,6 +208,7 @@ export class AzureCoast {
     this.wake.dispose();
     this.sky.dispose();
     this.echoVisual.dispose();
+    this.hemisphere.removeFromParent();
     this.sun.removeFromParent();
     this.sunTarget.removeFromParent();
   }

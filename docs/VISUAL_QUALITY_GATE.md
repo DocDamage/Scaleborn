@@ -137,3 +137,19 @@ Swimming wakes are now generated around the controlled dragon and independent ri
 - The low preset uses fewer caustic mesh vertices; shader and lake physics
   remain present in both modes. Tests verify terrain alignment, shoreline
   containment, independent foam materials and animation uniforms.
+
+### Depth-aware underwater optics (visual pass 4)
+
+- Atmospheric color, exposure and fog strength respond to the **actual camera**
+  depth below the collision-matched freshwater or seawater level. Fog transitions
+  smoothly across the waterline rather than snapping when the player's
+  swimming animation changes state; ocean and lake retain separate palettes.
+- Sunlight attenuates with depth but remains navigable through Mirrorfall's
+  full 148-meter basin. A deterministic crossed-card shaft field is confined
+  to the lake and fades out well above the deep floor. This is screen-facing
+  transparent geometry approximating visible light shafts, not volumetric
+  raymarching, scattering integration or physically correct transmission.
+- The new browser visual capture includes a third **actual submerged view**
+  (`artifacts/mirrorfall-underwater-browser.png`) plus the existing overhead
+  and shoreline views. Hardware GPU profiling and human image review remain
+  mandatory before claiming final art quality.
