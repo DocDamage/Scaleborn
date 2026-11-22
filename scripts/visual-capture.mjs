@@ -6,6 +6,25 @@ import { chromium } from 'playwright';
  * --hardware uses the *high* game materials and refuses software fallback.
  * The default software-WebGL test remains unchanged for reproducible CI.
  */
+
+/**
+ * Snapshot only a fully rendered game frame, without racing the next costly
+ * software-WebGL draw. Repeated screenshots still use the real game scene.
+ */
+async function captureQaScreenshot(page, options) {
+  await page.evaluate(() => {
+    if (typeof window.__scalebornQaHoldNextFrame !== 'function') {
+      throw new Error('Real-frame QA capture hook missing');
+    }
+    return window.__scalebornQaHoldNextFrame();
+  });
+  try {
+    await page.screenshot(options);
+  } finally {
+    await page.evaluate(() => window.__scalebornQaResumeFrames?.());
+  }
+}
+
 async function main() {
   const hardware = process.argv.includes('--hardware');
   const screenshotFile = (path) => hardware
@@ -66,7 +85,7 @@ async function main() {
     await page.waitForFunction(() => Number(document.querySelector('#speed')?.textContent) >= 0,
       null, { timeout: 30000 });
     await mkdir('artifacts', { recursive: true });
-    await page.screenshot({ path: screenshotFile('artifacts/mirrorfall-actual-browser.png'), timeout: 120000 });
+    await captureQaScreenshot(page, { path: screenshotFile('artifacts/mirrorfall-actual-browser.png'), timeout: 120000 });
     // Shoreline view exposes grass blades and procedural PBR detail.
     await page.evaluate(() => {
       if (typeof window.__scalebornQaShore !== 'function') {
@@ -77,7 +96,7 @@ async function main() {
     // QA-only software rendering is throttled to keep the main thread responsive.
     // Allow a fresh real WebGL frame after teleport before capturing the shore.
     await page.waitForTimeout(350);
-    await page.screenshot({ path: screenshotFile('artifacts/mirrorfall-shoreline-browser.png'), timeout: 120000 });
+    await captureQaScreenshot(page, { path: screenshotFile('artifacts/mirrorfall-shoreline-browser.png'), timeout: 120000 });
     // Real ground-level forest acceptance: camera walks beside one seeded oak.
     // The render must contain genuine instanced trees and fern cover.
     await page.evaluate(() => {
@@ -90,7 +109,7 @@ async function main() {
       document.querySelector('#focus-name')?.textContent === 'RIDER',
       null, { timeout: 15000 });
     await page.waitForTimeout(500);
-    await page.screenshot({
+    await captureQaScreenshot(page, {
       path: screenshotFile('artifacts/mirrorfall-forest-browser.png'), timeout: 120000,
     });
     // The new depth-optics pass must render from an actual submerged camera.
@@ -104,7 +123,7 @@ async function main() {
     await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'DIVING',
       null, { timeout: 15000 });
     await page.waitForTimeout(450);
-    await page.screenshot({
+    await captureQaScreenshot(page, {
       path: screenshotFile('artifacts/mirrorfall-underwater-browser.png'), timeout: 120000,
     });
     // Second dive camera actually looks across a planted, terrain-following
@@ -116,7 +135,7 @@ async function main() {
       window.__scalebornQaLakebed();
     });
     await page.waitForTimeout(500);
-    await page.screenshot({
+    await captureQaScreenshot(page, {
       path: screenshotFile('artifacts/mirrorfall-lakebed-browser.png'), timeout: 120000,
     });
     if (hardware) {
@@ -130,7 +149,7 @@ async function main() {
         window.__scalebornQaHeadwaters();
       });
       await page.waitForTimeout(600);
-      await page.screenshot({
+      await captureQaScreenshot(page, {
         path: screenshotFile('artifacts/mirrorfall-headwaters-browser.png'),
         timeout: 120000,
       });
@@ -141,7 +160,7 @@ async function main() {
         window.__scalebornQaImpactDive();
       });
       await page.waitForTimeout(600);
-      await page.screenshot({
+      await captureQaScreenshot(page, {
         path: screenshotFile('artifacts/mirrorfall-impact-underwater-browser.png'),
         timeout: 120000,
       });

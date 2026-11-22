@@ -14,6 +14,7 @@ import { GRAND_LAKE, MIRRORFALL, headwaterProfileAt, waterSurfaceAt } from '../w
 import { MIRRORFALL_IMPACT } from '../world/waterDynamics';
 import { findLakebedReviewViewpoint } from '../world/lakebedReviewViewpoint';
 import { AdaptiveResolution } from './adaptiveResolution';
+import { QaFrameCaptureGate } from './qaFrameCaptureGate';
 import { resolveCameraOcclusion } from './cameraOcclusion';
 import { OBSTACLES } from '../world/collision';
 import { TIDEGATE, newTidegateState, stepTidegate, interactTidegate, tidegateNearby, tidegateHint } from '../world/tidegate';
@@ -41,6 +42,7 @@ export class Game {
   private readonly quality: 'high' | 'low';
   private readonly resolution: AdaptiveResolution;
   private readonly qaRender: boolean;
+  private readonly qaFrameCaptureGate = new QaFrameCaptureGate();
   private readonly scene = new THREE.Scene();
   private readonly camera: THREE.PerspectiveCamera;
   private readonly coast: AzureCoast;
@@ -157,6 +159,8 @@ export class Game {
     if (import.meta.env.DEV && new URLSearchParams(window.location.search).get('qa') === '1') {
       const host = window as Window & {
         __scalebornQaAdvance?: (frames: number) => void;
+        __scalebornQaHoldNextFrame?: () => Promise<void>;
+        __scalebornQaResumeFrames?: () => void;
         __scalebornQaLand?: () => void;
         __scalebornQaLaunch?: () => void;
         __scalebornQaWater?: () => void;
@@ -172,6 +176,10 @@ export class Game {
         __scalebornQaShore?: () => void;
         __scalebornQaForest?: () => void;
       };
+      // Screenshot tests capture one fresh scene frame, then stop the CPU
+      // renderer while Chromium copies its completed compositor surface.
+      host.__scalebornQaHoldNextFrame = () => this.qaFrameCaptureGate.holdAfterNextFrame();
+      host.__scalebornQaResumeFrames = () => this.qaFrameCaptureGate.resume();
       host.__scalebornQaLand = (): void => {
         // Stage and trigger atomically: no frame-rate-dependent input race.
         this.flight.x = -555;
@@ -754,6 +762,10 @@ export class Game {
   }
 
   private frame = (now: number): void => {
+    if (this.qaRender && this.qaFrameCaptureGate.isHeld) {
+      requestAnimationFrame(this.frame);
+      return;
+    }
     // CI uses SwiftShader (CPU WebGL). Rendering every RAF starves Playwright's
     // main-thread DOM polling on large scenes. Keep the real world/shaders and
     // deterministic QA simulation, but limit QA-only rendering to 8 FPS.
@@ -834,6 +846,7 @@ export class Game {
     // frame entry fails to yield when one SwiftShader frame exceeds 125 ms.
     if (this.qaRender) this.lastQaRenderTime = performance.now();
     this.updateHud(elapsed);
+    if (this.qaRender) this.qaFrameCaptureGate.didRenderFrame();
     requestAnimationFrame(this.frame);
   };
 
