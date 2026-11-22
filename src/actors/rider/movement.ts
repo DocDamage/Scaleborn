@@ -2,7 +2,7 @@ import type { FlightControls, FlightState, InteractionResult } from '../dragon/f
 import { canStand, OBSTACLES } from '../../world/collision';
 import { heightAt } from '../../world/terrain';
 import { waterSurfaceAt } from '../../world/highlandLake';
-import { plungeCurrentStep } from '../../world/waterDynamics';
+import { plungeCurrentStep, plungeVelocityAt } from '../../world/waterDynamics';
 import { waterWaveOffsetAt } from '../../world/waterWaves';
 import { approach, riderSurfaceY, riderDiveY, riderCanSwim, riderFloorY } from '../../world/waterPhysics';
 
@@ -49,7 +49,7 @@ export function stepRider(state: FlightState, controls: FlightControls, dt: numb
   let nz = state.riderZ - Math.cos(state.riderYaw) * state.riderSpeed * dt;
   if (water) {
     const flow=plungeCurrentStep(nx,nz,dt,(x,z)=>
-      riderCanSwim(x,z) && riderFloorY(x,z)<state.riderY-.1);
+      riderCanSwim(x,z) && riderFloorY(x,z)<state.riderY-.1,state.riderY);
     nx=flow.x; nz=flow.z;
   }
   const nextHeight = heightAt(nx, nz);
@@ -85,7 +85,9 @@ export function stepRider(state: FlightState, controls: FlightControls, dt: numb
   const crest = riderSurfaceY(state.riderX, state.riderZ)
     + waterWaveOffsetAt(state.riderX, state.riderZ, state.time)*.43;
   if (state.riderMode === 'underwater') {
-    state.riderTargetY += clamp(controls.bank, -1, 1) * dt * 3.2;
+    const current = plungeVelocityAt(state.riderX, state.riderY, state.riderZ);
+    state.riderTargetY += (clamp(controls.bank, -1, 1) * 3.2
+      + current.y * .72) * dt;
     if (state.riderTargetY >= crest) {
       state.riderMode = 'surface';
       state.riderTargetY = crest;

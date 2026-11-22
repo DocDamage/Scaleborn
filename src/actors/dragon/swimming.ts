@@ -1,6 +1,6 @@
 import type { FlightControls, FlightState, InteractionResult } from './flight';
 import { FORMS } from './forms';
-import { plungeCurrentStep } from '../../world/waterDynamics';
+import { plungeCurrentStep, plungeVelocityAt } from '../../world/waterDynamics';
 import { waterWaveOffsetAt } from '../../world/waterWaves';
 import {
   approach, canDragonDive, canEnterSea, dragonBottomY, dragonDiveY, dragonSurfaceY,
@@ -39,7 +39,7 @@ export function stepDragonSwimming(state: FlightState, controls: FlightControls,
   let nx = state.x + Math.sin(state.yaw) * state.speed * dt;
   let nz = state.z - Math.cos(state.yaw) * state.speed * dt;
   // Waterfall wake applies a continuous, collision-safe outward force.
-  const flow=plungeCurrentStep(nx,nz,dt,(x,z)=>canEnterSea(x,z,state.form).ok);
+  const flow=plungeCurrentStep(nx,nz,dt,(x,z)=>canEnterSea(x,z,state.form).ok,state.y);
   nx=flow.x; nz=flow.z;
   if (canEnterSea(nx, nz, state.form).ok) {
     state.x = nx;
@@ -51,7 +51,10 @@ export function stepDragonSwimming(state: FlightState, controls: FlightControls,
   const wave = waterWaveOffsetAt(state.x, state.z, state.time) * .62;
   const top = dragonSurfaceY(state.form, state.x, state.z) + wave;
   if (underwater) {
-    state.waterTargetY += clamp(controls.bank, -1, 1) * dt * 8;
+    // Subsurface circulation is gradual and bounded. The controlled dragon
+    // can always overcome the current with upward input.
+    const current = plungeVelocityAt(state.x, state.y, state.z);
+    state.waterTargetY += (clamp(controls.bank, -1, 1) * 8 + current.y) * dt;
     state.waterTargetY = clamp(state.waterTargetY, bottom, top - 1.0);
     if (state.waterTargetY >= top - 1.01 && controls.bank > 0) {
       state.mode = 'surface';

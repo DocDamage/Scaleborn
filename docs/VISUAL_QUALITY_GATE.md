@@ -277,3 +277,17 @@ The visible effect is still an approximation to splashing water; particle
 pressure, mass conservation, waterfall-body collision and detailed 3D fluid
 simulation remain unimplemented. Review *actual* browser waterline screenshots
 and desktop-GPU alpha overdraw rather than treating the code as final realism.
+
+### Plunge-pool 3D swimmer interaction
+
+`waterDynamics.ts` now exposes `plungeVelocityAt(x,y,z)`, a bounded
+world-space vector field for Mirrorfall Lake. Surface water retains the
+previous radial push; with depth the outflow attenuates, a localized
+downwelling jet forms under the impact and a weak surrounding upwelling
+models recirculation. Dragon and rider diving targets integrate a controlled
+fraction of the vertical component, clamped to their existing terrain-floor
+and surface bounds. Normal upward controls are intentionally stronger than
+the downwelling; outside Mirrorfall the velocity is zero. This is a
+deterministic physically-inspired gameplay force, not a conserved or
+pressure-coupled fluid volume. The rendered waterfall and foam still use
+their existing visual wave approximation.

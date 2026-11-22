@@ -1,4 +1,4 @@
-import { GRAND_LAKE, MIRRORFALL, lakeContains } from './highlandLake';
+import { GRAND_LAKE, MIRRORFALL, lakeContains, waterSurfaceAt } from './highlandLake';
 
 /**
  * Deterministic localized plunge-pool response. Reused by both simulation
@@ -19,6 +19,7 @@ export const MIRRORFALL_IMPACT = Object.freeze({
 });
 
 export interface WaterCurrent { x: number; z: number; magnitude: number }
+export interface WaterVelocity3D extends WaterCurrent { y: number }
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
 const smooth = (value: number): number => value * value * (3 - 2 * value);
@@ -55,13 +56,50 @@ export function plungeFoamAt(x:number,z:number):number {
   return smooth(clamp01(1-d/MIRRORFALL_IMPACT.turbulenceRadius));
 }
 
+/**
+ * Bounded 3D recirculation in the Mirrorfall plunge pool. Near the falling
+ * water, a small downwelling jet entrains swimmers; just outside the impact
+ * ring an even weaker upwelling returns water toward the surface. Horizontal
+ * outflow is preserved at the surface but decreases with depth.
+ *
+ * This velocity approximation is deliberately limited in reach and power:
+ * it is not a Navier–Stokes pressure solve, must not pull characters through
+ * collision terrain, and cannot overwhelm the rider's ascent controls.
+ */
+export function plungeVelocityAt(x: number, y: number, z: number): WaterVelocity3D {
+  const still = { x: 0, y: 0, z: 0, magnitude: 0 };
+  if (![x, y, z].every(Number.isFinite) || !lakeContains(x, z)) return still;
+  const waterY = waterSurfaceAt(x, z);
+  if (y > waterY + 4 || y < waterY - 88) return still;
+  const depth = Math.max(0, waterY - y);
+  const horizontal = plungeCurrentAt(x, z);
+  const attenuation = Math.exp(-depth / 39);
+  const dx = x - MIRRORFALL_IMPACT.x;
+  const dz = z - MIRRORFALL_IMPACT.z;
+  const radius = Math.hypot(dx, dz);
+  const downwelling = -2.65
+    * Math.exp(-Math.pow(radius / 21, 2))
+    * smooth(clamp01((depth - .5) / 3.0))
+    * (1 - smooth(clamp01((depth - 18) / 33)));
+  const riseBand = smooth(clamp01((radius - 17) / 14))
+    * (1 - smooth(clamp01((radius - 47) / 21)));
+  const upwelling = .48 * riseBand
+    * smooth(clamp01((depth - 2) / 5))
+    * (1 - smooth(clamp01((depth - 26) / 31)));
+  const vx = horizontal.x * attenuation;
+  const vz = horizontal.z * attenuation;
+  const vy = downwelling + upwelling;
+  return { x: vx, y: vy, z: vz, magnitude: Math.hypot(vx, vy, vz) };
+}
+
 /** CFL-like cap to keep browser fixed-step current stable near shorelines. */
 export function plungeCurrentStep(
   x:number,z:number,dt:number,
   canMove:(nx:number,nz:number)=>boolean,
+  y=waterSurfaceAt(x,z),
 ):{x:number;z:number} {
   if(!Number.isFinite(dt)||dt<=0||dt>0.1)return {x,z};
-  const current=plungeCurrentAt(x,z);
+  const current=plungeVelocityAt(x,y,z);
   const nx=x+current.x*dt,nz=z+current.z*dt;
   return canMove(nx,nz)?{x:nx,z:nz}:{x,z};
 }
