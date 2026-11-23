@@ -235,3 +235,39 @@ actual WebGL side and mounted captures must determine visual acceptance.
 real WebGL character captures of this precise branch head, transition
 motion review and RTX 3060 performance are not yet verified by these source
 edits. PR #15 must remain in DRAFT and unmerged.
+
+### Rider skin, flexible sleeve cloth, Onyx lower jaw, and real QA portraits
+
+This continuation contains real game-code changes on the existing original
+character meshes, not concept art or donor fantasy characters:
+
+- `99017f2`, `3c4d949`, `6f2bda6`, `936bc87`: the original young
+  hybrid face, neck and hands use a shared 128², mipmapped, deterministic
+  warm-color/dermal-normal/roughness atlas. Skin stays matte, nonmetallic,
+  low normal relief and child-proportioned. Texture budgets, UV use,
+  repeatability and live mesh-material bindings have regression coverage.
+- `a9380a5`, `0193024`, `703981e`, `972153f`, `d6865e2`:
+  both existing upper sleeves now use independent bend-responsive GPU
+  morph targets with folded-cuff geometry and corresponding interpolated
+  normals for proper illumination under the woven PBR maps. Animation
+  follows each original elbow in the normal ground/swim/mounted poses
+  without CPU geometry recreation, control changes or new character skins.
+- `0cd9f62`, `dbd9ca6`, `3d55cef`, `9d840cc`, `4182eb0`:
+  added DEV-only actual gameplay close camera presets for the heroine's
+  face/skin and side-visible skinned tail. The Playwright character
+  screenshot script now exports `characters-hybrid-hero-face.png` and
+  `characters-hybrid-hero-tail.png` in addition to the existing real
+  WebGL character images. Tests constrain genuine camera positions.
+- `ee3edbd`, `2daf366`, `fe19fd8`: replaced Onyx's simple lower jaw
+  tube with original anatomically tapered mandibular loft, bilateral inset
+  lower lips and four restrained curved enamel tips. It retains the original
+  named jaw hinge, expression angle, materials and three-form simulation.
+  Dedicated tests verify geometry, normals, original sockets and hinge
+  movement.
+
+**Do not approve visual quality from these source changes alone.** Run
+`npm run check` and the full actual WebGL character capture against this
+exact branch head, inspect cheek/iris alignment, UV seams, cloth morph
+shading, teeth clipping at rest and during opening, close tail views, and
+every form/saddle silhouette. An RTX 3060 hardware profile and user art
+sign-off are still required. Keep PR #15 draft and unmerged.
