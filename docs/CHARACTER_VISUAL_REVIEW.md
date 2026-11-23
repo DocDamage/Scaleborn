@@ -314,3 +314,52 @@ performance measurements have not been independently confirmed here.
 Inspect the child's face/mouth/hair, spine/cloth seam and Onyx's four paws
 at rest, mid-stride, swimming, mount transitions and flight before approval.
 Keep PR #15 **DRAFT and UNMERGED** until actual in-engine signoff.
+
+
+### Original wing billow and cloth-to-pelvis continuity (2026-11-22)
+
+This batch directly changes the existing 3D render geometry and live animation
+of Onyx and the original bonded 13-year-old hybrid rider. No concept images,
+unapproved donor meshes, new gameplay systems, or simulation changes:
+
+- `d3544b6`, `b094f1b`, `6c13f07`: Onyx's original two skinned wing
+  membranes gain a second non-relative position/normal morph. It provides
+  gently bowed inner skin while preserving the actual scalloped trailing
+  edges, the leading finger cartilage, shoulder/root and the open tip.
+  Deterministic tension follows the existing flap phase; the influence
+  becomes **exactly zero** at complete fold. The first folded-wing morph,
+  existing three-bone skin, original dark-painted membrane and flight
+  controls remain unchanged. Two-sided finite geometry, pinned-edge and
+  grounded/air tests were added.
+- `9a1277e`, `b3eb927`, `5dae9ba`, `899f2c2`: the rider's existing
+  fitted trousers gain independent GPU thigh/knee bunching targets with
+  dedicated normals. Each responds to the actual knee bend while keeping
+  hip and kneecap seams pinned; the fixed child-size hips, rideable flank
+  and giant kneeling posture, boots, swimming and actor movement remain
+  unchanged.
+- `1d725ab`, `0543b86`, `f151fa0`, `607b2cf`: four small
+  bidirectional coat shape keys counter-fold the waist as her new upper
+  spine banks or pitches. The shoulder/collar remain attached to the
+  thoracic pivot while the hem no longer simply rotates out of the
+  child's pelvis. Reuses the existing original woven coat material,
+  geometry, named attachment and fixed actor/saddle sizes.
+- `c833997`, `2f6dd99`, `15bb785`, `4fc0bf6`: corrected art-review
+  capture integrity. The rideable banking case is now physically airborne,
+  and the Playwright capture holds the game's **real W/E inputs** while
+  recording motion. Read-only DEV telemetry asserts Onyx is walking or
+  banking; shots will fail instead of silently recording an idle model after
+  a staged speed/roll has decayed.
+- `bf62f1e`, `5703281`: regression checks enforce per-actor geometry
+  and morph budgets, the exact identity of reused typed vertex arrays
+  through travel/form changes, and finite morph influences. No per-frame
+  GPU buffer allocation is required by the new shapes.
+
+**Verification boundary:** GitHub source files and the DEV screenshot
+script's JavaScript syntax were inspected, but TypeScript lint, full Vitest
+suite, production build, current WebGL screenshots and target RTX 3060
+performance **have not** been independently verified in this session.
+Public GitHub/npm downloads were unavailable from the local execution
+environment. The quality gate remains **BLOCKING** and PR #15 must stay
+draft/unmerged. A green source-level assertion alone is not artwork
+approval. Inspect actual air/ground wing shading, rider knee/coat/hip
+contact, and captured walking/banking poses before signoff.
