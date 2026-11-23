@@ -66,7 +66,7 @@ export function riderUpperBodyPose(
       ? clamp(mountedBank!,-.5,.5) : -roll*.24
     : pose.motion==='swim'||pose.motion==='dive'
       ? .08*Math.sin(time*4.2):0;
-  const chestYaw=mounted?-roll*.048:
+  const chestYaw=mounted?(roll===0?0:-roll*.048):
     pose.motion==='walk' ? .018*Math.sin(time*7.2) : 0;
   return {
     pelvisPitch:lean*.20,
