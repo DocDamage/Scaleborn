@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { DragonPose } from './animationPose';
 import { makeWingMembraneMaterial } from './wingSurface';
+import { installWingBillowMorph, wingBillowInfluence } from './wingBillow';
 import { taperedSpine } from './organicSculpt';
 
 /**
@@ -210,6 +211,8 @@ export function createWingRig(side: -1 | 1): WingRig {
   foldNormals.computeVertexNormals();
   geo.morphAttributes.normal=[foldNormals.getAttribute('normal').clone()];
   foldNormals.dispose();
+  // Live flight tension sits alongside the existing first folded-sail morph.
+  installWingBillowMorph(geo);
 
   const shoulder=new THREE.Bone();
   shoulder.name=side<0?'leftWing.shoulder':'rightWing.shoulder';
@@ -245,6 +248,7 @@ export function poseWing(rig: WingRig, side: -1 | 1, pose: DragonPose): void {
   const pleat=fold*fold*(3-2*fold);
   if (rig.mesh.morphTargetInfluences) {
     rig.mesh.morphTargetInfluences[0]=pleat;
+    rig.mesh.morphTargetInfluences[1]=wingBillowInfluence(pose);
   }
   // Joint rotation alone retained a four-metre rib stretched diagonally
   // away from the torso even at a complete fold (verified in WebGL).
