@@ -7,6 +7,7 @@ import { MIRRORFALL_IMPACT } from './waterDynamics';
 import { PlungePoolFoam } from './plungePoolFoam';
 import { makeSprayStreakGeometry, makeSprayStreakTexture } from './sprayStreak';
 import { createCascadeFilaments } from './waterfallFilaments';
+import { createCascadeVeilGeometry } from './cascadeVeils';
 import { WaterfallMist } from './waterfallMist';
 import { WaterfallFallSpray } from './waterfallFallSpray';
 import { waterfallCenterXAt } from './waterfallTrajectory';
@@ -65,19 +66,22 @@ const fragment=`
   }
   void main(){
     vec2 p=vFlowUv;
+    // Offset flow detail with world position so neighboring water channels
+    // do not repeat an identical bright/transparent pattern.
+    float streakX=p.x+vFlowWorld.z*.017;
     float t=uTime;
     // Advected streaks vary in flow velocity and separate into finer
     // jets near the plunge pool. Edges are turbulent, not rectangular.
     // Higher vertical sheet speed near the lake yields flowing streaks
     // without moving the fixed waterfall crest.
     float flowAccel=mix(7.4,16.5,sqrt(clamp(p.y,0.0,1.0)));
-    float strip=noise(vec2(p.x*29.0+sin(p.y*10.0)*.24,
+    float strip=noise(vec2(streakX*29.0+sin(p.y*10.0)*.24,
       p.y*35.0-t*(flowAccel+p.x*1.1)));
-    float wash=noise(vec2(p.x*78.0+p.y*1.9,
+    float wash=noise(vec2(streakX*78.0+p.y*1.9,
       p.y*95.0-t*(flowAccel*1.8)));
-    float longFlow=pow(.5+.5*sin(p.x*84.0+wash*3.1+
+    float longFlow=pow(.5+.5*sin(streakX*84.0+wash*3.1+
       sin(p.y*20.0-t*2.1)*1.4),3.3);
-    float whiteJet=pow(.5+.5*sin(p.x*155.0+
+    float whiteJet=pow(.5+.5*sin(streakX*155.0+
       sin(p.y*37.0-t*2.3)*2.3),4.0);
     float broken=smoothstep(.35,.86,strip*.57+wash*.43);
     float turbulence=clamp(broken*.55+whiteJet*.36+longFlow*.26,0.0,1.0);
@@ -88,12 +92,12 @@ const fragment=`
     float nearImpact=smoothstep(.66,.98,p.y);
     // Break the lower curtain into intermittent voids and brighter jets,
     // instead of a continuous semi-opaque rectangular water billboard.
-    float porosity=noise(vec2(p.x*58.0+vSheetFold*2.3,
+    float porosity=noise(vec2(streakX*58.0+vSheetFold*2.3,
       p.y*66.0-t*flowAccel*.7));
     float breakup=smoothstep(.31,.67,porosity+broken*.15);
     // Coherent slow-moving gaps break the silhouette into distinct
     // water fingers instead of blending three opaque, square veils.
-    float macroSplit=noise(vec2(p.x*11.0+
+    float macroSplit=noise(vec2(streakX*11.0+
       sin(p.y*13.0)*.19,p.y*6.0-t*.48));
     float jetIsolation=smoothstep(.38,.69,macroSplit+.13*whiteJet);
     float baseAlpha=edge*(.105+.265*turbulence+.085*wash);
@@ -110,41 +114,15 @@ const fragment=`
   }
 `;
 
-function ribbon(width:number,zOffset:number,phase:number,material:THREE.ShaderMaterial):THREE.Mesh{
-  const nx=24,ny=94;
-  const points:number[]=[],uv:number[]=[],faces:number[]=[];
-  for(let i=0;i<=ny;i++){
-    const t=i/ny;
-    const x=waterfallCenterXAt(t);
-    const y=MIRRORFALL.topY - down*t;
-    for(let j=0;j<=nx;j++){
-      const u=j/nx;
-      const offset=(u-.5)*width*(.74+t*.49+
-        .065*Math.sin(t*17+phase)+.047*Math.sin(u*11+t*5+phase));
-      const ruffle=Math.sin(u*29+t*17+phase)*(.62+t*3.1)
-          +Math.sin(u*66-t*12+phase)*.35;
-      // The headwater lip is eroded into scallops; the rest accelerates
-      // down a curved fall. No new draw calls or physics discontinuities.
-      const lipRelief=(1-t)*(.55*Math.sin(u*23+phase)
-        +.27*Math.sin(u*51-phase));
-      points.push(x+Math.sin(u*8+phase)*1.1,
-        y+Math.sin(u*24+phase)*.25+lipRelief,
-        GRAND_LAKE.z+zOffset+offset+ruffle);
-      uv.push(u,t);
-      if(i<ny && j<nx){
-        const a=i*(nx+1)+j,b=a+nx+1;
-        faces.push(a,b,a+1,b,b+1,a+1);
-      }
-    }
-  }
-  const geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.Float32BufferAttribute(points,3));
-  geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
-  geo.setIndex(faces);geo.computeVertexNormals();
-  const mesh=new THREE.Mesh(geo,material);
-  mesh.frustumCulled=false;
-  mesh.renderOrder=3;
-  mesh.name='water.azure.mirrorfall-curtain';
+function ribbon(
+  width: number, zOffset: number, phase: number,
+  material: THREE.ShaderMaterial, quality: 'high' | 'low',
+): THREE.Mesh {
+  const mesh = new THREE.Mesh(
+    createCascadeVeilGeometry(width, zOffset, phase, quality), material);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 3;
+  mesh.name = 'water.azure.mirrorfall-curtain';
   return mesh;
 }
 
@@ -188,7 +166,7 @@ export class MirrorfallCascade {
       side:THREE.DoubleSide,transparent:true,depthWrite:false,fog:true,
     });
     for(const [i,width,offset] of [[0,78,0],[1,42,-21],[2,32,24]] as const){
-      this.group.add(ribbon(width,offset,i*2.3,this.waterMat));
+      this.group.add(ribbon(width,offset,i*2.3,this.waterMat,quality));
     }
     // Waterfall threads are layered inside the three established veils,
     // but batch all the crossed narrow ropes into a single geometry.

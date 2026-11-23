@@ -1139,3 +1139,25 @@ pressure-driven droplet fragmentation or a ray-traced waterfall. Compare
 actual high/low Chromium waterfall side views for oversaturation, opaque
 stripes, lake-crest intersection and sprite overdraw; target RTX 3060
 profiling and complete test execution remain blocking.
+
+### Braided Cascade geometry — downstream channel breakup
+
+The three earlier waterfall curtains each remained one full-width, nearly
+rectangular sheet, even after their shader developed streaks and noise. The
+actual gameplay renderer now builds each original veil as several individually
+scalloped, curved surface channels: 10 on High and 6 on Low. Their near-lip
+width remains mostly contiguous, while their spacing opens with fall depth and
+their 3D folds widen toward the plunge pool. Every veil is still a **single
+indexed geometry and draw**, uses the existing animated fog-aware water shader,
+and follows the shared waterfall trajectory used for contact/collision. Fine
+pigment/noise phase now varies with actual world Z rather than repeating the
+exact same pattern across every narrow channel. The already batched filament
+ropes and ballistic/falling droplet draws remain unchanged.
+
+New geometry-level regression tests cover high/low budgets, finite bounds,
+shared trajectory, lake-contained impact, actual downstream gaps, deterministic
+layout and material reuse. This is painterly surface breakup, not a
+mass-conserving or pressure-solved waterfall. Inspect the real browser side view
+for repetitive striping, transparent overlap, sheet thickness, and water/rock
+intersection before accepting it. Target-GPU profiling and actual WebGL
+appearance remain **unverified** in this source-only batch.
