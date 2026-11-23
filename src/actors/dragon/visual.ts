@@ -217,8 +217,8 @@ export class DragonVisual {
       // upper-lip contour at close range. Curved lofted forms sit against the
       // head's existing anatomical section, not on floating sphere beads.
       const nostril=new THREE.Mesh(taperedSpine([
-        [side*.110,.031,-1.138],[side*.176,.051,-1.080],
-        [side*.236,.062,-.994],
+        [side*.110,.096,-1.138],[side*.176,.116,-1.080],
+        [side*.236,.127,-.994],
       ],.033,12,26),ridges);
       nostril.name='creature.dragon.nostril.'+(side<0?'left':'right');
       nostril.castShadow=true;
