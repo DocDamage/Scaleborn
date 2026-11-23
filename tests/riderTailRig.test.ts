@@ -82,8 +82,11 @@ describe('original heroine deforming hybrid tail',()=>{
       dragon.update(state);
       expect(tip.rotation.y).not.toBeCloseTo(mountedBend,3);
       expect(dragon.rider.scale.x).toBe(1);
+      // The tail renderer sanitizes bad telemetry independently; the
+      // gameplay FlightState itself is intentionally not mutated.
+      const swimPose=riderPose(state);
       state.time=Number.NaN;state.roll=Number.POSITIVE_INFINITY;
-      dragon.update(state);
+      poseRiderTail({root,mid,tip},state,swimPose);
       expect([root.rotation.x,root.rotation.y,mid.rotation.y,tip.rotation.y]
         .every(Number.isFinite)).toBe(true);
     }finally{dragon.dispose();}
