@@ -55,14 +55,16 @@ const clamp=(n:number,a:number,b:number):number=>
  * No frame-history smoothing or physics integration is hidden in this pose.
  */
 export function riderUpperBodyPose(
-  state:FlightState,pose:RiderPose,
+  state:FlightState,pose:RiderPose,mountedBank?:number,
 ):RiderUpperBodyPose {
   const lean=clamp(finite(pose.torsoLean),-.35,.35);
   const roll=clamp(finite(state.roll),-.8,.8);
   const time=finite(state.time);
   const mounted=pose.motion==='mounted';
-  const bank=mounted?-roll*.24:
-    pose.motion==='swim'||pose.motion==='dive'
+  const bank=mounted
+    ? Number.isFinite(mountedBank)
+      ? clamp(mountedBank!,-.5,.5) : -roll*.24
+    : pose.motion==='swim'||pose.motion==='dive'
       ? .08*Math.sin(time*4.2):0;
   const chestYaw=mounted?-roll*.048:
     pose.motion==='walk' ? .018*Math.sin(time*7.2) : 0;
