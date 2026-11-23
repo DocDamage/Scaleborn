@@ -7,6 +7,7 @@ import { installSleeveCreaseMorph } from './riderSleeveCloth';
 import { installRiderUpperBody } from './riderUpperBodyRig';
 import { installRiderFaceMorphs } from './riderFaceMorph';
 import { makeRiderHairLock } from './riderHairSculpt';
+import { installRiderKneeClothMorph } from './riderKneeCloth';
 
 /**
  * Original adolescent dragon-human heroine. Her slender coastal-traveller
@@ -196,10 +197,12 @@ function createRiderLeg(
   const leg=new THREE.Group();
   leg.name=side<0?'rider.leftLeg':'rider.rightLeg';
   leg.position.set(side*.151,.66,.035);
-  leg.add(shapedTorso([
+  const trousers=shapedTorso([
     [.01,.096,.111,.02],[-.14,.109,.116,.04],
     [-.27,.096,.105,.044],[-.355,.083,.093,.034],
-  ],cloth,'rider.trousers',32));
+  ],cloth,'rider.trousers',32);
+  installRiderKneeClothMorph(trousers);
+  leg.add(trousers);
   // The true knee hinge solves the straight-legged mounted silhouette. Its
   // overlapping cloth cuff hides the joint when walking or bent in the saddle.
   const knee=new THREE.Group();
