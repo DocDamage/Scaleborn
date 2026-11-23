@@ -6,7 +6,8 @@ import { createRiderTailRig } from './riderTailRig';
 import { installSleeveCreaseMorph } from './riderSleeveCloth';
 import { installRiderUpperBody } from './riderUpperBodyRig';
 import { installRiderFaceMorphs } from './riderFaceMorph';
-import { makeRiderHairLock } from './riderHairSculpt';
+import { makeRiderHairLock, makeRiderHairFringe } from './riderHairSculpt';
+import { riderFaceRelief } from './riderFaceRelief';
 import { installRiderKneeClothMorph } from './riderKneeCloth';
 import { installRiderCoatWaistMorph } from './riderCoatWaist';
 
@@ -61,8 +62,11 @@ function shapedTorso(
         : region==='coat' ? coatPleat : .0022*Math.sin(angle*7+t*19);
       // Fitted weathered coat, not an evenly extruded tube.
       const hem=region==='coat' ? -.013*coatFall*Math.cos(angle*4) : 0;
+      // The eye orbit, brow ridge, bridge and cheek are part of one
+      // continuous surface, not separate pasted-on facial primitives.
+      const relief=region==='face'?riderFaceRelief(y,nx,Math.sin(angle)):0;
       positions.push(nx*(width+r)*(1-.033*jaw),
-        y+hem,centerZ+Math.sin(angle)*(depth+r)-cheek*.013);
+        y+hem,centerZ+Math.sin(angle)*(depth+r)-cheek*.013+relief);
       uvs.push(j/radial,t);
       if(i<samples&&j<radial) {
         const base=i*(radial+1)+j,next=base+radial+1;
@@ -313,6 +317,7 @@ export function makeScalebornRider():THREE.Group {
     [1.40,.169,.142,.034],[1.46,.172,.149,.048],
     [1.50,.126,.123,.052],[1.525,.036,.059,.051],
   ],hair,'rider.crown',18));
+  rest.add(makeRiderHairFringe(hair));
   for(const side of [-1,1] as const){
     smallEye(rest,side,shadowSkin,eyes,irises,hair);
     // Four thin layered strands replace the old single rigid hair tube.

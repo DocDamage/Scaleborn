@@ -71,3 +71,30 @@ export function poseRiderHairLocks(
     lock.rotation.set(p.pitch,p.yaw,p.roll);
   }
 }
+
+/**
+ * Break up the original heroine's overly uniform dark crown at the forehead.
+ * Six fine swept locks are grown from inside her existing hairline. They end
+ * above the animated brows, preserve the small swept horns, and follow the
+ * same head joint during walking, swimming and riding.
+ */
+export function makeRiderHairFringe(material:THREE.Material):THREE.Group {
+  const fringe=new THREE.Group();
+  fringe.name='rider.hair-fringe';
+  for(const side of [-1,1] as const){
+    for(let i=0;i<3;i++){
+      const x=side*(.026+i*.037);
+      const sweep=side*(.011+i*.005);
+      const strand=new THREE.Mesh(taperedSpine([
+        [x,1.478,-.098],
+        [x+sweep*.34,1.452,-.124],
+        [x+sweep*.75,1.428,-.139],
+        [x+sweep,1.402+i*.012,-.137],
+      ],.020-i*.003,10,24),material);
+      strand.name='rider.fringe.'+(side<0?'left':'right')+'.'+i;
+      strand.castShadow=true;
+      fringe.add(strand);
+    }
+  }
+  return fringe;
+}
