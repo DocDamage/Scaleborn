@@ -98,9 +98,12 @@ export function paintRiderSkinMaps(size=128):RiderSkinMaps {
   };
 }
 
+// One shared immutable texture triplet for repeated model/preview instances.
+const sharedRiderSkinMaps=paintRiderSkinMaps();
+
 /** Keep portrait skin relatively matte; no clearcoat or metallic sheen. */
 export function makeRiderSkinMaterial(
-  maps:RiderSkinMaps=paintRiderSkinMaps(),
+  maps:RiderSkinMaps=sharedRiderSkinMaps,
   color=0xbc947e,
 ):THREE.MeshStandardMaterial {
   const material=new THREE.MeshStandardMaterial({
