@@ -18,6 +18,7 @@ import { riderUpperBodyPose } from '../rider/riderUpperBodyRig';
 import { poseRiderFaceMorphs } from '../rider/riderFaceMorph';
 import { poseRiderHairLocks } from '../rider/riderHairSculpt';
 import { poseRiderKneeCloth } from '../rider/riderKneeCloth';
+import { poseRiderCoatWaist } from '../rider/riderCoatWaist';
 import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
 import { dragonExpression } from './dragonExpression';
 import { createDragonLegSculpt } from './limbSculpt';
@@ -112,6 +113,7 @@ export class DragonVisual {
   private readonly riderHairLeft = this.rider.getObjectByName('rider.hair-lock.left') as THREE.Group;
   private readonly riderHairRight = this.rider.getObjectByName('rider.hair-lock.right') as THREE.Group;
   private readonly riderSpine = this.rider.getObjectByName('rider.spine') as THREE.Group;
+  private readonly riderCoat = this.rider.getObjectByName('rider.fitted-coat') as THREE.Mesh;
   private readonly riderEyes = ([-1,1] as const).map(side => {
     const suffix=side<0?'left':'right';
     return {
@@ -425,6 +427,8 @@ export class DragonVisual {
     const upperPose = riderUpperBodyPose(state,riderMotion,pose.riderLean);
     this.riderSpine.rotation.set(
       upperPose.spinePitch,upperPose.spineYaw,upperPose.spineBank);
+    poseRiderCoatWaist(this.riderCoat,
+      upperPose.spinePitch,upperPose.spineBank);
     const riderFace = riderFacialPose(state,riderMotion);
     poseRiderFaceMorphs(this.riderFaceSurface,
       riderFace.cheekLift,riderFace.faceFocus);
