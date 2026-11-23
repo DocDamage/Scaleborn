@@ -8,6 +8,7 @@ import { installRiderUpperBody } from './riderUpperBodyRig';
 import { installRiderFaceMorphs } from './riderFaceMorph';
 import { makeRiderHairLock } from './riderHairSculpt';
 import { installRiderKneeClothMorph } from './riderKneeCloth';
+import { installRiderCoatWaistMorph } from './riderCoatWaist';
 
 /**
  * Original adolescent dragon-human heroine. Her slender coastal-traveller
@@ -264,12 +265,14 @@ export function makeScalebornRider():THREE.Group {
   head.add(rest);
   group.add(head);
 
-  group.add(shapedTorso([
+  const coatBody=shapedTorso([
     [.56,.172,.130,.020],[.65,.177,.138,.014],
     [.78,.151,.127,.004],[.88,.163,.132,-.002],
     [.995,.186,.137,-.006],[1.075,.200,.141,-.009],
     [1.16,.130,.106,-.020],
-  ],coat,'rider.fitted-coat',42,28,'coat'));
+  ],coat,'rider.fitted-coat',42,28,'coat');
+  installRiderCoatWaistMorph(coatBody);
+  group.add(coatBody);
   // Narrow original cloth lapels hug the collar-to-chest seam.
   for(const side of [-1,1] as const) {
     const lapel=new THREE.Mesh(taperedSpine([
