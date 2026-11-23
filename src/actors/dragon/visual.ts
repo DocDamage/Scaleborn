@@ -52,11 +52,14 @@ const enamel=new THREE.MeshStandardMaterial({
   color:0xaeb3ae,roughness:.78,metalness:0.01,
 });
 const iris = new THREE.MeshStandardMaterial({
-  color: 0x76b1a2, emissive: 0x1c433d, emissiveIntensity: 0.12, roughness: 0.64,
+  // Muted sea-glass iris under reptilian brows, not the bright cyan discs
+  // exposed by real mounted giant-form portraits.
+  color: 0x477b73, emissive: 0x102b2a, emissiveIntensity: 0.055,
+  roughness: 0.74,
 });
 const pupil = new THREE.MeshStandardMaterial({ color: 0x102329, roughness: 0.35 });
 const glimmer = new THREE.MeshStandardMaterial({
-  color: 0xe3f8e3, emissive: 0x648b84, emissiveIntensity: 0.10,
+  color: 0xa8c9be, emissive: 0x3a5a54, emissiveIntensity: 0.045,
 });
 
 function ellipsoid(parent: THREE.Group, material: THREE.Material,
@@ -185,14 +188,14 @@ export class DragonVisual {
     this.head.add(this.jawPivot);
     for (const side of [-1, 1]) {
       const irisMesh=makeOnyxEyeLens(this.head,side as -1|1,iris,
-        [side*.59,.20,-.35],[.110,.158,.16]);
+        [side*.59,.20,-.35],[.092,.128,.145]);
       irisMesh.name='creature.dragon.eye.iris.'+(side<0?'left':'right');
       // The vertical slit remains a separately animated named part.
       const pupilMesh=ellipsoid(this.head,pupil,
-        [side*.595,.21,-.398],[.032,.103,.025],14);
+        [side*.595,.21,-.398],[.027,.084,.019],14);
       pupilMesh.name='creature.dragon.eye.pupil.'+(side<0?'left':'right');
       const glint=ellipsoid(this.head,glimmer,
-        [side*.623,.273,-.423],[.014,.020,.013],10);
+        [side*.623,.273,-.423],[.010,.013,.009],10);
       glint.name='creature.dragon.eye.glint.'+(side<0?'left':'right');
       // Painted brow and upper lid are independent, moveable anatomical
       // surfaces. A blink no longer makes just the dark pupil disappear.
@@ -229,10 +232,10 @@ export class DragonVisual {
       this.head.add(upperLip);
       // Distinctive backward-swept paired horn and cartilage fin-crests.
       const horn=new THREE.Mesh(taperedSpine([
-        [side*.36,.40,.27],[side*.445,.58,.40],
-        [side*.51,.72,.64],[side*.575,.785,.91],
-        [side*.61,.775,1.12],
-      ],.138,14),ridges);
+        [side*.36,.40,.27],[side*.445,.54,.40],
+        [side*.51,.66,.64],[side*.575,.710,.91],
+        [side*.61,.690,1.12],
+      ],.108,14),ridges);
       horn.name=side<0?'creature.dragon.horn.left':'creature.dragon.horn.right';
       this.head.add(horn);
       const crestPivot=new THREE.Group();
@@ -407,9 +410,9 @@ export class DragonVisual {
     const face=dragonExpression(state,pose);
     this.jawPivot.rotation.x=-face.jawAngle;
     for(const eye of this.eyes){
-      eye.iris.scale.y=.158*face.eyeOpen;
-      eye.pupil.scale.y=.103*face.eyeOpen;
-      eye.glint.scale.y=.020*face.eyeOpen;
+      eye.iris.scale.y=.128*face.eyeOpen;
+      eye.pupil.scale.y=.084*face.eyeOpen;
+      eye.glint.scale.y=.013*face.eyeOpen;
       eye.pupil.position.z=-.398+face.pupilShift*.045;
       eye.glint.position.y=.273-(1-face.eyeOpen)*.020;
       eye.lid.position.y=-(1-face.eyeOpen)*.10;
