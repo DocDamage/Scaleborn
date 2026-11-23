@@ -19,7 +19,7 @@ export function stageCharacterPortrait(
   const x = -521, z = -104;
   const airborne=pose==='flight-rideable';
   const form = airborne ? 'rideable'
-    : ['rider','rider-side','rider-face','rider-tail'].includes(pose) ? 'small'
+    : pose === 'rider' || pose === 'rider-side' || pose === 'rider-face' || pose === 'rider-tail' ? 'small'
     : pose === 'mounted-rideable' || pose === 'mounted-rideable-side'
       ? 'rideable' : pose === 'mounted-giant' || pose === 'mounted-giant-side'
         ? 'giant' : pose;
