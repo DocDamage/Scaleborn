@@ -64,9 +64,19 @@ try {
     document.querySelector('#focus-name')?.textContent==='RIDER');
   await page.waitForTimeout(400);
   await captureQaScreenshot(page, {path:'artifacts/characters-hybrid-hero.png',timeout:120000});
+  // Actual WebGL close-up of the child's own face/skin material. This is
+  // required for checking texture UV detail, brow/eye scale and horn roots.
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('rider-face'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-hybrid-hero-face.png',timeout:120000});
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('rider-side'));
   await page.waitForTimeout(350);
   await captureQaScreenshot(page, {path:'artifacts/characters-hybrid-hero-side.png',timeout:120000});
+  // Original skinned hybrid tail and cloth viewed from behind the flank;
+  // the same runtime meshes and pivots are used by swimming and mounting.
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('rider-tail'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-hybrid-hero-tail.png',timeout:120000});
   await page.evaluate(() => window.__scalebornQaCharacterGameplay('rider'));
   await page.waitForTimeout(350);
   await captureQaScreenshot(page, {path:'artifacts/characters-rider-gameplay.png',timeout:120000});
