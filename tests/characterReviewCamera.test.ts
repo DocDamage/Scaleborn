@@ -100,6 +100,26 @@ describe('real-character close-up visual acceptance cameras', () => {
       new THREE.Vector3(state.riderX,state.riderY+.69,state.riderZ+.36));
     expect(tailDistance).toBeLessThan(2.6);
   });
+  it('stages real walking Onyx and banked mounted rider art checks',()=>{
+    const state=newFlightState();
+    const camera=new THREE.PerspectiveCamera(71,16/9,.2,6500);
+    expect(stageCharacterPortrait(state,'walk-rideable',heightAt)).toBe('dragon');
+    expect(state.form).toBe('rideable');
+    expect(state.mode).toBe('ground');
+    expect(state.speed).toBeGreaterThan(.3);
+    expect(state.transition).toBeNull();
+    poseCharacterPortraitCamera(camera,state,'dragon',heightAt);
+    expect(camera.position.distanceTo(
+      new THREE.Vector3(state.x,state.y,state.z))).toBeLessThan(9);
+    expect(stageCharacterPortrait(state,'bank-rideable',heightAt)).toBe('mounted-side');
+    expect(state.form).toBe('rideable');
+    expect(state.speed).toBe(0);
+    expect(state.roll).toBeCloseTo(.35,6);
+    poseCharacterPortraitCamera(camera,state,'mounted-side',heightAt);
+    expect(camera.fov).toBe(45);
+    expect(camera.position.y).toBeGreaterThan(state.y);
+    expect(camera.position.x).toBeGreaterThan(state.x);
+  });
   it('stages a genuine open-wing rideable air pose in the normal game scene',()=>{
     const state=newFlightState();
     const camera=new THREE.PerspectiveCamera(71,16/9,.2,6500);
