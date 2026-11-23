@@ -13,6 +13,7 @@ import { ImportedCharacterRig, type CharacterKind, type CharacterModelFile } fro
 import { loftDragon, ONYX_TORSO, ONYX_HEAD, onyxDorsalY, taperedSpine, sculptFin } from './organicSculpt';
 import { makeScalebornRider } from '../rider/heroSculpt';
 import { poseRiderTail } from '../rider/riderTailRig';
+import { poseSleeveCrease } from '../rider/riderSleeveCloth';
 import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
 import { dragonExpression } from './dragonExpression';
 import { createDragonLegSculpt } from './limbSculpt';
@@ -122,6 +123,10 @@ export class DragonVisual {
     rightKnee: this.rider.getObjectByName('rider.rightKnee') as THREE.Group,
     leftAnkle: this.rider.getObjectByName('rider.leftAnkle') as THREE.Group,
     rightAnkle: this.rider.getObjectByName('rider.rightAnkle') as THREE.Group,
+  };
+  private readonly riderSleeves = {
+    left:this.riderLimbs.leftArm.getObjectByName('rider.sleeve') as THREE.Mesh,
+    right:this.riderLimbs.rightArm.getObjectByName('rider.sleeve') as THREE.Mesh,
   };
   private readonly legs: Array<{
     group: THREE.Group; foot: THREE.Group; diagonal: boolean;
@@ -423,6 +428,8 @@ export class DragonVisual {
     this.riderLimbs.rightLeg.rotation.z = riderMotion.legSpread;
     this.riderLimbs.leftElbow.rotation.x = riderMotion.leftElbow;
     this.riderLimbs.rightElbow.rotation.x = riderMotion.rightElbow;
+    poseSleeveCrease(this.riderSleeves.left,riderMotion.leftElbow);
+    poseSleeveCrease(this.riderSleeves.right,riderMotion.rightElbow);
     this.riderLimbs.leftWrist.rotation.x = riderMotion.leftWrist;
     this.riderLimbs.rightWrist.rotation.x = riderMotion.rightWrist;
     this.riderLimbs.leftKnee.rotation.x = riderMotion.leftKnee;
