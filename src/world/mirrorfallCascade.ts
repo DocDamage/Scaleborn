@@ -10,10 +10,8 @@ import { createCascadeFilaments } from './waterfallFilaments';
 import { createCascadeVeilGeometry } from './cascadeVeils';
 import { WaterfallMist } from './waterfallMist';
 import { WaterfallFallSpray } from './waterfallFallSpray';
-import { waterfallCenterXAt } from './waterfallTrajectory';
 
 const plungeX=MIRRORFALL_IMPACT.x;
-const down=MIRRORFALL.topY-GRAND_LAKE.surfaceY;
 const gravity=9.81;
 
 /** Match ballistic-spray contact with the rendered lake, not a static plane.
