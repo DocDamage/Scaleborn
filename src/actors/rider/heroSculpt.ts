@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { taperedSpine } from '../dragon/organicSculpt';
 import { makeRiderFabricTextures } from './riderFabric';
+import { makeRiderSkinMaterial } from './riderSkinSurface';
 import { createRiderTailRig } from './riderTailRig';
 
 /**
@@ -226,7 +227,7 @@ export function makeScalebornRider():THREE.Group {
   group.userData.assetId='character.rider.hero';
   group.userData.scalebornDesign='scaleborn.hero.design.v1';
 
-  const warmSkin=material(0xbc947e,.86);
+  const warmSkin=makeRiderSkinMaterial();
   const shadowSkin=material(0x987d7a,.89);
   const cloakMat=woven(0x453d5f,.95);
   cloakMat.side=THREE.DoubleSide;
