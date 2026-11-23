@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { taperedSpine, sculptFin } from '../dragon/organicSculpt';
+import { taperedSpine } from '../dragon/organicSculpt';
 import { makeRiderFabricTextures } from './riderFabric';
+import { createRiderTailRig } from './riderTailRig';
 
 /**
  * Original adolescent dragon-human heroine. Her slender coastal-traveller
@@ -385,15 +386,8 @@ export function makeScalebornRider():THREE.Group {
   cloak.name='rider.travel-cloak';
   group.add(cloak);
 
-  const tail=new THREE.Group();
-  tail.name='rider.tail';
-  tail.position.set(0,.71,.11);
-  tail.add(new THREE.Mesh(taperedSpine([
-    [0,0,0],[0,-.13,.19],[0,-.24,.44],
-    [.09,-.21,.68],[.08,-.16,.92],
-  ],.092,12),scale));
-  tail.add(sculptFin([.08,-.16,.82],[.15,-.10,1.08],
-    .19,cloakMat,'rider.tail-tip'));
-  group.add(tail);
+  // The original draconic tail is now one skinned surface with a moving
+  // mid-joint, tip and inherited fin, retaining its old root coordinates.
+  group.add(createRiderTailRig(scale,cloakMat).root);
   return group;
 }
