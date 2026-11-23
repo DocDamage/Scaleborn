@@ -12,6 +12,7 @@ import { CHARACTER_MODEL_SOURCES, loadCharacterModel } from './characterSources'
 import { ImportedCharacterRig, type CharacterKind, type CharacterModelFile } from '../rider/importedCharacterRig';
 import { loftDragon, ONYX_TORSO, ONYX_HEAD, onyxDorsalY, taperedSpine, sculptFin } from './organicSculpt';
 import { makeScalebornRider } from '../rider/heroSculpt';
+import { poseRiderTail } from '../rider/riderTailRig';
 import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
 import { dragonExpression } from './dragonExpression';
 import { createDragonLegSculpt } from './limbSculpt';
@@ -90,7 +91,11 @@ export class DragonVisual {
   }> = [];
   private readonly crests:THREE.Group[] = [];
   private readonly jawPivot=new THREE.Group();
-  private readonly riderTail = this.rider.getObjectByName('rider.tail') as THREE.Group;
+  private readonly riderTail = {
+    root:this.rider.getObjectByName('rider.tail') as THREE.Group,
+    mid:this.rider.getObjectByName('rider.tail.mid') as THREE.Bone,
+    tip:this.rider.getObjectByName('rider.tail.end') as THREE.Bone,
+  };
   private readonly riderMouth = this.rider.getObjectByName('rider.mouth') as THREE.Mesh;
   private readonly riderHead = this.rider.getObjectByName('rider.head') as THREE.Group;
   private readonly riderEyes = ([-1,1] as const).map(side => {
@@ -426,10 +431,7 @@ export class DragonVisual {
     this.riderLimbs.rightKnee.rotation.z = riderMotion.kneeSpread;
     this.riderLimbs.leftAnkle.rotation.x = riderMotion.leftAnkle;
     this.riderLimbs.rightAnkle.rotation.x = riderMotion.rightAnkle;
-    this.riderTail.rotation.y=Math.sin(state.time*2.15)*.12
-      +(state.form==='small' ? Math.sin(state.time*.66)*.08 : state.roll*.16);
-    this.riderTail.rotation.x=state.riderMode==='underwater'
-      ? Math.sin(state.time*4.1)*.22 : -.04;
+    poseRiderTail(this.riderTail,state,riderMotion);
     if (state.form === 'small') {
       if (this.scene && this.rider.parent !== this.scene) this.scene.add(this.rider);
       this.rider.position.set(
