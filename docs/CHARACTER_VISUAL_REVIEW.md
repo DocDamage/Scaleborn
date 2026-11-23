@@ -271,3 +271,46 @@ exact branch head, inspect cheek/iris alignment, UV seams, cloth morph
 shading, teeth clipping at rest and during opening, close tail views, and
 every form/saddle silhouette. An RTX 3060 hardware profile and user art
 sign-off are still required. Keep PR #15 draft and unmerged.
+
+
+### Next original character animation batch — articulated spine, face and moving silhouettes
+
+The current integration branch includes original working render-geometry changes:
+
+- `76b67b0`, `c6c3a9e`, `6b4dcd0`, `31b651d`,
+  `c1fbe1a`: fitted heroine torso, head, arms and cloak now share a
+  render-only thoracic pivot at the original 0.81 m body height. Equal
+  and opposite rest offsets preserve existing child-coordinate placement;
+  the tail and both thighs stay attached to the pelvis. A bounded upper-body
+  pose redistributes lean and bank between pelvis and thoracic hinge while
+  retaining original flight-launch bracing and mount/small-form transitions.
+- `6503a7e`, `c210899`, `909bd40`, `50af30e`,
+  `433b53c`: cheek-lift and attentive-brow shape keys deform the original
+  continuous adolescent face geometry with correct paired morph normals.
+  Actual face motion is driven by her existing idle, walk, swim/dive and
+  mounted state; the original nose, small almond eyes, swept hybrid horns,
+  child proportions and 1.52 m character-size contract remain intact.
+- `a40e429`, `615b244`, `0709710`, `5503eb4`,
+  `0e544c0`: each of Onyx's four anatomical lofted fore/hind limbs now
+  uses two subtle animated muscle-compression targets with baked normals.
+  The actual hip/paw joints are unchanged and root/ankle cap vertices stay
+  fixed. This is a visual hock-flex improvement, **not** IK or a new
+  collision/gameplay system.
+- `e656493`, `7f33aa0`, `44c7eab`, `ba1a026`:
+  the original young hybrid's heavy rigid side hair pieces have been replaced
+  with four small tapered, layered locks per side under the existing horns.
+  Tiny head-local sway responds to walking, swimming and banking without
+  changing facial parts, age proportions, head attachments or player input.
+- `050248f`, `d73463d`, `8b66cad`, `90cb8f2`:
+  real DEV-only Playwright capture presets now also render Onyx walking
+  (`characters-onyx-walk.png`) and the rider banked on his rideable form
+  (`characters-rider-banked-spine.png`). These images use the live
+  gameplay scene and original rig, not generated concept images.
+
+**Art gate remains BLOCKING.** The source has focused deterministic
+regression tests but full `npm run check`, latest actual-game Chromium
+captures, clipping/lighting review for new morphs, and target RTX 3060
+performance measurements have not been independently confirmed here.
+Inspect the child's face/mouth/hair, spine/cloth seam and Onyx's four paws
+at rest, mid-stride, swimming, mount transitions and flight before approval.
+Keep PR #15 **DRAFT and UNMERGED** until actual in-engine signoff.
