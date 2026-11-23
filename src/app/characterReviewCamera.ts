@@ -5,7 +5,8 @@ import { FORMS, type DragonForm } from '../actors/dragon/forms';
 export type PortraitSubject = 'dragon' | 'rider' | 'mounted' | 'rider-side' | 'mounted-side' | 'rider-face' | 'rider-tail';
 export type PortraitPose = DragonForm | 'rider' | 'rider-side' | 'rider-face' | 'rider-tail' | 'flight-rideable'
   | 'mounted-rideable' | 'mounted-giant'
-  | 'mounted-rideable-side' | 'mounted-giant-side';
+  | 'mounted-rideable-side' | 'mounted-giant-side'
+  | 'walk-rideable' | 'bank-rideable';
 
 /**
  * Repeatable *development-only* character art review position. The open
@@ -18,9 +19,12 @@ export function stageCharacterPortrait(
 ): PortraitSubject {
   const x = -521, z = -104;
   const airborne=pose==='flight-rideable';
+  const walking=pose==='walk-rideable';
+  const banking=pose==='bank-rideable';
   const form = airborne ? 'rideable'
     : pose === 'rider' || pose === 'rider-side' || pose === 'rider-face' || pose === 'rider-tail' ? 'small'
     : pose === 'mounted-rideable' || pose === 'mounted-rideable-side'
+      || walking || banking
       ? 'rideable' : pose === 'mounted-giant' || pose === 'mounted-giant-side'
         ? 'giant' : pose;
   state.x = x;
@@ -31,9 +35,9 @@ export function stageCharacterPortrait(
   state.transition = null;
   state.controlTarget = ['rider','rider-side','rider-face','rider-tail'].includes(pose)
     ? 'rider' : 'dragon';
-  state.speed = airborne?FORMS[form].cruise:0;
+  state.speed = airborne?FORMS[form].cruise:walking?3.8:0;
   state.pitch = airborne?.035:0;
-  state.roll = 0;
+  state.roll = banking?.35:0;
   state.yaw = 0;
   state.riderX = x + 2.8;
   state.riderZ = z;
@@ -45,7 +49,7 @@ export function stageCharacterPortrait(
   if (pose === 'rider-side') return 'rider-side';
   if (pose === 'rider-face') return 'rider-face';
   if (pose === 'rider-tail') return 'rider-tail';
-  if (pose === 'mounted-rideable-side' || pose === 'mounted-giant-side')
+  if (pose === 'mounted-rideable-side' || pose === 'mounted-giant-side' || banking)
     return 'mounted-side';
   return pose === 'mounted-rideable' || pose === 'mounted-giant'
     ? 'mounted' : state.controlTarget;
