@@ -18,7 +18,10 @@ describe('adolescent rider bend-responsive original garment',()=>{
         expect(arm.getObjectByName('rider.'+side+'Elbow')).toBeInstanceOf(THREE.Group);
         const p=sleeve.geometry.getAttribute('position');
         const fold=sleeve.geometry.morphAttributes.position?.[0];
+        const foldNormals=sleeve.geometry.morphAttributes.normal?.[0];
         expect(fold).toBeDefined();
+        expect(foldNormals).toBeDefined();
+        expect(foldNormals!.count).toBe(p.count);
         expect(fold!.count).toBe(p.count);
         expect(sleeve.geometry.morphTargetsRelative).toBe(false);
         expect(sleeve.morphTargetInfluences).toHaveLength(1);
@@ -29,7 +32,8 @@ describe('adolescent rider bend-responsive original garment',()=>{
             p.getX(i)-fold!.getX(i),
             p.getY(i)-fold!.getY(i),
             p.getZ(i)-fold!.getZ(i));
-          expect([fold!.getX(i),fold!.getY(i),fold!.getZ(i)]
+          expect([fold!.getX(i),fold!.getY(i),fold!.getZ(i),
+            foldNormals!.getX(i),foldNormals!.getY(i),foldNormals!.getZ(i)]
             .every(Number.isFinite)).toBe(true);
           maxDisplacement=Math.max(maxDisplacement,delta);
           if(p.getY(i)<-.24&&p.getY(i)>-.36)motion=Math.max(motion,delta);
