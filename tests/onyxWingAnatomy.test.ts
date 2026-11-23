@@ -29,6 +29,45 @@ describe('Onyx original shoulder tendons and arched finger-bone wings',()=>{
       }
     }
   });
+  it('uses thin, tapered organic cartilage instead of round mechanical spars',()=>{
+    for(const side of [-1,1] as const){
+      const rig=createWingRig(side);
+      try{
+        for(const [index,bone] of [rig.shoulder,rig.elbow,rig.tip].entries()){
+          const mesh=bone.getObjectByName('creature.dragon.wing-finger.'+index) as THREE.Mesh;
+          const geometry=mesh.geometry;
+          const p=geometry.getAttribute('position'),normal=geometry.getAttribute('normal');
+          const uv=geometry.getAttribute('uv');
+          expect(p.count).toBe(41*15);
+          expect(uv.count).toBe(p.count);
+          expect(geometry.index?.count).toBe(40*14*6);
+          expect(geometry.boundingSphere?.radius).toBeGreaterThan(0);
+          const ring=(index:number):{height:number;width:number}=>{
+            const y:number[]=[],z:number[]=[];
+            for(let j=0;j<15;j++){
+              y.push(p.getY(index*15+j));
+              z.push(p.getZ(index*15+j));
+            }
+            return {
+              height:Math.max(...y)-Math.min(...y),
+              width:Math.max(...z)-Math.min(...z),
+            };
+          };
+          const middle=ring(14),tip=ring(40);
+          expect(middle.height).toBeLessThan(middle.width*.7);
+          expect(tip.width).toBeLessThan(middle.width*.09);
+          expect(tip.height).toBeLessThan(middle.height*.09);
+          for(let i=0;i<p.count;i++){
+            expect([p.getX(i),p.getY(i),p.getZ(i),
+              normal.getX(i),normal.getY(i),normal.getZ(i)]
+              .every(Number.isFinite)).toBe(true);
+          }
+        }
+      }finally{
+        rig.root.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose();});
+      }
+    }
+  });
   it('folds wings rearward across the torso instead of only lowering them',()=>{
     for(const side of [-1,1] as const){
       const rig=createWingRig(side);
