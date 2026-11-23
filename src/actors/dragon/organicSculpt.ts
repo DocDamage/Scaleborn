@@ -138,6 +138,35 @@ export function onyxDorsalY(z: number): number {
   return cy+ry+pattern+ridge+onyxSurfaceOffset('torso',sampleZ,0,1).y;
 }
 
+/**
+ * Upper half of the original torso loft at an arbitrary lateral point.
+ * Cloth contacts this exact cross-section in Onyx model space instead of
+ * a fixed world-height plane. Outside the torso silhouette there is no
+ * obstruction, allowing the rider's cloak to fall freely over the flank.
+ * This never alters collision, actor transforms, or the procedural mesh.
+ */
+export function onyxBackSurfaceY(x:number,z:number):number|null {
+  const first=ONYX_TORSO[0]![0],last=ONYX_TORSO[ONYX_TORSO.length-1]![0];
+  if(!Number.isFinite(x)||!Number.isFinite(z)||z<first||z>last)return null;
+  let low=0,high=1;
+  for(let i=0;i<28;i++){
+    const mid=(low+high)*.5;
+    if(sampleSection(ONYX_TORSO,mid)[0]<z)low=mid;
+    else high=mid;
+  }
+  const t=(low+high)*.5;
+  const [sampleZ,cy,rx,ry]=sampleSection(ONYX_TORSO,t);
+  if(Math.abs(x)>=rx)return null;
+  const nx=x/rx;
+  const ny=Math.sqrt(Math.max(0,1-nx*nx));
+  const a=Math.atan2(ny,nx);
+  const pattern=.007*Math.sin(a*16+sampleZ*19)
+    *Math.sin(a*8-sampleZ*31);
+  const ridge=Math.pow(ny,12)*.025*(1-t);
+  return cy+ny*(ry+pattern)+ridge
+    +onyxSurfaceOffset('torso',sampleZ,nx,ny).y;
+}
+
 /** Tapering tubular crests, curled horns, tail-fins, claws and tendrils. */
 export function taperedSpine(
   points: readonly (readonly [number,number,number])[],
