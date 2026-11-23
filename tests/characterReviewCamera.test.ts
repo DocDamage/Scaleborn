@@ -79,6 +79,27 @@ describe('real-character close-up visual acceptance cameras', () => {
       expect(camera.fov).toBe(subject==='rider-side'?40:45);
     }
   });
+  it('frames real heroine skin and skinned-tail detail at distinct close camera ranges',()=>{
+    const state=newFlightState();
+    const camera=new THREE.PerspectiveCamera(71,16/9,.2,6500);
+    expect(stageCharacterPortrait(state,'rider-face',heightAt)).toBe('rider-face');
+    expect(state.form).toBe('small');
+    expect(state.controlTarget).toBe('rider');
+    poseCharacterPortraitCamera(camera,state,'rider-face',heightAt);
+    const faceDistance=camera.position.distanceTo(
+      new THREE.Vector3(state.riderX,state.riderY+1.35,state.riderZ-.02));
+    expect(faceDistance).toBeLessThan(2.2);
+    expect(camera.fov).toBe(36);
+    expect(camera.position.y).toBeGreaterThan(state.riderY+1.15);
+    expect(stageCharacterPortrait(state,'rider-tail',heightAt)).toBe('rider-tail');
+    poseCharacterPortraitCamera(camera,state,'rider-tail',heightAt);
+    expect(camera.fov).toBe(40);
+    expect(camera.position.x).toBeGreaterThan(state.riderX+1.6);
+    expect(camera.position.y).toBeGreaterThan(heightAt(camera.position.x,camera.position.z)+.8);
+    const tailDistance=camera.position.distanceTo(
+      new THREE.Vector3(state.riderX,state.riderY+.69,state.riderZ+.36));
+    expect(tailDistance).toBeLessThan(2.6);
+  });
   it('stages a genuine open-wing rideable air pose in the normal game scene',()=>{
     const state=newFlightState();
     const camera=new THREE.PerspectiveCamera(71,16/9,.2,6500);
