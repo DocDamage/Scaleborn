@@ -18,7 +18,9 @@ export function stageCharacterPortrait(
   height: (x: number, z: number) => number,
 ): PortraitSubject {
   const x = -521, z = -104;
-  const airborne=pose==='flight-rideable';
+  // The banked saddle pose is a real flying turn, not a forced 20-degree
+  // sideways roll while Onyx is planted on level terrain.
+  const airborne=pose==='flight-rideable'||pose==='bank-rideable';
   const walking=pose==='walk-rideable';
   const banking=pose==='bank-rideable';
   const form = airborne ? 'rideable'
