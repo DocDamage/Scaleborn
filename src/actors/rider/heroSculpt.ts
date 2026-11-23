@@ -3,6 +3,7 @@ import { taperedSpine } from '../dragon/organicSculpt';
 import { makeRiderFabricTextures } from './riderFabric';
 import { makeRiderSkinMaterial } from './riderSkinSurface';
 import { createRiderTailRig } from './riderTailRig';
+import { installSleeveCreaseMorph } from './riderSleeveCloth';
 
 /**
  * Original adolescent dragon-human heroine. Her slender coastal-traveller
@@ -136,6 +137,7 @@ function createRiderArm(
     [-.13,.083,.089,-.018],[-.25,.075,.084,-.032],
     [-.355,.063,.073,-.044],
   ],coat,'rider.sleeve',34);
+  installSleeveCreaseMorph(sleeve);
   arm.add(sleeve);
   // Separate elbow pivot allows hands to brace in mounted flight without
   // turning the entire straight sleeve into a rigid diagonal plank.
