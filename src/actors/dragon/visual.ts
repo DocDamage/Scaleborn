@@ -18,6 +18,7 @@ import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
 import { dragonExpression } from './dragonExpression';
 import { createDragonLegSculpt } from './limbSculpt';
 import { makeOnyxEyeLens } from './eyeLens';
+import { sculptOnyxLowerJaw } from './onyxJawSculpt';
 import { RiderCloakMotion } from '../rider/cloakMotion';
 import { mountedRiderSeat } from '../rider/mountSeat';
 
@@ -41,6 +42,9 @@ const ridges = applyDragonScales(
   new THREE.MeshStandardMaterial({ color: 0x171f32, roughness: 0.74 }),
   scaleTextures,
 );
+const enamel=new THREE.MeshStandardMaterial({
+  color:0xaeb3ae,roughness:.78,metalness:0.01,
+});
 const iris = new THREE.MeshStandardMaterial({
   color: 0x76b1a2, emissive: 0x1c433d, emissiveIntensity: 0.12, roughness: 0.64,
 });
@@ -160,16 +164,9 @@ export class DragonVisual {
     skull.name='creature.dragon.onyx.sculpted-skull';
     skull.castShadow=true;
     this.head.add(skull);
-    const lowerJaw=new THREE.Mesh(loftDragon([
-      [-1.10,-.26,.08,.05],[-.85,-.29,.30,.115],
-      [-.56,-.24,.43,.14],[-.21,-.20,.39,.15],[.08,-.16,.18,.10],
-    ],42,26),highlight);
-    lowerJaw.name='creature.dragon.lower-jaw';
     this.jawPivot.name='creature.dragon.onyx.jaw-hinge';
     this.jawPivot.position.set(0,-.17,-.06);
-    // Keep the rest-sculpt coordinates while pivoting near the rear jaw.
-    lowerJaw.position.set(0,.17,.06);
-    this.jawPivot.add(lowerJaw);
+    this.jawPivot.add(sculptOnyxLowerJaw(highlight,skin,enamel));
     this.head.add(this.jawPivot);
     for (const side of [-1, 1]) {
       const irisMesh=makeOnyxEyeLens(this.head,side as -1|1,iris,
