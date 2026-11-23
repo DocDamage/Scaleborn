@@ -14,6 +14,7 @@ import { loftDragon, ONYX_TORSO, ONYX_HEAD, onyxDorsalY, taperedSpine, sculptFin
 import { makeScalebornRider } from '../rider/heroSculpt';
 import { poseRiderTail } from '../rider/riderTailRig';
 import { poseSleeveCrease } from '../rider/riderSleeveCloth';
+import { riderUpperBodyPose } from '../rider/riderUpperBodyRig';
 import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
 import { dragonExpression } from './dragonExpression';
 import { createDragonLegSculpt } from './limbSculpt';
@@ -103,6 +104,7 @@ export class DragonVisual {
   };
   private readonly riderMouth = this.rider.getObjectByName('rider.mouth') as THREE.Mesh;
   private readonly riderHead = this.rider.getObjectByName('rider.head') as THREE.Group;
+  private readonly riderSpine = this.rider.getObjectByName('rider.spine') as THREE.Group;
   private readonly riderEyes = ([-1,1] as const).map(side => {
     const suffix=side<0?'left':'right';
     return {
@@ -401,6 +403,9 @@ export class DragonVisual {
 
     this.importedDragon?.animateDragon(pose, dt);
     const riderMotion = riderPose(state);
+    const upperPose = riderUpperBodyPose(state,riderMotion,pose.riderLean);
+    this.riderSpine.rotation.set(
+      upperPose.spinePitch,upperPose.spineYaw,upperPose.spineBank);
     const riderFace = riderFacialPose(state,riderMotion);
     for(const feature of this.riderEyes){
       feature.white.scale.y=.018*riderFace.eyeOpen;
@@ -442,9 +447,9 @@ export class DragonVisual {
         state.riderX, state.riderY, state.riderZ,
       );
       this.rider.rotation.set(
-        riderMotion.torsoLean,
+        upperPose.pelvisPitch,
         -state.riderYaw,
-        state.riderMode === 'ground' ? 0 : Math.sin(state.time * 4.2) * 0.08,
+        upperPose.pelvisBank,
       );
       this.rider.visible = true;
     } else {
@@ -453,7 +458,7 @@ export class DragonVisual {
       // Both torso and saddle occupy the same world-space bobbing frame.
       // Previously the dragon walked through the fixed rider pelvis.
       this.rider.position.set(0,seat.y + this.body.position.y,seat.z);
-      this.rider.rotation.set(riderMotion.torsoLean, 0, pose.riderLean);
+      this.rider.rotation.set(upperPose.pelvisPitch, 0, upperPose.pelvisBank);
       this.rider.visible = true;
     }
   }
