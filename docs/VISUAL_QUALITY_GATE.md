@@ -1161,3 +1161,19 @@ mass-conserving or pressure-solved waterfall. Inspect the real browser side view
 for repetitive striping, transparent overlap, sheet thickness, and water/rock
 intersection before accepting it. Target-GPU profiling and actual WebGL
 appearance remain **unverified** in this source-only batch.
+
+### Mirrorfall scenic cliff relief (November 22, 2026)
+
+The supplemental waterfall rock wall now has deterministic geometric
+buttresses, winding erosion gullies, projected mineral bedding shelves and
+darkened damp recesses. It tracks the existing curved waterfall trajectory
+rather than the prior linear approximation. Its open central cleft, explicit
+6.75 m minimum centerline standoff, high/low geometry budgets, PBR rock map
+and wet-film overlay are preserved without new draw calls or changes to
+terrain collision, swimming, or lake height. Regression tests cover geometry
+finiteness, indexed opening topology, standoff, reproducibility, and material
+reuse. This is scenic relief, not a new gameplay collision surface.
+
+**Still blocking:** real rider-height and plunge-pool WebGL comparisons for
+rock/curtain overlap, sunset lighting and shader behavior, plus actual RTX 3060
+performance. Automated build and test checks were not run for this patch.
