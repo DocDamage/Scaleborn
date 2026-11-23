@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { makeOrganicLoft } from './organicLoft';
+import { installOnyxLegFlexMorph } from './onyxLegFlex';
 
 /** Sculpted anatomy is local to the existing hip socket: no collision or form-scale changes. */
 type Radius = readonly [number, number];
@@ -71,6 +72,7 @@ function sweptSurface(
 export interface DragonLegSculpt {
   group: THREE.Group;
   foot: THREE.Group;
+  flesh: THREE.Mesh;
 }
 
 /**
@@ -100,6 +102,7 @@ export function createDragonLegSculpt(
   flesh.name = 'creature.dragon.leg-surface';
   flesh.castShadow = true;
   flesh.receiveShadow = true;
+  installOnyxLegFlexMorph(flesh);
   group.add(flesh);
 
   const foot = new THREE.Group();
@@ -129,5 +132,5 @@ export function createDragonLegSculpt(
     foot.add(claw);
   }
   group.add(foot);
-  return { group, foot };
+  return { group, foot, flesh };
 }
