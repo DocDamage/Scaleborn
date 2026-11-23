@@ -433,8 +433,8 @@ export class DragonVisual {
     poseRiderFaceMorphs(this.riderFaceSurface,
       riderFace.cheekLift,riderFace.faceFocus);
     for(const feature of this.riderEyes){
-      feature.white.scale.y=.018*riderFace.eyeOpen;
-      feature.iris.scale.y=.014*riderFace.eyeOpen;
+      feature.white.scale.y=.013*riderFace.eyeOpen;
+      feature.iris.scale.y=.010*riderFace.eyeOpen;
       feature.upperLid.position.y=-(1-riderFace.eyeOpen)*.016;
       feature.brow.position.y=riderFace.browLift;
     }
