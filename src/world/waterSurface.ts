@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { GRAND_LAKE, lakeBoundaryScale } from './highlandLake';
+import { GRAND_LAKE } from './highlandLake';
+import { makeLakeShoreBreakGeometry } from './lakeShoreBreak';
 import { MIRRORFALL_IMPACT } from './waterDynamics';
 import { makeLakeBathymetry, BATHYMETRY_RANGE_METERS, LAKE_MAP_WIDTH, LAKE_MAP_HEIGHT } from './lakeBathymetry';
 import { SEA_LEVEL, WORLD_WIDTH_METERS } from './terrain';
@@ -219,12 +220,17 @@ const foamFrag=`
       sin(clamp(vFoamUv.y,0.0,1.0)*3.1415926)),1.35);
     float oceanCrest=pow(max(0.0,sin(vWorld.x*.85+vWorld.z*.59-
       uTime*2.8+noiseA*2.2)),2.0);
-    float lakeBands=pow(max(0.0,sin(vFoamUv.x*300.0-uTime*1.36
+    float lakeBands=pow(max(0.0,sin((vWorld.x*.085+vWorld.z*.112)-uTime*1.36
       +noiseA*2.7)),2.0);
     float pulse=mix(.17+.83*oceanCrest,.25+.75*lakeBands,uLakeStrip);
     vec3 foam=mix(vec3(.55,.78,.75),vec3(.97,.99,.93),
       clamp(wisps*.75+oceanCrest*.25,0.0,1.0));
-    float alpha=coastalFade*(.055+.47*wisps)*pulse;
+    // The lake's foam is now many separated short washes. Feather each
+    // short arc's ends; the ocean shader still uses its existing UVs.
+    float shorePatches=mix(1.0,
+      smoothstep(.0,.12,vFoamUv.x)*(1.0-smoothstep(.82,1.0,vFoamUv.x)),
+      uLakeStrip);
+    float alpha=coastalFade*(.055+.47*wisps)*pulse*shorePatches;
     gl_FragColor=vec4(foam,clamp(alpha,0.0,.58));
     #include <fog_fragment>
   }
@@ -364,24 +370,7 @@ export class LakeShoreFoam {
   readonly mesh: THREE.Mesh;
   private readonly material=makeFoamShader(true);
   constructor(){
-    const positions:number[]=[],uvs:number[]=[];
-    const n=720,ring=0.981;
-    for(let i=0;i<n;i++){
-      const a=(i/n)*Math.PI*2,b=((i+1)/n)*Math.PI*2;
-      const point=(angle:number, inward:number):[number,number,number]=>[
-        GRAND_LAKE.x+Math.cos(angle)*GRAND_LAKE.radiusX*(ring-inward)*lakeBoundaryScale(angle),
-        GRAND_LAKE.surfaceY+0.10,
-        GRAND_LAKE.z+Math.sin(angle)*GRAND_LAKE.radiusZ*(ring-inward)*lakeBoundaryScale(angle),
-      ];
-      const p0=point(a,0.0),p1=point(a,0.011),p2=point(b,0),p3=point(b,0.011);
-      positions.push(...p0,...p1,...p2,...p1,...p3,...p2);
-      const u0=i/n,u1=(i+1)/n;
-      uvs.push(u0,0,u0,1,u1,0,u0,1,u1,1,u1,0);
-    }
-    const geometry=new THREE.BufferGeometry();
-    geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-    geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
-    geometry.computeVertexNormals();
+    const geometry=makeLakeShoreBreakGeometry();
     this.mesh=new THREE.Mesh(geometry,this.material);
     this.mesh.name='water.azure.lake-shore-foam';
     this.mesh.renderOrder=3;

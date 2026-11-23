@@ -1095,3 +1095,24 @@ This is a bounded, stylized foam approximation, not CFD or verified water
 transport. Compare the actual high-quality rider-height and plunge camera
 captures for foam scale, excess brightness, shoreline clipping and GPU
 overdraw before granting visual acceptance.
+
+
+### Broken freshwater shoreline swash (shoreline visual batch)
+
+The former `LakeShoreFoam` submitted all 720 segments of an uninterrupted,
+constant-width lake perimeter band. This could read as a bright synthetic
+ellipse at ground height regardless of how noisy the fragment shader was.
+`lakeShoreBreak.ts` now assembles deterministic, separated, curved shore
+washes with length/width variation and tapered end geometry. The same indexed
+mesh remains a single draw, stays inside the shared irregular lake mask and
+rides the lake's four wind-wave bands and plunge ripple. Local longitudinal
+UVs feather patch tips; color pulses use stable world coordinates so each
+short ribbon does not repeat the same 300-cycle pattern. The ocean surf
+shader behavior is preserved, with underwater-side foam suppression.
+
+Regression tests cover indexed geometry budgets, stable placement, gaps,
+shoreline containment, inward taper, and shader wiring. This is still a
+stylized wave-break approximation; compare actual rider-height lakebank
+WebGL captures for bright aliasing, water/terrain edge intersection and
+moving crest timing before treating the art gate as passed. No full browser
+or target RTX 3060 GPU result is claimed from this source edit.

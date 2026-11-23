@@ -31,7 +31,9 @@ describe('Mirrorfall visual systems contract', () => {
       expect(lake.mesh.position.y).toBe(GRAND_LAKE.surfaceY);
       expect(ocean.mesh.position.y).toBe(0);
       expect(lake.mesh.geometry.getAttribute('position').count).toBeGreaterThan(10_000);
-      expect(shore.mesh.geometry.getAttribute('position').count).toBeGreaterThan(4000);
+      // The broken swash is indexed; fewer duplicated vertices, no full ring.
+      expect(shore.mesh.geometry.getAttribute('position').count).toBeGreaterThan(1000);
+      expect(shore.mesh.geometry.index?.count).toBeGreaterThan(3000);
       expect(lake.mesh.material).toBeInstanceOf(THREE.ShaderMaterial);
       const lakeShader=lake.mesh.material as THREE.ShaderMaterial;
       expect(lakeShader.uniforms.uBathymetry?.value)
