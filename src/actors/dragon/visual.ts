@@ -55,6 +55,45 @@ function ellipsoid(parent: THREE.Group, material: THREE.Material,
   return mesh;
 }
 
+/**
+ * A shallow, tapered eye surface that follows the skull's side, rather than a
+ * protruding ball. The medial height tapers to narrow reptilian corners and
+ * the very shallow corneal bulge catches light without cartoon globe volume.
+ * Scale remains driven by the existing expression/blink channels.
+ */
+function dragonEyeLens(parent: THREE.Group, side: -1 | 1,
+  material: THREE.Material, pos:[number,number,number],
+  scale:[number,number,number]): THREE.Mesh {
+  const longitudinal=32,vertical=12;
+  const points:number[]=[],uvs:number[]=[],indices:number[]=[];
+  for(let i=0;i<=longitudinal;i++){
+    const z=2*i/longitudinal-1;
+    const corner=Math.max(0,1-z*z);
+    const aperture=.013+.72*Math.pow(corner,.72);
+    for(let j=0;j<=vertical;j++){
+      const v=2*j/vertical-1;
+      const bulge=.035+.26*corner*(1-v*v);
+      points.push(side*bulge,v*aperture,z);
+      uvs.push(i/longitudinal,j/vertical);
+      if(i<longitudinal&&j<vertical){
+        const k=i*(vertical+1)+j,n=k+vertical+1;
+        if(side<0) indices.push(k,n,k+1,k+1,n,n+1);
+        else indices.push(k,k+1,n,k+1,n+1,n);
+      }
+    }
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(points,3));
+  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  const mesh=new THREE.Mesh(geometry,material);
+  mesh.position.set(...pos);
+  mesh.scale.set(...scale);
+  parent.add(mesh);
+  return mesh;
+}
+
 function tailFin(parent: THREE.Group): void {
   // The skinned tail at z≈2.15 has center y=-.16 and dorsal radius≈.05.
   // Old fin roots were ~11cm above the skin and rendered as loose petals.
@@ -161,14 +200,15 @@ export class DragonVisual {
     this.jawPivot.add(lowerJaw);
     this.head.add(this.jawPivot);
     for (const side of [-1, 1]) {
-      const irisMesh=ellipsoid(this.head,iris,
-        [side*.51,.20,-.35],[.110,.158,.075],18);
+      const irisMesh=dragonEyeLens(this.head,side as -1|1,iris,
+        [side*.59,.20,-.35],[.110,.158,.16]);
       irisMesh.name='creature.dragon.eye.iris.'+(side<0?'left':'right');
+      // The vertical slit remains a separately animated named part.
       const pupilMesh=ellipsoid(this.head,pupil,
-        [side*.575,.21,-.398],[.047,.115,.044],14);
+        [side*.595,.21,-.398],[.032,.103,.025],14);
       pupilMesh.name='creature.dragon.eye.pupil.'+(side<0?'left':'right');
       const glint=ellipsoid(this.head,glimmer,
-        [side*.606,.273,-.423],[.022,.029,.020],10);
+        [side*.623,.273,-.423],[.014,.020,.013],10);
       glint.name='creature.dragon.eye.glint.'+(side<0?'left':'right');
       // Painted brow and upper lid are independent, moveable anatomical
       // surfaces. A blink no longer makes just the dark pupil disappear.
@@ -376,10 +416,10 @@ export class DragonVisual {
     this.jawPivot.rotation.x=-face.jawAngle;
     for(const eye of this.eyes){
       eye.iris.scale.y=.158*face.eyeOpen;
-      eye.pupil.scale.y=.115*face.eyeOpen;
-      eye.glint.scale.y=.029*face.eyeOpen;
-      eye.pupil.position.z=-.398+face.pupilShift*.060;
-      eye.glint.position.y=.273-(1-face.eyeOpen)*.029;
+      eye.pupil.scale.y=.103*face.eyeOpen;
+      eye.glint.scale.y=.020*face.eyeOpen;
+      eye.pupil.position.z=-.398+face.pupilShift*.045;
+      eye.glint.position.y=.273-(1-face.eyeOpen)*.020;
       eye.lid.position.y=-(1-face.eyeOpen)*.10;
       eye.brow.position.y=face.browLift;
       eye.brow.rotation.z=eye.side*face.browLift*.48;
