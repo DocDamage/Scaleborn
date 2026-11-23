@@ -113,7 +113,9 @@ describe('real-character close-up visual acceptance cameras', () => {
       new THREE.Vector3(state.x,state.y,state.z))).toBeLessThan(9);
     expect(stageCharacterPortrait(state,'bank-rideable',heightAt)).toBe('mounted-side');
     expect(state.form).toBe('rideable');
-    expect(state.speed).toBe(0);
+    expect(state.mode).toBe('air');
+    expect(state.speed).toBe(FORMS.rideable.cruise);
+    expect(state.y).toBeCloseTo(heightAt(state.x,state.z)+12,5);
     expect(state.roll).toBeCloseTo(.35,6);
     poseCharacterPortraitCamera(camera,state,'mounted-side',heightAt);
     expect(camera.fov).toBe(45);
