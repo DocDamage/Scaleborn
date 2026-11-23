@@ -17,6 +17,7 @@ import { poseSleeveCrease } from '../rider/riderSleeveCloth';
 import { riderUpperBodyPose } from '../rider/riderUpperBodyRig';
 import { poseRiderFaceMorphs } from '../rider/riderFaceMorph';
 import { poseRiderHairLocks } from '../rider/riderHairSculpt';
+import { poseRiderKneeCloth } from '../rider/riderKneeCloth';
 import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
 import { dragonExpression } from './dragonExpression';
 import { createDragonLegSculpt } from './limbSculpt';
@@ -135,6 +136,10 @@ export class DragonVisual {
     rightKnee: this.rider.getObjectByName('rider.rightKnee') as THREE.Group,
     leftAnkle: this.rider.getObjectByName('rider.leftAnkle') as THREE.Group,
     rightAnkle: this.rider.getObjectByName('rider.rightAnkle') as THREE.Group,
+  };
+  private readonly riderTrousers = {
+    left:this.riderLimbs.leftLeg.getObjectByName('rider.trousers') as THREE.Mesh,
+    right:this.riderLimbs.rightLeg.getObjectByName('rider.trousers') as THREE.Mesh,
   };
   private readonly riderSleeves = {
     left:this.riderLimbs.leftArm.getObjectByName('rider.sleeve') as THREE.Mesh,
@@ -455,6 +460,8 @@ export class DragonVisual {
     this.riderLimbs.rightWrist.rotation.x = riderMotion.rightWrist;
     this.riderLimbs.leftKnee.rotation.x = riderMotion.leftKnee;
     this.riderLimbs.rightKnee.rotation.x = riderMotion.rightKnee;
+    poseRiderKneeCloth(this.riderTrousers.left,riderMotion.leftKnee);
+    poseRiderKneeCloth(this.riderTrousers.right,riderMotion.rightKnee);
     this.riderLimbs.leftKnee.rotation.z = -riderMotion.kneeSpread;
     this.riderLimbs.rightKnee.rotation.z = riderMotion.kneeSpread;
     this.riderLimbs.leftAnkle.rotation.x = riderMotion.leftAnkle;
