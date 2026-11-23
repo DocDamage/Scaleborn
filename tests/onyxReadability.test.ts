@@ -18,6 +18,32 @@ describe('screenshot-driven Onyx face and pigment readability',()=>{
       expect(material.normalMap).toBeInstanceOf(THREE.DataTexture);
     }finally{dragon.dispose();}
   });
+  it('sculpts shallow bilateral reptilian eye lenses, not bulging eyeballs',()=>{
+    const dragon=new DragonVisual();
+    try{
+      for(const side of [-1,1] as const){
+        const suffix=side<0?'left':'right';
+        const eye=dragon.root.getObjectByName('creature.dragon.eye.iris.'+suffix) as THREE.Mesh;
+        const pupil=dragon.root.getObjectByName('creature.dragon.eye.pupil.'+suffix) as THREE.Mesh;
+        expect(eye.geometry).not.toBeInstanceOf(THREE.SphereGeometry);
+        const p=eye.geometry.getAttribute('position');
+        const uv=eye.geometry.getAttribute('uv');
+        const normal=eye.geometry.getAttribute('normal');
+        expect(p.count).toBe(33*13);
+        expect(uv.count).toBe(p.count);
+        expect(eye.geometry.index?.count).toBe(32*12*6);
+        expect(eye.scale.z).toBeGreaterThan(eye.scale.x);
+        expect(p.getX(16*13+6)*side).toBeGreaterThan(.25);
+        expect(normal.getX(16*13+6)*side).toBeGreaterThan(.5);
+        expect(pupil.scale.x).toBeLessThan(.04);
+        for(let i=0;i<p.count;i++){
+          expect([p.getX(i),p.getY(i),p.getZ(i),
+            normal.getX(i),normal.getY(i),normal.getZ(i)]
+            .every(Number.isFinite)).toBe(true);
+        }
+      }
+    }finally{dragon.dispose();}
+  });
   it('has inset slanted readable eyes and backward-swept tapered paired horns',()=>{
     const dragon=new DragonVisual();
     try{
