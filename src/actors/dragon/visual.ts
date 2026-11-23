@@ -10,7 +10,7 @@ import { applyDragonScales, makeDragonScaleTextures } from './skinSurface';
 import { makeOnyxPaintedScaleMap } from './onyxPaintedScales';
 import { CHARACTER_MODEL_SOURCES, loadCharacterModel } from './characterSources';
 import { ImportedCharacterRig, type CharacterKind, type CharacterModelFile } from '../rider/importedCharacterRig';
-import { loftDragon, ONYX_TORSO, ONYX_HEAD, onyxDorsalY, taperedSpine, sculptFin } from './organicSculpt';
+import { loftDragon, ONYX_TORSO, ONYX_HEAD, onyxDorsalY, onyxBackSurfaceY, taperedSpine, sculptFin } from './organicSculpt';
 import { makeScalebornRider } from '../rider/heroSculpt';
 import { poseRiderTail } from '../rider/riderTailRig';
 import { poseSleeveCrease } from '../rider/riderSleeveCloth';
@@ -444,9 +444,6 @@ export class DragonVisual {
       riderFace.headPitch,riderFace.headYaw,riderFace.headBank);
     poseRiderHairLocks(this.riderHairLeft,this.riderHairRight,
       state,riderMotion.motion);
-    this.cloakMotion.update(state.time,
-      state.form === 'small' ? state.riderSpeed : state.speed,
-      state.form === 'small' ? 0 : state.roll);
     this.importedRider?.animateRider(riderMotion, Math.abs(state.riderSpeed), dt);
     this.riderLimbs.leftArm.rotation.x = riderMotion.leftArm;
     this.riderLimbs.rightArm.rotation.x = riderMotion.rightArm;
@@ -491,6 +488,14 @@ export class DragonVisual {
       this.rider.rotation.set(upperPose.pelvisPitch, 0, upperPose.pelvisBank);
       this.rider.visible = true;
     }
+    // Contact is evaluated AFTER final spine, seat and form transforms.
+    // The original child-sized cloak hugs Onyx's curved back instead of
+    // intersecting the torso in rideable/giant and banked poses.
+    this.cloakMotion.update(state.time,
+      state.form === 'small' ? state.riderSpeed : state.speed,
+      state.form === 'small' ? 0 : state.roll,
+      state.form === 'small' ? undefined
+        : {body:this.body,surfaceY:onyxBackSurfaceY});
   }
 
   dispose(): void {
