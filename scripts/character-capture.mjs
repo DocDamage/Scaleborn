@@ -38,6 +38,16 @@ try {
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('rideable'));
   await page.waitForTimeout(500);
   await captureQaScreenshot(page, {path:'artifacts/characters-onyx-rideable.png',timeout:120000});
+  // Same original leg meshes at walking speed; catches a stiff knee and
+  // clipping between the independent hock morph and planted paw.
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('walk-rideable'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-onyx-walk.png',timeout:120000});
+  // A banked, fixed-child-size saddle close-up exposes thoracic lean,
+  // elbow creases, and whether the rider's pelvis stays against Onyx.
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('bank-rideable'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-rider-banked-spine.png',timeout:120000});
   // Same real Three.js actor + original three-bone skinned wing, staged
   // airborne to verify the silhouette stays open when folding is inactive.
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('flight-rideable'));
