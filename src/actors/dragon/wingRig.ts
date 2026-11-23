@@ -50,23 +50,67 @@ export interface WingRig {
 }
 
 /**
- * An original, tapered phalange follows the wing's cartilage leading edge.
- * The existing Bone owns its bend and all attachment names remain unchanged.
- * Curved lofts replace straight 7-sided cylinders with hard end caps.
+ * A wing finger is broad cartilage hugging the membrane, not a round metal
+ * rod.  The dorsal thickness is lower than its front/back width and the root
+ * swells into the joint before fading to an organic, closed-looking point.
+ * Each mesh stays in its original bone's rest space; skinning and folding are
+ * owned by the existing rig and never allocate geometry during a frame.
  */
+function wingFingerGeometry(length: number, side: -1 | 1,
+  radius: number): THREE.BufferGeometry {
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0,0,0),
+    new THREE.Vector3(side*length*.23,.042,-.023),
+    new THREE.Vector3(side*length*.55,.082,-.075),
+    new THREE.Vector3(side*length*.83,.032,-.13),
+    new THREE.Vector3(side*length,-.024,-.16),
+  ],false,'centripetal');
+  const rings=40, sides=14;
+  const positions:number[]=[],uvs:number[]=[],indices:number[]=[];
+  const up=new THREE.Vector3(0,1,0);
+  const dorsal=new THREE.Vector3(), chord=new THREE.Vector3();
+  const vertex=new THREE.Vector3();
+  for(let i=0;i<=rings;i++){
+    const t=i/rings;
+    const center=curve.getPoint(t);
+    const tangent=curve.getTangent(t).normalize();
+    // A local orthonormal frame prevents the cartilaginous rib twisting
+    // around its path as the left/right directions mirror each other.
+    dorsal.copy(up).addScaledVector(tangent,-tangent.y).normalize();
+    chord.crossVectors(tangent,dorsal).normalize();
+    const tip=Math.pow(Math.max(.006,1-t),.85);
+    const base=(.78+.22*Math.sin(Math.PI*t))*tip;
+    const broad=radius*(1.14+.18*Math.sin(Math.PI*t))*base;
+    const thin=radius*(.49+.045*Math.cos(2*Math.PI*t))*base;
+    for(let j=0;j<=sides;j++){
+      const a=j/sides*2*Math.PI;
+      // An understated raised dorsal ridge tapers into thin lateral margins.
+      const lift=Math.sin(a)*thin*(1+.075*Math.cos(3*a)*Math.sin(Math.PI*t));
+      vertex.copy(center)
+        .addScaledVector(chord,Math.cos(a)*broad)
+        .addScaledVector(dorsal,lift);
+      positions.push(vertex.x,vertex.y,vertex.z);
+      uvs.push(j/sides,t);
+      if(i<rings&&j<sides){
+        const k=i*(sides+1)+j,n=k+sides+1;
+        indices.push(k,n,k+1,n,n+1,k+1);
+      }
+    }
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+/** Existing articulated bone names and attachments are unchanged. */
 function spar(parent: THREE.Bone, length: number, side: -1 | 1,
   radius: number, index: number): void {
-  const points: Array<readonly [number, number, number]> = [
-    [0, 0, 0],
-    [side * length * .23, .042, -.023],
-    [side * length * .55, .082, -.075],
-    [side * length * .83, .032, -.13],
-    [side * length, -.024, -.16],
-  ];
-  const mesh = new THREE.Mesh(
-    taperedSpine(points, radius, 14, 34), sparMaterial);
+  const mesh=new THREE.Mesh(wingFingerGeometry(length,side,radius),sparMaterial);
   mesh.name='creature.dragon.wing-finger.'+index;
-  // Preserve outward-sided attachment semantics for legacy authored rigs.
   mesh.position.x=side*.006;
   mesh.castShadow=true;
   parent.add(mesh);
