@@ -24,6 +24,7 @@ import { dragonExpression } from './dragonExpression';
 import { createDragonLegSculpt } from './limbSculpt';
 import { poseOnyxLegFlex } from './onyxLegFlex';
 import { makeOnyxEyeLens } from './eyeLens';
+import { makeSweptHorn } from './headSculpt';
 import { sculptOnyxLowerJaw } from './onyxJawSculpt';
 import { RiderCloakMotion } from '../rider/cloakMotion';
 import { mountedRiderSeat } from '../rider/mountSeat';
@@ -231,13 +232,25 @@ export class DragonVisual {
       upperLip.castShadow=true;
       this.head.add(upperLip);
       // Distinctive backward-swept paired horn and cartilage fin-crests.
-      const horn=new THREE.Mesh(taperedSpine([
-        [side*.36,.40,.27],[side*.445,.54,.40],
-        [side*.51,.66,.64],[side*.575,.710,.91],
-        [side*.61,.690,1.12],
-      ],.108,14),ridges);
-      horn.name=side<0?'creature.dragon.horn.left':'creature.dragon.horn.right';
+      const label = side < 0 ? 'left' : 'right';
+      const horn = new THREE.Mesh(makeSweptHorn([
+        new THREE.Vector3(side*.36, .40, .27),
+        new THREE.Vector3(side*.445, .54, .40),
+        new THREE.Vector3(side*.51, .66, .64),
+        new THREE.Vector3(side*.575, .710, .91),
+        new THREE.Vector3(side*.61, .690, 1.12),
+      ], .108, 18, 36), ridges);
+      horn.name = 'creature.dragon.horn.' + label;
+      horn.castShadow = true;
       this.head.add(horn);
+      const spur = new THREE.Mesh(makeSweptHorn([
+        new THREE.Vector3(side*.51, -.035, -.11),
+        new THREE.Vector3(side*.64, .01, .06),
+        new THREE.Vector3(side*.74, .03, .20),
+      ], .095, 12, 18), highlight);
+      spur.name = 'creature.dragon.cheek-spur.' + label;
+      spur.castShadow = true;
+      this.head.add(spur);
       const crestPivot=new THREE.Group();
       crestPivot.name='creature.dragon.mobile-crest.'+(side<0?'left':'right');
       crestPivot.position.set(side*.49,.23,.14);

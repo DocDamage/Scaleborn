@@ -1197,3 +1197,11 @@ finite normals and the compiled shader injection.
 build/test execution and RTX 3060 GPU timing. Scenic geometry remains separate
 from authoritative terrain collision, and this is not a physically modeled cave
 or photogrammetric cliff. The release visual gate stays blocking.
+
+### Reconciled Onyx head
+
+The playable head combines the swept horn surfaces and paired cheek spurs
+from visual pass 6 with the integration branch's tapered cranium, hinged
+jaw, modeled lips, nostrils and animated eyes. The horns follow the
+profile used in the character side-view review. Human visual acceptance
+and RTX 3060 profiling remain open.
