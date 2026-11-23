@@ -87,6 +87,59 @@ export function createMirrorfallCliffGeometry(
     }
   }
 
+
+  // Give both sides of the open waterfall cleft actual rock thickness.
+  // The previous face stopped in two razor-thin vertical edges, exposing
+  // a flat sheet from oblique lake/flight cameras. These shaded return
+  // walls are welded at the exact existing seam positions, and retreat
+  // AWAY from the falling water; they never narrow the playable opening.
+  // They share the main indexed mesh/material: zero extra draw calls.
+  const cleftDepthSteps = quality === 'high' ? 8 : 5;
+  const frontVertexCount = positions.length / 3;
+  for (const side of [-1, 1] as const) {
+    const border = side < 0
+      ? Math.floor(columns * (1 - .23) * .5)
+      : Math.ceil(columns * (1 + .23) * .5);
+    const start = positions.length / 3;
+    for (let row = 0; row <= rows; row++) {
+      const t = row / rows;
+      const original = (row * (columns + 1) + border) * 3;
+      const frontX = positions[original]!;
+      const frontY = positions[original + 1]!;
+      const frontZ = positions[original + 2]!;
+      const frontR = colors[original]!;
+      const frontG = colors[original + 1]!;
+      const frontB = colors[original + 2]!;
+      for (let step = 0; step <= cleftDepthSteps; step++) {
+        const s = step / cleftDepthSteps;
+        const incised = Math.sin(t * 18.7 + side * 1.8)
+          + .40 * Math.sin(t * 43.1 - side * 3.4);
+        const depth = (17.5 + 3.5 * Math.sin(t * 7.3 + side)) * s;
+        // Bedding and erosion form overhanging silhouettes without
+        // detaching the seam or projecting into the waterfall corridor.
+        const recess = 2.6 * Math.sin(Math.PI * s) * incised;
+        positions.push(
+          frontX + depth + recess,
+          frontY + s * (1.15 * Math.sin(t * 13.2 + side) - .7),
+          frontZ + side * (3.8 * s + 1.7 * s * Math.sin(t * 9.6 + side)),
+        );
+        uvs.push(s * 2.4, t * 6);
+        const shade = 1 - s * (.37 + .075 * Math.sin(t * 12.1 + side));
+        colors.push(frontR * shade, frontG * shade, frontB * shade);
+      }
+    }
+    for (let row = 0; row < rows; row++) {
+      for (let step = 0; step < cleftDepthSteps; step++) {
+        const a = start + row * (cleftDepthSteps + 1) + step;
+        const b = a + cleftDepthSteps + 1;
+        // Inner-facing normals point into the open chasm; never rely on
+        // DoubleSide alone to hide inside-out lighting at the cleft.
+        if (side < 0) indices.push(a, a + 1, b, b, a + 1, b + 1);
+        else indices.push(a, b, a + 1, b, b + 1, a + 1);
+      }
+    }
+  }
+
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position',
     new THREE.Float32BufferAttribute(positions, 3));
@@ -98,5 +151,7 @@ export function createMirrorfallCliffGeometry(
   geometry.userData.columns = columns;
   geometry.userData.rows = rows;
   geometry.userData.cleftHalfWidth = .23;
+  geometry.userData.frontVertexCount = frontVertexCount;
+  geometry.userData.cleftDepthSteps = cleftDepthSteps;
   return geometry;
 }

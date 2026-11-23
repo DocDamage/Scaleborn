@@ -17,7 +17,12 @@ describe('sculpted Mirrorfall waterfall cliff wings', () => {
         const uv = geo.getAttribute('uv');
         const normal = geo.getAttribute('normal');
         const index = geo.index!;
-        expect(position.count).toBe((rows + 1) * (columns + 1));
+        const frontCount = geo.userData.frontVertexCount as number;
+        const depthSteps = geo.userData.cleftDepthSteps as number;
+        expect(frontCount).toBe((rows + 1) * (columns + 1));
+        expect(depthSteps).toBe(quality === 'high' ? 8 : 5);
+        expect(position.count).toBe(frontCount +
+          2 * (rows + 1) * (depthSteps + 1));
         expect(index.count).toBeGreaterThan(3000);
         expect(index.count).toBeLessThan(columns * rows * 6);
         expect(color.count).toBe(position.count);
@@ -30,7 +35,10 @@ describe('sculpted Mirrorfall waterfall cliff wings', () => {
             color.getX(i), color.getY(i), color.getZ(i),
             uv.getX(i), uv.getY(i),
           ].every(Number.isFinite)).toBe(true);
-          const row = Math.floor(i / (columns + 1));
+          const sideRow = Math.floor(((i - frontCount) %
+            ((rows + 1) * (depthSteps + 1))) / (depthSteps + 1));
+          const row = i < frontCount
+            ? Math.floor(i / (columns + 1)) : sideRow;
           expect(position.getX(i) -
             waterfallCenterXAt(1 - row / rows)).toBeGreaterThan(6.70);
         }
@@ -51,6 +59,28 @@ describe('sculpted Mirrorfall waterfall cliff wings', () => {
           minRelief = Math.min(minRelief, x);
         }
         expect(maxRelief - minRelief).toBeGreaterThan(3.5);
+        // The exact original border meets the new return wall, with
+        // deep geometry pointing away from the falling-water corridor.
+        const oneSideCount = (rows + 1) * (depthSteps + 1);
+        for (const [sideIndex, side] of [-1, 1].entries()) {
+          const border = side < 0
+            ? Math.floor(columns * (1 - .23) * .5)
+            : Math.ceil(columns * (1 + .23) * .5);
+          const start = frontCount + sideIndex * oneSideCount;
+          for (const row of [0, Math.floor(rows / 2), rows]) {
+            const front = row * (columns + 1) + border;
+            const seam = start + row * (depthSteps + 1);
+            const back = seam + depthSteps;
+            expect(position.getX(seam)).toBeCloseTo(position.getX(front), 5);
+            expect(position.getY(seam)).toBeCloseTo(position.getY(front), 5);
+            expect(position.getZ(seam)).toBeCloseTo(position.getZ(front), 5);
+            expect(position.getX(back) - position.getX(seam))
+              .toBeGreaterThan(13);
+            expect(side * (position.getZ(back) - position.getZ(seam)))
+              .toBeGreaterThan(2);
+            expect(color.getX(back)).toBeLessThan(color.getX(seam));
+          }
+        }
       } finally { geo.dispose(); }
     });
   }
@@ -70,6 +100,23 @@ describe('sculpted Mirrorfall waterfall cliff wings', () => {
       expect(film).toBeInstanceOf(THREE.Mesh);
       expect((wall as THREE.Mesh).geometry).toBe((film as THREE.Mesh).geometry);
       expect(cliffs.group.children).toHaveLength(2);
+      const wallMaterial = (wall as THREE.Mesh).material as THREE.MeshStandardMaterial;
+      expect(wallMaterial.customProgramCacheKey())
+        .toContain('terrain-triplanar-v2-0.133333333');
+      const shader = {
+        uniforms: {},
+        vertexShader: '#include <common>\\n#include <worldpos_vertex>',
+        fragmentShader: [
+          '#include <common>', '#include <map_fragment>',
+          '#include <color_fragment>', '#include <roughnessmap_fragment>',
+          '#include <normal_fragment_maps>',
+        ].join('\\n'),
+      } as Parameters<THREE.MeshStandardMaterial['onBeforeCompile']>[0];
+      wallMaterial.onBeforeCompile(shader, {} as THREE.WebGLRenderer);
+      expect(shader.fragmentShader).toContain('scTriSample(map)');
+      expect(shader.fragmentShader).toContain('scTriSample(roughnessMap)');
+      expect(shader.fragmentShader).toContain('scWorldNormal');
+      expect(shader.fragmentShader).toContain('scFbm');
       cliffs.update(4.5);
       expect(((film as THREE.Mesh).material as THREE.ShaderMaterial)
         .uniforms.uTime!.value).toBe(4.5);

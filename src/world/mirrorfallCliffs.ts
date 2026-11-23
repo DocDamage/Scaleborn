@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { makeRockMaterial } from './materials';
 import { makeCliffRunoffMaterial } from './cliffRunoff';
 import { createMirrorfallCliffGeometry } from './cliffFaceSculpt';
+import { installTerrainTriplanar } from './terrainTriplanar';
 
 /** Single eroded, open-cleft cliff face with a shared wet-rock overlay.
  * Collision remains on the existing gameplay terrain heightfield. */
@@ -16,6 +17,10 @@ export class MirrorfallCliffs {
     this.material = makeRockMaterial(quality);
     this.material.side = THREE.DoubleSide;
     this.material.vertexColors = true;
+    // The vertical escarpment was stretching rock maps along its UV bands.
+    // World-metre triplanar albedo/normal/roughness is continuous across
+    // the newly exposed canyon sidewalls, in both quality modes.
+    installTerrainTriplanar(this.material, 7.5);
     const geometry = createMirrorfallCliffGeometry(quality);
     this.wall = new THREE.Mesh(geometry, this.material);
     this.wall.name = 'terrain.azure.mirrorfall-eroded-strata';

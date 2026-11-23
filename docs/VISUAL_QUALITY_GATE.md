@@ -1177,3 +1177,23 @@ reuse. This is scenic relief, not a new gameplay collision surface.
 **Still blocking:** real rider-height and plunge-pool WebGL comparisons for
 rock/curtain overlap, sunset lighting and shader behavior, plus actual RTX 3060
 performance. Automated build and test checks were not run for this patch.
+
+
+### Mirrorfall canyon cleft depth and rock projection (continuation)
+
+The scenic rock curtain previously ended at two razor-thin, open edges around
+the waterfall channel. Actual mesh geometry now includes two incised, 17–21 m
+deep return walls, seamed to the existing relief and retreating away from
+the falling water rather than narrowing the waterfall corridor. The same
+indexed cliff draw and wet-film overlay cover these surfaces; no new render
+batch or collision surface is introduced. Painterly rock albedo, normal,
+and roughness maps now use 7.5 m world-space triplanar projection on **both**
+quality presets, removing stretched UV bands on the steep face and the new
+sidewalls while preserving the preexisting mineral vertex tint. Regression
+tests check stitched seams, safe centerline clearance, wall depth, indices,
+finite normals and the compiled shader injection.
+
+**Unverified:** actual gameplay WebGL images (particularly oblique side views),
+build/test execution and RTX 3060 GPU timing. Scenic geometry remains separate
+from authoritative terrain collision, and this is not a physically modeled cave
+or photogrammetric cliff. The release visual gate stays blocking.
