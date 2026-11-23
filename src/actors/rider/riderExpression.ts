@@ -9,6 +9,10 @@ export interface RiderFacialPose {
   headPitch: number;
   headYaw: number;
   headBank: number;
+  /** Gentle original facial-surface cheek lift for warmth and breath. */
+  cheekLift: number;
+  /** Brow/temple surface tension while navigating, diving, or banking. */
+  faceFocus: number;
 }
 export function riderFacialPose(state:FlightState, pose:RiderPose):RiderFacialPose {
   const time=Number.isFinite(state.time)?Math.max(0,state.time):0;
@@ -32,5 +36,15 @@ export function riderFacialPose(state:FlightState, pose:RiderPose):RiderFacialPo
       -pose.torsoLean*.18 + Math.sin(time*.9)*.010)),
     headYaw:mounted ? -signedRoll*.14 : Math.sin(time*.53)*.038,
     headBank:mounted ? -signedRoll*.07 : Math.sin(time*1.1)*.006,
+    // Small, overlapping GPU shape keys preserve natural child proportions.
+    // A faint relaxed expression gives way to attentive brow tension when
+    // Onyx banks or when the heroine is diving into cold freshwater.
+    cheekLift:pose.motion==='idle'
+      ? .25+.08*Math.sin(time*.62)
+      : pose.motion==='walk' ? .20
+        : mounted ? Math.max(.04,.16-focus*.10) : .08,
+    faceFocus:mounted ? Math.min(.55,.12+focus*.38)
+      : pose.motion==='dive' ? .28
+        : pose.motion==='swim' ? .15 : 0,
   };
 }
