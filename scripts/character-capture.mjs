@@ -41,13 +41,31 @@ try {
   // Same original leg meshes at walking speed; catches a stiff knee and
   // clipping between the independent hock morph and planted paw.
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('walk-rideable'));
-  await page.waitForTimeout(350);
-  await captureQaScreenshot(page, {path:'artifacts/characters-onyx-walk.png',timeout:120000});
-  // A banked, fixed-child-size saddle close-up exposes thoracic lean,
-  // elbow creases, and whether the rider's pelvis stays against Onyx.
+  // Hold the game's actual forward-movement key throughout the software
+  // render. Merely staging a speed then waiting caused it to decay to idle.
+  await page.keyboard.down('w');
+  try {
+    await page.waitForTimeout(350);
+    const walking=await page.evaluate(()=>window.__scalebornQaCharacterMotion());
+    assert.equal(walking.mode,'ground');
+    assert.ok(walking.speed>.3,'Onyx was not genuinely walking at capture');
+    await captureQaScreenshot(page, {path:'artifacts/characters-onyx-walk.png',timeout:120000});
+  } finally {
+    await page.keyboard.up('w');
+  }
+  // Review the real rider's spine and saddle during an actual airborne
+  // bank, holding the existing bank-right key until the WebGL frame is saved.
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('bank-rideable'));
-  await page.waitForTimeout(350);
-  await captureQaScreenshot(page, {path:'artifacts/characters-rider-banked-spine.png',timeout:120000});
+  await page.keyboard.down('e');
+  try {
+    await page.waitForTimeout(350);
+    const banking=await page.evaluate(()=>window.__scalebornQaCharacterMotion());
+    assert.equal(banking.mode,'air');
+    assert.ok(Math.abs(banking.roll)>.1,'Onyx was not banking at capture');
+    await captureQaScreenshot(page, {path:'artifacts/characters-rider-banked-spine.png',timeout:120000});
+  } finally {
+    await page.keyboard.up('e');
+  }
   // Same real Three.js actor + original three-bone skinned wing, staged
   // airborne to verify the silhouette stays open when folding is inactive.
   await page.evaluate(() => window.__scalebornQaCharacterPortrait('flight-rideable'));
