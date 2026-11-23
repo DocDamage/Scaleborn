@@ -79,8 +79,11 @@ describe('original three-form character morph geometry budget',()=>{
           const mesh=meshes[j]!,old=captured[j]!;
           expect(mesh.geometry).toBe(old.geometry);
           expect(mesh.geometry.getAttribute('position').array).toBe(old.array);
-          expect((mesh.geometry.morphAttributes.position??[]).map(m=>m.array))
-            .toEqual(old.morphs);
+          const morphs=mesh.geometry.morphAttributes.position??[];
+          expect(morphs).toHaveLength(old.morphs.length);
+          for(let k=0;k<morphs.length;k++){
+            expect(morphs[k]!.array).toBe(old.morphs[k]);
+          }
           expect((mesh.morphTargetInfluences??[]).every(Number.isFinite)).toBe(true);
         }
         expect(dragon.rider.scale.x).toBe(1);
