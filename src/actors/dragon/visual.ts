@@ -19,6 +19,7 @@ import { poseRiderFaceMorphs } from '../rider/riderFaceMorph';
 import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
 import { dragonExpression } from './dragonExpression';
 import { createDragonLegSculpt } from './limbSculpt';
+import { poseOnyxLegFlex } from './onyxLegFlex';
 import { makeOnyxEyeLens } from './eyeLens';
 import { sculptOnyxLowerJaw } from './onyxJawSculpt';
 import { RiderCloakMotion } from '../rider/cloakMotion';
@@ -137,7 +138,7 @@ export class DragonVisual {
     right:this.riderLimbs.rightArm.getObjectByName('rider.sleeve') as THREE.Mesh,
   };
   private readonly legs: Array<{
-    group: THREE.Group; foot: THREE.Group; diagonal: boolean;
+    group: THREE.Group; foot: THREE.Group; flesh:THREE.Mesh; diagonal: boolean;
     front: boolean; side: -1 | 1;
   }> = [];
   private displayedScale = FORMS.rideable.visualScale;
@@ -268,7 +269,8 @@ export class DragonVisual {
         leg.position.set(side * 0.55, -0.45, z);
         this.body.add(leg);
         this.legs.push({
-          group: leg, foot: sculpt.foot, diagonal: (side < 0) === front,
+          group: leg, foot: sculpt.foot, flesh:sculpt.flesh,
+          diagonal: (side < 0) === front,
           front, side,
         });
       }
@@ -367,6 +369,13 @@ export class DragonVisual {
     for (const leg of this.legs) {
       const phase = pose.gaitPhase + (leg.diagonal ? 0 : Math.PI);
       const stride = Math.sin(phase) * pose.gaitAmount;
+      const aquatic=state.mode==='underwater'||state.mode==='surface';
+      // Keep muscle compression aligned to the existing diagonal footstep
+      // and swimming animation, without altering collision or leg sockets.
+      const compression=pose.name==='walk' ? stride
+        : aquatic ? Math.sin(state.time*4.4+(leg.diagonal?0:Math.PI))*.45
+          : state.mode==='air' ? -.16 : 0;
+      poseOnyxLegFlex(leg.flesh,compression);
       leg.group.rotation.x = (pose.name === 'walk' ? stride * 0.43
         : state.mode === 'underwater' || state.mode === 'surface'
           ? Math.sin(state.time * 4.4 + (leg.diagonal ? 0 : Math.PI)) * 0.13
