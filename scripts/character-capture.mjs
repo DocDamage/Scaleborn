@@ -1,0 +1,132 @@
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+import { chromium } from 'playwright';
+import { captureQaScreenshot } from './qa-screenshot.mjs';
+
+const browser=await chromium.launch({headless:true,args:[
+  '--enable-webgl','--ignore-gpu-blocklist','--enable-unsafe-swiftshader',
+  '--use-gl=angle','--use-angle=swiftshader','--disable-dev-shm-usage',
+]});
+const errors=[];
+try {
+  const page=await browser.newPage({
+    viewport:{width:1280,height:720},deviceScaleFactor:1,
+  });
+  page.on('pageerror',error=>errors.push('page: '+error.message));
+  page.on('console',message=>{
+    if(message.type()==='error') errors.push('console: '+message.text());
+  });
+  const origin=process.env.SCALEBORN_URL??'http://127.0.0.1:5173';
+  const response=await page.goto(origin+'?start=meadow&qa=1&quality=low',{
+    waitUntil:'domcontentloaded',timeout:30000,
+  });
+  assert.equal(response?.status(),200);
+  await page.locator('#start').click();
+  await page.locator('#welcome').waitFor({state:'hidden'});
+  await mkdir('artifacts',{recursive:true});
+
+  await page.evaluate(()=>{
+    window.__scalebornQaLand();
+    window.__scalebornQaAdvance(100);
+  });
+  await page.waitForFunction(()=>document.querySelector('#mode-name')?.textContent==='ON LAND');
+  // Real chase camera at the uncluttered character-review meadow. Earlier
+  // screenshots had large quest rings directly between Onyx and the camera.
+  await page.evaluate(() => window.__scalebornQaCharacterGameplay('rideable'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-onyx-gameplay.png',timeout:120000});
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('rideable'));
+  await page.waitForTimeout(500);
+  await captureQaScreenshot(page, {path:'artifacts/characters-onyx-rideable.png',timeout:120000});
+  // Same original leg meshes at walking speed; catches a stiff knee and
+  // clipping between the independent hock morph and planted paw.
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('walk-rideable'));
+  // Hold the game's actual forward-movement key throughout the software
+  // render. Merely staging a speed then waiting caused it to decay to idle.
+  await page.keyboard.down('w');
+  try {
+    await page.waitForTimeout(350);
+    const walking=await page.evaluate(()=>window.__scalebornQaCharacterMotion());
+    assert.equal(walking.mode,'ground');
+    assert.ok(walking.speed>.3,'Onyx was not genuinely walking at capture');
+    await captureQaScreenshot(page, {path:'artifacts/characters-onyx-walk.png',timeout:120000});
+  } finally {
+    await page.keyboard.up('w');
+  }
+  // Review the real rider's spine and saddle during an actual airborne
+  // bank, holding the existing bank-right key until the WebGL frame is saved.
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('bank-rideable'));
+  await page.keyboard.down('e');
+  try {
+    await page.waitForTimeout(350);
+    const banking=await page.evaluate(()=>window.__scalebornQaCharacterMotion());
+    assert.equal(banking.mode,'air');
+    assert.ok(Math.abs(banking.roll)>.1,'Onyx was not banking at capture');
+    await captureQaScreenshot(page, {path:'artifacts/characters-rider-banked-spine.png',timeout:120000});
+  } finally {
+    await page.keyboard.up('e');
+  }
+  // Same real Three.js actor + original three-bone skinned wing, staged
+  // airborne to verify the silhouette stays open when folding is inactive.
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('flight-rideable'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-onyx-flight.png',timeout:120000});
+
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('mounted-rideable'));
+  await page.waitForTimeout(400);
+  await captureQaScreenshot(page, {path:'artifacts/characters-rider-mounted-rideable.png',timeout:120000});
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('mounted-rideable-side'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-rider-mounted-rideable-side.png',timeout:120000});
+
+  await page.keyboard.press('1');
+  await page.evaluate(()=>window.__scalebornQaAdvance(8));
+  await page.waitForFunction(()=>
+    document.querySelector('#form-name')?.textContent==='SMALL COMPANION');
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('small'));
+  await page.waitForTimeout(400);
+  await captureQaScreenshot(page, {path:'artifacts/characters-onyx-small.png',timeout:120000});
+
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('rider'));
+  await page.waitForFunction(()=>
+    document.querySelector('#focus-name')?.textContent==='RIDER');
+  await page.waitForTimeout(400);
+  await captureQaScreenshot(page, {path:'artifacts/characters-hybrid-hero.png',timeout:120000});
+  // Actual WebGL close-up of the child's own face/skin material. This is
+  // required for checking texture UV detail, brow/eye scale and horn roots.
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('rider-face'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-hybrid-hero-face.png',timeout:120000});
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('rider-side'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-hybrid-hero-side.png',timeout:120000});
+  // Original skinned hybrid tail and cloth viewed from behind the flank;
+  // the same runtime meshes and pivots are used by swimming and mounting.
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('rider-tail'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-hybrid-hero-tail.png',timeout:120000});
+  await page.evaluate(() => window.__scalebornQaCharacterGameplay('rider'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-rider-gameplay.png',timeout:120000});
+
+  await page.evaluate(()=>window.__scalebornQaLake());
+  await page.keyboard.press('3');
+  await page.evaluate(()=>window.__scalebornQaAdvance(10));
+  await page.waitForFunction(()=>
+    document.querySelector('#form-name')?.textContent==='GIANT');
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('giant'));
+  await page.waitForTimeout(550);
+  await captureQaScreenshot(page, {path:'artifacts/characters-onyx-giant.png',timeout:120000});
+
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('mounted-giant'));
+  await page.waitForTimeout(450);
+  await captureQaScreenshot(page, {path:'artifacts/characters-rider-mounted-giant.png',timeout:120000});
+  await page.evaluate(() => window.__scalebornQaCharacterPortrait('mounted-giant-side'));
+  await page.waitForTimeout(350);
+  await captureQaScreenshot(page, {path:'artifacts/characters-rider-mounted-giant-side.png',timeout:120000});
+
+  assert.deepEqual(errors,[],'Browser/shader errors during real character rendering');
+  console.log('PASS: actual skinned wing, three form changes and hybrid rider rendered.');
+} finally {
+  await browser.close();
+}

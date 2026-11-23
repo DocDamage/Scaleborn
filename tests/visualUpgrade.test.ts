@@ -31,7 +31,9 @@ describe('Mirrorfall visual systems contract', () => {
       expect(lake.mesh.position.y).toBe(GRAND_LAKE.surfaceY);
       expect(ocean.mesh.position.y).toBe(0);
       expect(lake.mesh.geometry.getAttribute('position').count).toBeGreaterThan(10_000);
-      expect(shore.mesh.geometry.getAttribute('position').count).toBeGreaterThan(4000);
+      // The broken swash is indexed; fewer duplicated vertices, no full ring.
+      expect(shore.mesh.geometry.getAttribute('position').count).toBeGreaterThan(1000);
+      expect(shore.mesh.geometry.index?.count).toBeGreaterThan(3000);
       expect(lake.mesh.material).toBeInstanceOf(THREE.ShaderMaterial);
       const lakeShader=lake.mesh.material as THREE.ShaderMaterial;
       expect(lakeShader.uniforms.uBathymetry?.value)
@@ -42,6 +44,28 @@ describe('Mirrorfall visual systems contract', () => {
         .toBe(shore.mesh.geometry.getAttribute('position').count);
       lake.update(12.5);
       expect((lake.mesh.material as THREE.ShaderMaterial).uniforms.uTime?.value).toBe(12.5);
+    } finally {ocean.dispose();lake.dispose();shore.dispose();}
+  });
+  it('uses complete scene-fog uniforms for water and shoreline shader passes', () => {
+    const ocean=new PainterlyWaterSurface('ocean');
+    const lake=new PainterlyWaterSurface('lake');
+    const shore=new LakeShoreFoam();
+    try {
+      const mats=[
+        ocean.mesh.material,lake.mesh.material,shore.mesh.material,
+      ] as THREE.ShaderMaterial[];
+      for(const material of mats){
+        expect(material.fog).toBe(true);
+        expect(material.uniforms.fogColor?.value).toBeInstanceOf(THREE.Color);
+        expect(material.uniforms.fogDensity?.value).toBeDefined();
+        expect(material.vertexShader).toContain('#include <fog_vertex>');
+        expect(material.vertexShader).toContain('mvPosition');
+        expect(material.fragmentShader).toContain('#include <fog_fragment>');
+      }
+      lake.update(2.4);
+      shore.update(2.4);
+      expect(mats[1]!.uniforms.uTime?.value).toBe(2.4);
+      expect(mats[2]!.uniforms.uTime?.value).toBe(2.4);
     } finally {ocean.dispose();lake.dispose();shore.dispose();}
   });
   it('renders waterfall sheets and gravity-driven impact droplets over the lake', () => {

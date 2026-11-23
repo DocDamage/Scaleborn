@@ -5,32 +5,61 @@ import { waterSurfaceAt } from './highlandLake';
 
 type Quality = 'high' | 'low';
 
-function grassPatch(quality: Quality): THREE.BufferGeometry {
-  const positions: number[]=[];
-  const blades=quality==='high'?14:10;
-  const v=(p:THREE.Vector3):void=>{positions.push(p.x,p.y,p.z);};
-  for(let i=0;i<blades;i++){
-    const angle=i*2.399963229728653+Math.sin(i*1.73)*.24;
-    const dir=new THREE.Vector3(Math.cos(angle),0,Math.sin(angle));
-    const sideways=new THREE.Vector3(-dir.z,0,dir.x);
-    const center=new THREE.Vector3(
-      Math.sin(i*3.17)*.31,0,Math.cos(i*3.17)*.31);
-    const length=.56+(i%5)*.13;
-    const width=.036+(i%3)*.011;
-    const baseL=center.clone().addScaledVector(sideways,-width);
-    const baseR=center.clone().addScaledVector(sideways,width);
-    const middle=center.clone().addScaledVector(dir,length*.25)
-      .add(new THREE.Vector3(0,length*.63,0));
-    const midL=middle.clone().addScaledVector(sideways,-width*.55);
-    const midR=middle.clone().addScaledVector(sideways,width*.55);
-    const tip=center.clone().addScaledVector(dir,length*.56)
-      .add(new THREE.Vector3(0,length,0));
-    v(baseL);v(midL);v(baseR);
-    v(baseR);v(midL);v(midR);
-    v(midL);v(tip);v(midR);
+/** Curved, indexed meadow blades with root-to-tip painted albedo.
+ * Smooth normals prevent the near-camera groundcover from appearing as
+ * a collection of flat, faceted triangles. Both presets share one draw call.
+ */
+export function makeGrassPatch(quality: Quality): THREE.BufferGeometry {
+  const positions: number[] = [], colors: number[] = [], indices: number[] = [];
+  const blades = quality === 'high' ? 15 : 10;
+  const sections = quality === 'high' ? 4 : 2;
+  for (let i = 0; i < blades; i++) {
+    const angle = i * 2.399963229728653 + Math.sin(i * 1.73) * .24;
+    const dx = Math.cos(angle), dz = Math.sin(angle);
+    const sideX = -dz, sideZ = dx;
+    const rootX = Math.sin(i * 3.17) * .31;
+    const rootZ = Math.cos(i * 3.17) * .31;
+    // Meadow grass should not grow taller than the dog-sized Onyx.
+    const height = .36 + (i % 5) * .065;
+    const width = .023 + (i % 3) * .006;
+    const hue = Math.sin(i * 2.61) * .055;
+    const first = positions.length / 3;
+    for (let j = 0; j <= sections; j++) {
+      const t = j / sections;
+      // Wind-curved blades grow vertically then fold outward toward the tip.
+      const forward = height * (.10 * t + .33 * t * t);
+      const rise = height * (t - .11 * t * t);
+      const halfWidth = width * Math.pow(1 - t, .78) + .0008;
+      // Subtle spiral, rooted in the soil: no perfectly planar paper cards.
+      const twist = .20 * Math.sin(t * 2.5 + i * .43) * t;
+      const bentSideX = sideX * Math.cos(twist) + dx * Math.sin(twist);
+      const bentSideZ = sideZ * Math.cos(twist) + dz * Math.sin(twist);
+      // Instance tint, base material and vertex pigment multiply. The old
+      // dark root-to-tip values were multiplied three times, producing a
+      // nearly featureless dark-green field even at rider height.
+      // Paint these blades in a lighter, still muted watercolour range.
+      const dry = i % 7 === 0 ? .13 : 0;
+      const r = .55 + t * .16 + hue + dry;
+      const g = .67 + t * .17 + hue * .4 + dry * .45;
+      const b = .44 + t * .13 + (i % 4) * .014 + dry * .18;
+      for (const sign of [-1, 1]) {
+        positions.push(
+          rootX + dx * forward + bentSideX * halfWidth * sign,
+          rise,
+          rootZ + dz * forward + bentSideZ * halfWidth * sign,
+        );
+        colors.push(r, g, b);
+      }
+    }
+    for (let j = 0; j < sections; j++) {
+      const a = first + j * 2, b = a + 1, c = a + 2, d = a + 3;
+      indices.push(a, c, b, b, c, d);
+    }
   }
-  const geometry=new THREE.BufferGeometry();
-  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
 }
@@ -48,6 +77,7 @@ export class LocalGroundcover {
   readonly mesh: THREE.InstancedMesh;
   private readonly material: THREE.MeshStandardMaterial;
   private readonly time={value:0};
+  private readonly actorPosition={value:new THREE.Vector2()};
   private readonly radius: number;
   private readonly spacing: number;
   private readonly dummy=new THREE.Object3D();
@@ -57,17 +87,23 @@ export class LocalGroundcover {
 
   constructor(scene:THREE.Scene,quality:Quality='high') {
     this.radius=quality==='high'?94:76;
-    this.spacing=quality==='high'?3.05:4.65;
+    // Ground-level WebGL captures showed isolated grass tufts several
+    // metres apart. Close the meadow gaps while keeping ONE draw call and
+    // an explicitly bounded high/low instance budget.
+    this.spacing=quality==='high'?2.10:2.80;
     const side=Math.ceil(this.radius*2/this.spacing)+5;
     const capacity=side*side;
     this.material=new THREE.MeshStandardMaterial({
-      color:0xb6caa3,side:THREE.DoubleSide,roughness:.94,metalness:0,
+      color:0xd8e4c6,vertexColors:true,side:THREE.DoubleSide,roughness:.94,metalness:0,
     });
     const wind=this.time;
+    const fadeRadius={value:this.radius};
     this.material.onBeforeCompile=(shader)=>{
       shader.uniforms.uScGrassDetailTime=wind;
+      shader.uniforms.uScGrassActor=this.actorPosition;
+      shader.uniforms.uScGrassDetailRadius=fadeRadius;
       shader.vertexShader=shader.vertexShader.replace('#include <common>',
-        '#include <common>\nuniform float uScGrassDetailTime;');
+        '#include <common>\nuniform float uScGrassDetailTime;\nuniform float uScGrassDetailRadius;\nuniform vec2 uScGrassActor;');
       shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',
         `#include <begin_vertex>
           #ifdef USE_INSTANCING
@@ -79,10 +115,22 @@ export class LocalGroundcover {
             *position.y*position.y*.065;
           transformed.z+=cos(uScGrassDetailTime*.91+phase+position.y*1.5)
             *position.y*position.y*.047;
+          // Scale down the actual grass blade around its root before it
+          // enters the local vegetation budget, avoiding a popping ring.
+          #ifdef USE_INSTANCING
+          float fadeDistance=length(instanceMatrix[3].xz-cameraPosition.xz);
+          float scDetailFade=1.0-smoothstep(
+            uScGrassDetailRadius-17.0,uScGrassDetailRadius-3.0,fadeDistance);
+          transformed*=scDetailFade;
+          // Trample only the flexible blade, never its terrain-anchored root.
+          float actorDistance=length(instanceMatrix[3].xz-uScGrassActor);
+          float closeDisturbance=1.0-smoothstep(.65,3.1,actorDistance);
+          transformed.y*=1.0-.74*closeDisturbance;
+          #endif
         `);
     };
-    this.material.customProgramCacheKey=()=> 'scaleborn-groundcover-wind-v1';
-    this.mesh=new THREE.InstancedMesh(grassPatch(quality),this.material,capacity);
+    this.material.customProgramCacheKey=()=> 'scaleborn-groundcover-wind-fade-v2-actor-response';
+    this.mesh=new THREE.InstancedMesh(makeGrassPatch(quality),this.material,capacity);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.count=0;
     this.mesh.frustumCulled=false;
@@ -94,6 +142,7 @@ export class LocalGroundcover {
   update(x:number,z:number,time:number):void {
     this.time.value=time;
     if(!Number.isFinite(x)||!Number.isFinite(z))return;
+    this.actorPosition.value.set(x,z);
     const centerX=Math.floor(x/(this.spacing*4));
     const centerZ=Math.floor(z/(this.spacing*4));
     if(centerX===this.lastX&&centerZ===this.lastZ)return;
@@ -131,7 +180,9 @@ export class LocalGroundcover {
         this.dummy.scale.setScalar(.58+tint*.75);
         this.dummy.updateMatrix();
         this.mesh.setMatrixAt(count,this.dummy.matrix);
-        this.color.setHSL(.22+tint*.11,.28+tint*.13,.46+tint*.17);
+        // Retain subtle plant-by-plant hue variation without multiplying
+        // a dark instance tint into the already painted root colours.
+        this.color.setHSL(.245+tint*.055,.20+tint*.12,.67+tint*.095);
         this.mesh.setColorAt(count,this.color);
         count++;
       }

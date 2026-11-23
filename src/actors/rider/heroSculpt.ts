@@ -1,0 +1,422 @@
+import * as THREE from 'three';
+import { taperedSpine } from '../dragon/organicSculpt';
+import { makeRiderFabricTextures } from './riderFabric';
+import { makeRiderSkinMaterial } from './riderSkinSurface';
+import { createRiderTailRig } from './riderTailRig';
+import { installSleeveCreaseMorph } from './riderSleeveCloth';
+import { installRiderUpperBody } from './riderUpperBodyRig';
+import { installRiderFaceMorphs } from './riderFaceMorph';
+import { makeRiderHairLock, makeRiderHairFringe } from './riderHairSculpt';
+import { riderFaceRelief } from './riderFaceRelief';
+import { installRiderKneeClothMorph } from './riderKneeCloth';
+import { installRiderCoatWaistMorph } from './riderCoatWaist';
+
+/**
+ * Original adolescent dragon-human heroine. Her slender coastal-traveller
+ * silhouette, small swept horns and articulated draconic tail are authored
+ * here; no unrelated adult elf/ranger model is used.
+ *
+ * All parts attach to reusable limb pivots so the existing portable rider
+ * pose channels keep working on foot, underwater and while mounted.
+ */
+type Profile = readonly [height:number, width:number, depth:number, z:number];
+
+function shapedTorso(
+  profile: readonly Profile[], material:THREE.Material, name:string,
+  samples=36, radial=24, region:'plain'|'face'|'coat'='plain',
+):THREE.Mesh {
+  const positions:number[]=[], uvs:number[]=[], index:number[]=[];
+  const rising=profile[profile.length-1]![0]>=profile[0]![0];
+  for(let i=0;i<=samples;i++){
+    const t=i/samples;
+    const f=t*(profile.length-1), k=Math.min(profile.length-2,Math.floor(f));
+    const u=f-k;
+    const a=profile[k]!, b=profile[k+1]!;
+    // Cubic cross-section interpolation gives cheeks, sleeves and boot shafts
+    // continuous tangents instead of the pinched bands of smoothstep rings.
+    const blend=(channel:number):number=>{
+      const prev=profile[Math.max(0,k-1)]![channel]!;
+      const next=profile[Math.min(profile.length-1,k+2)]![channel]!;
+      const m0=(b[channel]!-prev)*.5,m1=(next-a[channel]!)*.5;
+      const value=(2*u*u*u-3*u*u+1)*a[channel]!
+        +(u*u*u-2*u*u+u)*m0
+        +(-2*u*u*u+3*u*u)*b[channel]!
+        +(u*u*u-u*u)*m1;
+      return channel===1||channel===2?Math.max(.004,value):value;
+    };
+    const y=a[0]+(b[0]-a[0])*u;
+    const width=blend(1),depth=blend(2),centerZ=blend(3);
+    for(let j=0;j<=radial;j++){
+      const angle=j/radial*Math.PI*2;
+      const nx=Math.cos(angle),forward=Math.max(0,-Math.sin(angle));
+      const cheek=region==='face'
+        ? Math.exp(-Math.pow((y-1.303)/.072,2)*2)
+          *Math.exp(-Math.pow((Math.abs(nx)-.70)/.28,2)*2)*forward
+        : 0;
+      const jaw=region==='face'
+        ? Math.exp(-Math.pow((y-1.228)/.058,2)*2):0;
+      const coatFall=Math.pow(1-t,7);
+      const coatPleat=region==='coat'
+        ? (.004+.006*coatFall)*Math.cos(angle*6)*(.55+.45*Math.sin(t*Math.PI)) : 0;
+      const r=region==='face'?0
+        : region==='coat' ? coatPleat : .0022*Math.sin(angle*7+t*19);
+      // Fitted weathered coat, not an evenly extruded tube.
+      const hem=region==='coat' ? -.013*coatFall*Math.cos(angle*4) : 0;
+      // The eye orbit, brow ridge, bridge and cheek are part of one
+      // continuous surface, not separate pasted-on facial primitives.
+      const relief=region==='face'?riderFaceRelief(y,nx,Math.sin(angle)):0;
+      positions.push(nx*(width+r)*(1-.033*jaw),
+        y+hem,centerZ+Math.sin(angle)*(depth+r)-cheek*.013+relief);
+      uvs.push(j/radial,t);
+      if(i<samples&&j<radial) {
+        const base=i*(radial+1)+j,next=base+radial+1;
+        if (rising) index.push(base,next,base+1,base+1,next,next+1);
+        else index.push(base,base+1,next,base+1,next+1,next);
+      }
+    }
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  g.setIndex(index);g.computeVertexNormals();
+  const m=new THREE.Mesh(g,material);m.name=name;
+  m.castShadow=true;
+  return m;
+}
+
+function material(color:number, roughness=.9):THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({color,roughness,metalness:0.0});
+}
+
+const fabric = makeRiderFabricTextures();
+function woven(color:number, roughness=.93):THREE.MeshStandardMaterial {
+  const mat = new THREE.MeshStandardMaterial({
+    color,roughness,metalness:0,
+    map:fabric.color, normalMap:fabric.normal, roughnessMap:fabric.roughness,
+  });
+  mat.normalScale.set(.16,.16);
+  return mat;
+}
+
+function smallEye(parent:THREE.Group,side:number,
+  skin:THREE.Material,eye:THREE.Material,iris:THREE.Material,
+  browPigment:THREE.Material):void {
+  // Small almond-shaped eyes sit against the facial surface rather than
+  // floating as round green toy-like globes in real close-up screenshots.
+  const white = new THREE.Mesh(new THREE.SphereGeometry(1,18,14),eye);
+  white.name=side<0?'rider.eye.left':'rider.eye.right';
+  // The previous large white capsules read as separate doll eyes in real
+  // WebGL portraits. A narrower, flush almond follows the cheek curvature.
+  white.position.set(side*.084,1.296,-.145);
+  white.scale.set(.031,.013,.0035);
+  parent.add(white);
+  const jewel=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),iris);
+  jewel.name=side<0?'rider.iris.left':'rider.iris.right';
+  jewel.position.set(side*.084,1.296,-.150);
+  jewel.scale.set(.009,.010,.0028);
+  parent.add(jewel);
+  // Curved upper and lower eyelids partially enclose the thin almond eye.
+  // They hide the exposed sphere edges that appeared googly in real WebGL QA.
+  const upperLid = new THREE.Mesh(taperedSpine([
+    [side*.054,1.306,-.139],[side*.084,1.312,-.151],
+    [side*.115,1.305,-.140],
+  ],.007,10,20),skin);
+  upperLid.name=side<0?'rider.eyelid.upper.left':'rider.eyelid.upper.right';
+  parent.add(upperLid);
+  const lowerLid = new THREE.Mesh(taperedSpine([
+    [side*.055,1.287,-.139],[side*.084,1.283,-.150],
+    [side*.114,1.289,-.141],
+  ],.005,10,20),skin);
+  lowerLid.name=side<0?'rider.eyelid.lower.left':'rider.eyelid.lower.right';
+  parent.add(lowerLid);
+  const brow=new THREE.Mesh(taperedSpine([
+    [side*.044,1.343,-.137],[side*.083,1.353,-.148],
+    [side*.125,1.344,-.128],
+  ],.010,10,22),browPigment);
+  brow.name=side<0?'rider.brow.left':'rider.brow.right';
+  parent.add(brow);
+}
+
+function createRiderArm(
+  parent:THREE.Group,side:-1|1,
+  coat:THREE.Material,skin:THREE.Material,trim:THREE.Material,
+):THREE.Group {
+  const arm=new THREE.Group();
+  arm.name=side<0?'rider.leftArm':'rider.rightArm';
+  arm.position.set(side*.228,1.107,-.018);
+  const sleeve=shapedTorso([
+    [.025,.066,.077,0],[0,.073,.082,-.008],
+    [-.13,.083,.089,-.018],[-.25,.075,.084,-.032],
+    [-.355,.063,.073,-.044],
+  ],coat,'rider.sleeve',34);
+  installSleeveCreaseMorph(sleeve);
+  arm.add(sleeve);
+  // Separate elbow pivot allows hands to brace in mounted flight without
+  // turning the entire straight sleeve into a rigid diagonal plank.
+  const elbow=new THREE.Group();
+  elbow.name=side<0?'rider.leftElbow':'rider.rightElbow';
+  elbow.position.set(0,-.335,-.039);
+  elbow.add(shapedTorso([
+    [.005,.063,.069,0],[-.08,.068,.071,-.005],
+    [-.17,.060,.064,-.014],[-.235,.055,.059,-.021],
+  ],coat,'rider.forearm',26));
+  elbow.add(shapedTorso([
+    [-.22,.059,.067,-.021],[-.258,.057,.065,-.022],
+  ],trim,'rider.cuff',9));
+  const wrist=new THREE.Group();
+  wrist.name=side<0?'rider.leftWrist':'rider.rightWrist';
+  wrist.position.set(0,-.285,-.024);
+  // A smaller palm and four gently curled digits replace the one-piece
+  // conical mitten. All fingers follow the existing elbow/wrist socket.
+  wrist.add(shapedTorso([
+    [.034,.047,.053,.002],[0,.050,.055,-.002],
+    [-.043,.043,.039,-.009],
+  ],skin,'rider.hand',19));
+  for(let i=0;i<4;i++){
+    const x=(i-1.5)*.027;
+    const length=[.048,.060,.057,.045][i]!;
+    const digit=new THREE.Mesh(taperedSpine([
+      [x,-.032,-.012],
+      [x,-.047,-.027],
+      [x*.96,-.050-length*.57,-.044],
+      [x*.93,-.042-length,-.060],
+    ],.012-i*.001,10,22),skin);
+    digit.name='rider.finger.'+i;
+    digit.castShadow=true;
+    wrist.add(digit);
+  }
+  const thumb=new THREE.Mesh(taperedSpine([
+    [side*.044,-.008,-.004],[side*.067,-.025,-.019],
+    [side*.073,-.045,-.046],[side*.066,-.055,-.058],
+  ],.015,12,20),skin);
+  thumb.name='rider.thumb';
+  thumb.castShadow=true;
+  wrist.add(thumb);
+  elbow.add(wrist);
+  arm.add(elbow);
+  parent.add(arm);
+  return arm;
+}
+
+function createRiderLeg(
+  parent:THREE.Group,side:-1|1,
+  cloth:THREE.Material,boot:THREE.Material,trim:THREE.Material,
+):THREE.Group {
+  const leg=new THREE.Group();
+  leg.name=side<0?'rider.leftLeg':'rider.rightLeg';
+  leg.position.set(side*.151,.66,.035);
+  const trousers=shapedTorso([
+    [.01,.096,.111,.02],[-.14,.109,.116,.04],
+    [-.27,.096,.105,.044],[-.355,.083,.093,.034],
+  ],cloth,'rider.trousers',32);
+  installRiderKneeClothMorph(trousers);
+  leg.add(trousers);
+  // The true knee hinge solves the straight-legged mounted silhouette. Its
+  // overlapping cloth cuff hides the joint when walking or bent in the saddle.
+  const knee=new THREE.Group();
+  knee.name=side<0?'rider.leftKnee':'rider.rightKnee';
+  knee.position.set(0,-.33,.033);
+  knee.add(shapedTorso([
+    [.015,.082,.093,0],[-.075,.084,.094,-.005],
+    [-.17,.073,.083,-.016],[-.226,.069,.077,-.020],
+  ],cloth,'rider.shin',26));
+  const ankle=new THREE.Group();
+  ankle.name=side<0?'rider.leftAnkle':'rider.rightAnkle';
+  ankle.position.set(0,-.175,-.018);
+  ankle.add(shapedTorso([
+    [.01,.071,.077,0],[-.06,.076,.085,-.014],
+    [-.12,.077,.105,-.058],[-.152,.054,.080,-.074],
+  ],boot,'rider.boot',24));
+  ankle.add(shapedTorso([
+    [-.015,.076,.081,-.008],[-.033,.075,.080,-.010],
+  ],trim,'rider.boot-hem',8));
+  knee.add(ankle);
+  leg.add(knee);
+  parent.add(leg);
+  return leg;
+}
+
+/** Build original render geometry and standardized existing animation pivots. */
+export function makeScalebornRider():THREE.Group {
+  const group=new THREE.Group();
+  group.name='character.rider.hero';
+  group.userData.assetId='character.rider.hero';
+  group.userData.scalebornDesign='scaleborn.hero.design.v1';
+
+  const warmSkin=makeRiderSkinMaterial();
+  const shadowSkin=material(0x987d7a,.89);
+  const cloakMat=woven(0x453d5f,.95);
+  cloakMat.side=THREE.DoubleSide;
+  const coat=woven(0x68536a,.90);
+  const cloth=woven(0x3b6471,.94);
+  const boot=material(0x302d3e,.93);
+  const trim=new THREE.MeshStandardMaterial({
+    color:0xb4a585,roughness:.76,metalness:.08,
+  });
+  // Muted green-gray sclera and deeper sea-glass irises preserve the
+  // original hybrid palette without glowing coin-like eyes.
+  const eyes=material(0x9ca9a1,.77);
+  const irises=material(0x326e61,.65);
+  const hair=material(0x252937,.93);
+  const scale=new THREE.MeshStandardMaterial({
+    color:0x354d67,metalness:.19,roughness:.52,
+  });
+
+  // Independent head joint with a neutral rest-space offset. Every original
+  // facial vertex keeps its authored absolute height, so named features and
+  // cosmetic asset IDs remain stable under mounting and dismounting.
+  const head=new THREE.Group();
+  head.name='rider.head';
+  head.position.y=1.19;
+  const rest=new THREE.Group();
+  rest.name='rider.head-rest-space';
+  rest.position.y=-1.19;
+  head.add(rest);
+  group.add(head);
+
+  const coatBody=shapedTorso([
+    [.56,.172,.130,.020],[.65,.177,.138,.014],
+    [.78,.151,.127,.004],[.88,.163,.132,-.002],
+    [.995,.186,.137,-.006],[1.075,.200,.141,-.009],
+    [1.16,.130,.106,-.020],
+  ],coat,'rider.fitted-coat',42,28,'coat');
+  installRiderCoatWaistMorph(coatBody);
+  group.add(coatBody);
+  // Narrow original cloth lapels hug the collar-to-chest seam.
+  for(const side of [-1,1] as const) {
+    const lapel=new THREE.Mesh(taperedSpine([
+      [side*.142,1.125,-.070],
+      [side*.098,1.084,-.110],
+      [side*.063,1.016,-.136],
+      [side*.035,.957,-.140],
+    ],.014,10,28),trim);
+    lapel.name=side<0?'rider.coat-lapel.left':'rider.coat-lapel.right';
+    lapel.castShadow=true;
+    group.add(lapel);
+  }
+
+  group.add(shapedTorso([
+    [1.145,.063,.073,-.01],[1.19,.071,.075,-.018],
+    [1.225,.075,.08,-.02],
+  ],warmSkin,'rider.neck',12));
+
+  const face=shapedTorso([
+    // The neck overlaps the jaw's inward taper, hiding the lower open ring
+    // that read as a bright grin beneath the original child-scale face.
+    [1.164,.058,.070,-.009],[1.20,.097,.095,-.005],
+    [1.24,.136,.124,-.018],
+    [1.30,.173,.151,-.011],[1.352,.169,.156,.003],
+    [1.414,.149,.142,.019],[1.458,.116,.115,.035],
+    [1.48,.074,.082,.038],
+  ],warmSkin,'rider.face',48,30,'face');
+  installRiderFaceMorphs(face);
+  rest.add(face);
+
+  // Hood-like angular hairline, parting in the middle to reveal the brows.
+  rest.add(shapedTorso([
+    [1.40,.169,.142,.034],[1.46,.172,.149,.048],
+    [1.50,.126,.123,.052],[1.525,.036,.059,.051],
+  ],hair,'rider.crown',18));
+  rest.add(makeRiderHairFringe(hair));
+  for(const side of [-1,1] as const){
+    smallEye(rest,side,shadowSkin,eyes,irises,hair);
+    // Four thin layered strands replace the old single rigid hair tube.
+    rest.add(makeRiderHairLock(side,hair));
+    // Dragon ancestry is subtle: swept short horns, not adult antlers.
+    const horn=new THREE.Mesh(taperedSpine([
+      [side*.108,1.471,.071],[side*.137,1.516,.135],
+      [side*.185,1.517,.210],[side*.212,1.487,.274],
+    ],.029,14),scale);
+    horn.name=side<0?'rider.horn.left':'rider.horn.right';
+    rest.add(horn);
+    // The previous side tusks looked like stray ears in real screenshots.
+    // Small scales now lie along her cheek/temple, inside the face outline.
+    const smallScales=new THREE.Mesh(taperedSpine([
+      [side*.148,1.332,-.052],[side*.158,1.299,-.066],
+      [side*.16,1.274,-.072],
+    ],.014,10),scale);
+    smallScales.name=side<0?'rider.temple-scales.left':'rider.temple-scales.right';
+    rest.add(smallScales);
+    createRiderArm(group,side,coat,warmSkin,trim);
+    createRiderLeg(group,side,cloth,boot,trim);
+  }
+
+  // Subtle dragon-hybrid nose bridge keeps the painted face dimensional.
+  const nose=new THREE.Mesh(taperedSpine([
+    [0,1.305,-.143],[0,1.288,-.150],
+    [0,1.275,-.157],[0,1.269,-.160],
+  ],.012,12,24),warmSkin);
+  nose.name='rider.nose';
+  rest.add(nose);
+
+  // Subtle expression line follows the child heroine's lower facial contour.
+  // The lip is embedded in the sculpt, not a black floating cartoon mouth.
+  const mouth=new THREE.Mesh(taperedSpine([
+    [-.050,1.231,-.117],[-.028,1.226,-.130],
+    [0,1.226,-.136],[.028,1.226,-.130],[.050,1.231,-.117],
+  ],.0045,10,28),shadowSkin);
+  mouth.name='rider.mouth';
+  rest.add(mouth);
+
+  // Trouser belt and coastal talisman are visible without bulky armor.
+  group.add(shapedTorso([
+    [.685,.178,.15,.009],[.715,.180,.150,.008],
+  ],trim,'rider.belt',8));
+  const pendant=new THREE.Mesh(new THREE.OctahedronGeometry(.030,1),irises);
+  pendant.name='rider.bond-pendant';
+  pendant.position.set(0,1.01,-.149);
+  group.add(pendant);
+
+  // Broad cloak is a double-sided, hanging cloth mesh rather than a cone.
+  const positions:number[]=[],uvs:number[]=[],colors:number[]=[],indexes:number[]=[];
+  const cols=16,rows=14;
+  for(let row=0;row<=rows;row++) {
+    const t=row/rows;
+    for(let col=0;col<=cols;col++){
+      const s=col/cols*2-1;
+      // The mantle is pinned at both collarbones, wraps the back and falls
+      // outward into a slightly scalloped weighted hem. Three-dimensional
+      // diagonal drape and six shallow fabric pleats break up the old flat
+      // trapezoidal sail at rider-height camera angles.
+      const edge=Math.abs(s), fall=t*t;
+      const crease=Math.cos(s*Math.PI*6)*fall;
+      positions.push(
+        s*(.215+.18*t),
+        1.12-.72*t+.032*edge*edge*fall+.018*Math.cos(s*Math.PI*5)*fall*t,
+        .142+.28*t+.11*Math.sin(Math.PI*t)+.065*fall
+          -.055*edge*edge*t+.019*crease+.012*Math.sin(s*Math.PI*4)*t,
+      );
+      // The original woven albedo/normal/roughness maps were never sampled
+      // on this live mesh because it had no UV attribute.
+      uvs.push(col/cols*2, t*2.6);
+      const pigment=1-.08*edge*edge-.055*t+.035*crease;
+      colors.push(.95*pigment,.92*pigment,pigment);
+      if(row<rows&&col<cols){
+        const k=row*(cols+1)+col,l=k+cols+1;
+        indexes.push(k,k+1,l,l,k+1,l+1);
+      }
+    }
+  }
+  const cloakGeo=new THREE.BufferGeometry();
+  cloakGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  cloakGeo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  cloakGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+  cloakGeo.setIndex(indexes);cloakGeo.computeVertexNormals();
+  // Dynamic cloth keeps a conservative local bound throughout banking and
+  // flight; frustum culling must not clip its displaced scalloped hem.
+  cloakGeo.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.75,.41),1.25);
+  const cloakFabric=cloakMat.clone();
+  cloakFabric.vertexColors=true;
+  const cloak=new THREE.Mesh(cloakGeo,cloakFabric);
+  cloak.name='rider.travel-cloak';
+  group.add(cloak);
+
+  // The original draconic tail is now one skinned surface with a moving
+  // mid-joint, tip and inherited fin, retaining its old root coordinates.
+  group.add(createRiderTailRig(scale,cloakMat).root);
+  // This is the complete existing original upper body, not a second mesh.
+  // It gains a chest/spine hinge while the tail and lower limbs stay at the
+  // original child-scale pelvis and saddle coordinates.
+  installRiderUpperBody(group);
+  return group;
+}

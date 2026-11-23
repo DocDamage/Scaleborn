@@ -4,6 +4,7 @@ import { fbm } from '../core/random';
 import { GRAND_LAKE, lakeContains, lakeRadius, lakeShoreDistance } from './highlandLake';
 import { stitchedHeight, TILE_METERS, type TileSpec } from './tileLod';
 import { terrainUvAt } from './terrainUv';
+import { heightfieldNormalAt, seamNormalWeight } from './terrainNormals';
 
 const sand = new THREE.Color(0xc5b698);
 const grass = new THREE.Color(0x668d61);
@@ -92,6 +93,7 @@ function intersect(a: Point, b: Point): Point {
 /** A subtle quad strip following the coastline, not a rectangular alpha overlay. */
 function coastlineFoam(points: Point[][]): THREE.BufferGeometry | null {
   const vertices: number[] = [];
+  const uvs: number[] = [];
   const indices: number[] = [];
   const n = points.length - 1;
   for (let row = 0; row < n; row++) {
@@ -118,13 +120,20 @@ function coastlineFoam(points: Point[][]): THREE.BufferGeometry | null {
         const ox = -dz / length * halfWidth;
         const oz = dx / length * halfWidth;
         const start = vertices.length / 3;
-        const y = SEA_LEVEL + 0.73;
+        // Sea surf and the water mesh share the same moving wave elevation.
+        // Keep only a small depth-bias to avoid z-fighting, not the old
+        // 0.73m high static foam shelf floating above every trough.
+        const y = SEA_LEVEL + 0.08;
         vertices.push(
           a.x - ox, y, a.z - oz,
           a.x + ox, y, a.z + oz,
           b.x - ox, y, b.z - oz,
           b.x + ox, y, b.z + oz,
         );
+        // UV.x tracks each piece's contour length; UV.y is the cross-shore
+        // profile. The fragment shader tapers both edges rather than painting
+        // a full-width opaque rectangle over water and land.
+        uvs.push(0,0, 0,1, length * 0.075,0, length * 0.075,1);
         indices.push(start, start + 1, start + 2, start + 1, start + 3, start + 2);
       }
     }
@@ -132,6 +141,7 @@ function coastlineFoam(points: Point[][]): THREE.BufferGeometry | null {
   if (vertices.length === 0) return null;
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geo.setIndex(indices);
   geo.computeVertexNormals();
   return geo;
@@ -176,6 +186,31 @@ export function makeTerrainTile(
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   texCoords.needsUpdate = true;
   geometry.computeVertexNormals();
+  // A per-tile triangle average cannot see neighboring triangles. That
+  // creates hard lighting seams where the camera streams a different LOD.
+  // Preserve triangle-derived interior normals, but converge to the same
+  // collision-heightfield gradient at every shared tile boundary. The two
+  // interior rings smooth the shading transition without extra geometry.
+  const tileNormals = geometry.getAttribute('normal');
+  for (let row = 0; row <= n; row++) {
+    for (let col = 0; col <= n; col++) {
+      const weight = seamNormalWeight(col, row, n);
+      if (weight === 0) continue;
+      const index = row * (n + 1) + col;
+      const wx = (tx + col / n) * TILE_METERS;
+      const wz = (tz + row / n) * TILE_METERS;
+      const [nx, ny, nz] = heightfieldNormalAt(wx, wz);
+      const ox = tileNormals.getX(index), oy = tileNormals.getY(index);
+      const oz = tileNormals.getZ(index);
+      const dx = ox * (1 - weight) + nx * weight;
+      const dy = oy * (1 - weight) + ny * weight;
+      const dz = oz * (1 - weight) + nz * weight;
+      const inverseLength = 1 / Math.hypot(dx, dy, dz);
+      tileNormals.setXYZ(index, dx * inverseLength,
+        dy * inverseLength, dz * inverseLength);
+    }
+  }
+  tileNormals.needsUpdate = true;
   // Alpine escarpments must remain stone even on the inexpensive renderer.
   // Shader-based slope blending covers high mode, vertex color acts as a
   // cheaper but physically grounded fallback for low / software WebGL.

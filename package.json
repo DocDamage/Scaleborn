@@ -12,7 +12,12 @@
     "test": "vitest run",
     "check": "npm run lint && npm run test && npm run build",
     "test:browser": "node scripts/browser-smoke.mjs",
-    "test:visual": "node scripts/visual-capture.mjs"
+    "test:visual": "node scripts/visual-capture.mjs",
+    "test:headwaters": "node scripts/headwater-capture.mjs",
+    "test:visual:high": "node scripts/visual-capture.mjs --hardware",
+    "benchmark:gpu": "node scripts/hardware-benchmark.mjs",
+    "test:characters": "node scripts/character-capture.mjs",
+    "test:combat-browser": "node scripts/combat-smoke.mjs"
   },
   "dependencies": {
     "three": "0.175.0"

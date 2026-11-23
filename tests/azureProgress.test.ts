@@ -27,6 +27,26 @@ describe('bounded versioned Azure Coast progress', () => {
     expect(loaded.discovered).toEqual(['azure.sunken-shrine', 'azure.tidegate']);
     expect(JSON.stringify(loaded)).not.toContain('dragonAnchored');
   });
+  it('restores one-time Gloam victory while accepting older v1 save payloads', () => {
+    const storage = new MemoryStore();
+    const progressed = snapshotAzureProgress(
+      { solved: true, dragonAnchored: false },
+      { collected: true, attuned: true },
+      ['azure.sunken-shrine'], true,
+    );
+    expect(progressed.gloamCleared).toBe(true);
+    expect(saveAzureProgress(storage, progressed)).toBe(true);
+    expect(loadAzureProgress(storage)).toEqual(progressed);
+    const legacy = { ...progressed } as Record<string, unknown>;
+    delete legacy.gloamCleared;
+    expect(parseAzureProgress(legacy)).toEqual({
+      ...progressed, gloamCleared: false,
+    });
+    // Bad new fields must not wipe valid story progress.
+    expect(parseAzureProgress({ ...progressed, gloamCleared: 'yes' }))
+      .toEqual({ ...progressed, gloamCleared: false });
+  });
+
   it('rejects mismatched versions, seeds, types and unknown nested content', () => {
     const good = { ...freshAzureProgress(), tidegateSolved: true };
     expect(parseAzureProgress({ ...good, worldSeed: AZURE_SEED + 1 }).tidegateSolved).toBe(false);

@@ -29,6 +29,43 @@ describe('procedural terrain geometry', () => {
     }
   });
 
+  it('keeps boundary normals identical across high-to-low streamed terrain', () => {
+    const highTile = makeTerrainTile(2, 0, tileSpec(0, 0, 2, 0), surfaceMaterial, foamMaterial);
+    const lowTile = makeTerrainTile(3, 0, tileSpec(0, 0, 3, 0), surfaceMaterial, foamMaterial);
+    try {
+      const a = surface(highTile.group).getAttribute('normal');
+      const b = surface(lowTile.group).getAttribute('normal');
+      for (let k = 0; k <= 16; k++) {
+        const highIndex = k * 4 * 65 + 64;
+        const lowIndex = k * 17;
+        for (const axis of ['X', 'Y', 'Z'] as const) {
+          const read = axis === 'X' ? 'getX' : axis === 'Y' ? 'getY' : 'getZ';
+          expect(a[read](highIndex)).toBeCloseTo(b[read](lowIndex), 5);
+        }
+      }
+    } finally {
+      disposeTerrainTile(highTile.group);
+      disposeTerrainTile(lowTile.group);
+    }
+  });
+
+  it('keeps boundary normals identical across matching-detail neighbors', () => {
+    const aTile = makeTerrainTile(0, 0, tileSpec(0, 0, 0, 0), surfaceMaterial, foamMaterial);
+    const bTile = makeTerrainTile(1, 0, tileSpec(0, 0, 1, 0), surfaceMaterial, foamMaterial);
+    try {
+      const a = surface(aTile.group).getAttribute('normal');
+      const b = surface(bTile.group).getAttribute('normal');
+      for (let k = 0; k <= 64; k++) {
+        expect(a.getX(k * 65 + 64)).toBeCloseTo(b.getX(k * 65), 6);
+        expect(a.getY(k * 65 + 64)).toBeCloseTo(b.getY(k * 65), 6);
+        expect(a.getZ(k * 65 + 64)).toBeCloseTo(b.getZ(k * 65), 6);
+      }
+    } finally {
+      disposeTerrainTile(aTile.group);
+      disposeTerrainTile(bTile.group);
+    }
+  });
+
   it('creates deterministic vertex colors with natural coast categories', () => {
     const spec = tileSpec(-6, 0, -6, 0);
     const a = makeTerrainTile(-6, 0, spec, surfaceMaterial, foamMaterial);

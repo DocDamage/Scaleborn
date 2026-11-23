@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { DragonVisual } from '../actors/dragon/visual';
+import { newCombatState, castDragonFire, castRiderSigil, castMountedRiderSigil, castDragonClaw, castBondSurge, stepCombat, combatNearby, combatRemaining, restoreGloamVictory } from '../combat/combat';
+import { CombatVisual } from '../combat/visuals';
+import { CombatTargetLock } from '../combat/targetLock';
 import { newFlightState, stepFlight, requestDragonForm, toggleLanding, type InteractionResult } from '../actors/dragon/flight';
 import { FORMS, FORM_ORDER, type DragonForm } from '../actors/dragon/forms';
 import { assertManifestUnique } from '../data/assets';
@@ -10,8 +13,14 @@ import { CoastDiscovery } from '../world/discoveries';
 import { toggleDragonDive } from '../actors/dragon/swimming';
 import { toggleRiderControl, toggleRiderDive } from '../actors/rider/movement';
 import { LANDMARKS } from '../world/terrain';
-import { GRAND_LAKE, waterSurfaceAt } from '../world/highlandLake';
+import { GRAND_LAKE, MIRRORFALL, headwaterProfileAt, waterSurfaceAt } from '../world/highlandLake';
+import { MIRRORFALL_IMPACT } from '../world/waterDynamics';
+import { findLakebedReviewViewpoint } from '../world/lakebedReviewViewpoint';
 import { AdaptiveResolution } from './adaptiveResolution';
+import { QaFrameCaptureGate } from './qaFrameCaptureGate';
+import { stageCharacterPortrait, poseCharacterPortraitCamera, type PortraitPose, type PortraitSubject } from './characterReviewCamera';
+import { resolveCameraOcclusion } from './cameraOcclusion';
+import { OBSTACLES } from '../world/collision';
 import { TIDEGATE, newTidegateState, stepTidegate, interactTidegate, tidegateNearby, tidegateHint } from '../world/tidegate';
 import {
   ECHO_SHRINE, newTidalEchoState, echoPhase, echoObjective,
@@ -37,15 +46,30 @@ export class Game {
   private readonly quality: 'high' | 'low';
   private readonly resolution: AdaptiveResolution;
   private readonly qaRender: boolean;
+  private readonly qaFrameCaptureGate = new QaFrameCaptureGate();
+  private qaPortraitSubject: PortraitSubject | null = null;
   private readonly scene = new THREE.Scene();
   private readonly camera: THREE.PerspectiveCamera;
   private readonly coast: AzureCoast;
   private readonly dragon = new DragonVisual();
+  private readonly combat = newCombatState();
+  private readonly targetLock = new CombatTargetLock();
+  private readonly lockMarker = requireElement<HTMLDivElement>('#combat-lock-marker');
+  private readonly combatVisual: CombatVisual;
+  private combatNoticeSeen = 0;
+  private readonly combatHud = requireElement<HTMLElement>('#combat-hud');
+  private readonly combatHealth = requireElement<HTMLElement>('#combat-health-fill');
+  private readonly combatEmber = requireElement<HTMLElement>('#combat-ember-fill');
+  private readonly combatEnergyLabel = requireElement<HTMLElement>('#combat-energy-label');
+  private readonly combatHealthBar = requireElement<HTMLElement>('#combat-health-bar');
+  private readonly combatEmberBar = requireElement<HTMLElement>('#combat-ember-bar');
+  private readonly combatThreats = requireElement<HTMLElement>('#combat-threats');
   private readonly discoveries = new CoastDiscovery();
   private readonly tidegate = newTidegateState();
   private readonly echo = newTidalEchoState();
   private readonly progressStorage: ProgressStorage | null;
   private saveAvailable = false;
+  private gloamVictoryStored = false;
   private readonly echoTitle = requireElement<HTMLElement>('#echo-title');
   private readonly echoStage = requireElement<HTMLElement>('#echo-stage');
   private readonly echoPanel = requireElement<HTMLElement>('#echo-panel');
@@ -94,7 +118,7 @@ export class Game {
     // the same world seed; only GPU cost, vegetation density and shading change.
     const params=new URLSearchParams(window.location.search);
     this.quality = params.get('quality') === 'low' ? 'low' : 'high';
-    this.qaRender=params.get('qa')==='1';
+    this.qaRender=import.meta.env.DEV && params.get('qa')==='1';
     const requestedDpr=Math.min(window.devicePixelRatio||1,
       this.quality === 'low' ? 0.68 : 1.4);
     this.resolution=new AdaptiveResolution({
@@ -111,6 +135,8 @@ export class Game {
     this.echo.collected = saved.echo.collected;
     this.echo.attuned = saved.echo.attuned;
     this.discoveries.restore(saved.discovered);
+    restoreGloamVictory(this.combat, saved.gloamCleared);
+    this.gloamVictoryStored = saved.gloamCleared;
     this.renderer = new THREE.WebGLRenderer({
       canvas, antialias: true, powerPreference: 'high-performance',
     });
@@ -129,6 +155,16 @@ export class Game {
       this.flight.z = 100;
       this.flight.y = heightAt(-555, 100) + 18;
       this.flight.yaw = 0;
+    } else if (start === 'combat') {
+      // Repeatable ground-level combat without staging or fake enemy hits.
+      this.flight.x = -446;
+      this.flight.z = -52;
+      this.flight.y = heightAt(-446, -52) + FORMS.rideable.standHeight;
+      this.flight.yaw = Math.PI / 2;
+      this.flight.pitch = 0;
+      this.flight.roll = 0;
+      this.flight.speed = 0;
+      this.flight.mode = 'ground';
     } else if (start === 'water') {
       this.flight.x = 1900;
       this.flight.z = 1900;
@@ -145,6 +181,7 @@ export class Game {
     }
     this.coast = new AzureCoast(this.scene, this.quality);
     this.dragon.attach(this.scene);
+    this.combatVisual = new CombatVisual(this.scene, this.combat);
     this.coast.update(this.flight.x, this.flight.z);
     this.dragon.update(this.flight);
     this.input = new FlightInput(canvas);
@@ -153,6 +190,13 @@ export class Game {
     if (import.meta.env.DEV && new URLSearchParams(window.location.search).get('qa') === '1') {
       const host = window as Window & {
         __scalebornQaAdvance?: (frames: number) => void;
+        __scalebornQaHoldNextFrame?: () => Promise<void>;
+        __scalebornQaResumeFrames?: () => void;
+        __scalebornQaCharacterPortrait?: (pose: PortraitPose) => void;
+        __scalebornQaCharacterGameplay?: (pose: DragonForm | 'rider') => void;
+        __scalebornQaCharacterMotion?: () => {
+          form:DragonForm;mode:string;speed:number;roll:number;
+        };
         __scalebornQaLand?: () => void;
         __scalebornQaLaunch?: () => void;
         __scalebornQaWater?: () => void;
@@ -162,8 +206,64 @@ export class Game {
         __scalebornQaStageEchoReturn?: () => void;
         __scalebornQaLake?: () => void;
         __scalebornQaLakeDive?: () => void;
+        __scalebornQaLakebed?: () => void;
+        __scalebornQaHeadwaters?: () => void;
+        __scalebornQaImpactDive?: () => void;
         __scalebornQaShore?: () => void;
         __scalebornQaForest?: () => void;
+        __scalebornQaCombatSnapshot?: () => {
+          hp: number; ember: number; focus: number; respawns: number;
+          maxEmber: number; gloamCleared: boolean;
+          fireSequence: number; clawSequence: number; lockedTargetId:string|null;
+          sigilSequence: number; bondSequence: number;
+          player: { x: number; y: number; z: number; yaw: number; form: DragonForm; mode: string };
+          lastFire: { origin: { x: number; y: number; z: number }; direction: { x: number; y: number; z: number } } | null;
+          hounds: Array<{ id: string; x: number; y: number; z: number; hp: number; maxHp: number; alert: boolean; windup: number }>;
+        };
+        __scalebornQaStageCombat?: (mode: 'dragon' | 'claw' | 'rider' | 'bond' | 'melee') => void;
+        __scalebornQaAdvanceCombat?: (frames: number) => void;
+      };
+      // Screenshot tests capture one fresh scene frame, then stop the CPU
+      // renderer while Chromium copies its completed compositor surface.
+      // Read-only DEV telemetry lets real screenshot tests reject a static
+      // pose accidentally captured after the simulation's velocity decays.
+      host.__scalebornQaCharacterMotion = () => ({
+        form:this.flight.form,mode:this.flight.mode,
+        speed:this.flight.speed,roll:this.flight.roll,
+      });
+      host.__scalebornQaHoldNextFrame = () => this.qaFrameCaptureGate.holdAfterNextFrame();
+      host.__scalebornQaResumeFrames = () => this.qaFrameCaptureGate.resume();
+      host.__scalebornQaCharacterPortrait = (pose: PortraitPose): void => {
+        if (!['small','rideable','giant','rider','rider-side','rider-face',
+          'rider-tail','flight-rideable','mounted-rideable','mounted-giant',
+          'mounted-rideable-side','mounted-giant-side','walk-rideable',
+          'bank-rideable'].includes(pose)) {
+          throw new Error('Invalid character review pose');
+        }
+        this.qaPortraitSubject = stageCharacterPortrait(this.flight, pose, heightAt);
+        this.coast.update(this.flight.x,this.flight.z);
+        this.coast.setUnderwater(false);
+        this.dragon.update(this.flight);
+        this.updateCamera(1,true);
+        this.coast.updateAtmosphere(this.flight.time,this.camera.position);
+        this.updateHud(.2);
+      };
+      // Same real character scene, but with the ordinary player chase lens
+      // from the unobstructed meadow. This fixes the old gameplay snapshot
+      // framing giant Tidegate ring props instead of Onyx or the rider.
+      host.__scalebornQaCharacterGameplay = (pose: DragonForm | 'rider'): void => {
+        if(!['small','rideable','giant','rider'].includes(pose)){
+          throw new Error('Invalid gameplay character review pose');
+        }
+        stageCharacterPortrait(this.flight,pose,heightAt);
+        this.qaPortraitSubject = null;
+        this.cameraIndex = 0;
+        this.coast.update(this.flight.x,this.flight.z);
+        this.coast.setUnderwater(false);
+        this.dragon.update(this.flight);
+        this.updateCamera(1,true);
+        this.coast.updateAtmosphere(this.flight.time,this.camera.position);
+        this.updateHud(.2);
       };
       host.__scalebornQaLand = (): void => {
         // Stage and trigger atomically: no frame-rate-dependent input race.
@@ -284,6 +384,9 @@ export class Game {
       host.__scalebornQaForest = (): void => {
         // Ground-level visual acceptance, staged next to a real seeded oak.
         // This uses an actual instanced tree from the world, not a test prop.
+        // Expand visibility once for seed-stable oak selection; the next
+        // actual gameplay frame restores camera-aware visibility filtering.
+        this.coast.animate(this.flight.time, GRAND_LAKE.x, this.flight.y, GRAND_LAKE.z);
         const grove=this.scene.getObjectByName('vegetation.azure.pbr-tree-wood.0');
         if (!(grove instanceof THREE.InstancedMesh) || grove.count===0) {
           throw new Error('Oak forest not present in rendered scene');
@@ -333,6 +436,7 @@ export class Game {
         this.updateHud(.2);
       };
       host.__scalebornQaLake = (): void => {
+        this.qaPortraitSubject = null;
         this.flight.x = GRAND_LAKE.x + 78;
         this.flight.z = GRAND_LAKE.z + 76;
         this.flight.y = GRAND_LAKE.surfaceY + 77;
@@ -376,10 +480,171 @@ export class Game {
         this.coast.updateAtmosphere(this.flight.time, this.camera.position);
         this.updateHud(0.2);
       };
+      host.__scalebornQaLakebed = (): void => {
+        // A shallow bed-level camera is needed to verify that lake rocks,
+        // vegetation, caustics and sediments actually render. The older
+        // midwater capture could only show fog over the 148m-deep basin.
+        const { x, z, eyeY } = findLakebedReviewViewpoint();
+        this.flight.x=x;
+        this.flight.z=z;
+        this.flight.y=eyeY;
+        this.flight.waterTargetY=this.flight.y;
+        this.flight.yaw=-Math.PI/2;
+        this.flight.pitch=-.16;
+        this.flight.roll=0;
+        this.flight.speed=0;
+        this.flight.form='rideable';
+        this.flight.mode='underwater';
+        this.flight.controlTarget='dragon';
+        this.flight.transition=null;
+        this.cameraIndex=0;
+        this.coast.update(x,z);
+        this.coast.setUnderwater(true);
+        this.dragon.update(this.flight);
+        this.updateCamera(1,true);
+        this.coast.updateAtmosphere(this.flight.time,this.camera.position);
+        this.updateHud(.2);
+      };
+      host.__scalebornQaHeadwaters = (): void => {
+        // The real rider-height creek camera sees water flowing into the
+        // waterfall lip. Keep it opt-in so recurring CI does not render
+        // another expensive software-WebGL screenshot every code commit.
+        const x=MIRRORFALL.x+64;
+        const channel=headwaterProfileAt(x,GRAND_LAKE.z);
+        if(!channel)throw new Error('No visible feeder stream at QA site');
+        const z=channel.centerZ+channel.halfWidth*1.18;
+        const y=heightAt(x,z);
+        if(waterSurfaceAt(x,z)!==0 || y<channel.surfaceY-1){
+          throw new Error('Headwater QA rider must stand on the dry bank');
+        }
+        this.flight.x=x+2;
+        this.flight.z=z+4;
+        this.flight.y=heightAt(this.flight.x,this.flight.z)+FORMS.small.standHeight;
+        this.flight.form='small';
+        this.flight.mode='ground';
+        this.flight.controlTarget='rider';
+        this.flight.transition=null;
+        this.flight.speed=0;
+        this.flight.roll=0;
+        this.flight.pitch=0;
+        this.flight.riderX=x;
+        this.flight.riderZ=z;
+        this.flight.riderY=y+.05;
+        this.flight.riderTargetY=this.flight.riderY;
+        this.flight.riderMode='ground';
+        this.flight.riderSpeed=0;
+        this.flight.riderYaw=-Math.PI/2+.36;
+        this.cameraIndex=1;
+        this.coast.update(x,z);
+        this.coast.setUnderwater(false);
+        this.dragon.update(this.flight);
+        this.updateCamera(1,true);
+        this.coast.updateAtmosphere(this.flight.time,this.camera.position);
+        this.updateHud(.2);
+      };
+      host.__scalebornQaImpactDive = (): void => {
+        // Inspect the *real* below-surface waterfall entrainment bubbles,
+        // wave underside and lakebed in the same gameplay WebGL scene.
+        const x=MIRRORFALL_IMPACT.x-18;
+        const z=MIRRORFALL_IMPACT.z+5;
+        const water=waterSurfaceAt(x,z);
+        const floor=heightAt(x,z);
+        if(Math.abs(water-GRAND_LAKE.surfaceY)>.001 || water-floor<12){
+          throw new Error('Plunge bubble QA camera is not safely underwater');
+        }
+        this.flight.x=x;
+        this.flight.z=z;
+        this.flight.y=water-8;
+        this.flight.waterTargetY=this.flight.y;
+        this.flight.yaw=Math.PI/2;
+        this.flight.pitch=0;
+        this.flight.roll=0;
+        this.flight.speed=0;
+        this.flight.form='rideable';
+        this.flight.mode='underwater';
+        this.flight.controlTarget='dragon';
+        this.flight.transition=null;
+        this.cameraIndex=0;
+        this.coast.update(x,z);
+        this.coast.setUnderwater(true);
+        this.dragon.update(this.flight);
+        this.updateCamera(1,true);
+        this.coast.updateAtmosphere(this.flight.time,this.camera.position);
+        this.updateHud(.2);
+      };
+      // Read-only combat diagnostics; no fake damage or enemy state changes.
+      host.__scalebornQaCombatSnapshot = () => ({
+        hp: this.combat.hp,
+        maxEmber: this.combat.maxEmber,
+        gloamCleared: this.combat.gloamCleared,
+        ember: this.combat.ember,
+        focus: this.combat.focus,
+        respawns: this.combat.respawns,
+        fireSequence: this.combat.fireSequence,
+        clawSequence: this.combat.clawSequence,
+        lockedTargetId: this.targetLock.current(this.combat,this.flight)?.id ?? null,
+        player: { x: this.flight.x, y: this.flight.y, z: this.flight.z,
+          yaw: this.flight.yaw, form: this.flight.form, mode: this.flight.mode },
+        lastFire: this.combat.lastFire ? { origin: this.combat.lastFire.origin,
+          direction: this.combat.lastFire.direction } : null,
+        sigilSequence: this.combat.sigilSequence,
+        bondSequence: this.combat.bondSequence,
+        hounds: this.combat.hounds.map((h) => ({
+          id: h.id, x: h.x, y: h.y, z: h.z,
+          hp: h.hp, maxHp: h.maxHp, alert: h.alert, windup: h.windup,
+        })),
+      });
+      host.__scalebornQaStageCombat = (mode): void => {
+        // Only actor placement is staged for screenshot speed. Every cast,
+        // AI reaction and damage change still passes through gameplay code.
+        const victim = mode === 'melee' ? this.combat.hounds[1]
+          : this.combat.hounds.find((hound) => hound.hp > 0);
+        if (!victim || victim.hp <= 0) {
+          throw new Error('QA target not alive for ' + mode);
+        }
+        const offset = mode === 'bond' ? 6 : mode === 'melee' ? 2.5
+          : mode === 'claw' ? 3 : mode === 'rider' ? 11 : 13;
+        const x = victim.x - offset, z = victim.z;
+        const form = mode === 'dragon' || mode === 'claw' ||
+          mode === 'melee' ? 'rideable' : 'small';
+        this.flight.x = x; this.flight.z = z;
+        this.flight.y = heightAt(x, z) + FORMS[form].standHeight;
+        this.flight.yaw = Math.PI / 2;
+        this.flight.pitch = 0; this.flight.roll = 0; this.flight.speed = 0;
+        this.flight.mode = 'ground'; this.flight.form = form;
+        this.flight.transition = null;
+        this.flight.riderX = x + 1; this.flight.riderZ = z;
+        this.flight.riderY = heightAt(x + 1, z) + 0.05;
+        this.flight.riderTargetY = this.flight.riderY;
+        this.flight.riderYaw = Math.PI / 2;
+        this.flight.riderSpeed = 0; this.flight.riderMode = 'ground';
+        this.flight.controlTarget = mode === 'rider' ? 'rider' : 'dragon';
+        this.coast.update(x, z);
+        this.dragon.update(this.flight);
+        this.updateCamera(1, true);
+        this.updateHud(0.2);
+      };
+      host.__scalebornQaAdvanceCombat = (frames): void => {
+        if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
+          throw new Error('QA combat frames must be between 1 and 180');
+        }
+        this.consumeGameplayActions();
+        const idle = { turn: 0, pitch: 0, bank: 0, boost: false, flap: false, move: 0 };
+        for (let i = 0; i < frames; i++) {
+          stepFlight(this.flight, idle, FIXED_DT);
+          stepCombat(this.combat, this.flight, FIXED_DT);
+          stepTidegate(this.tidegate, this.flight);
+        }
+        this.accumulator = 0;
+        this.dragon.update(this.flight);
+        this.combatVisual.update(this.combat, this.flight.time, frames * FIXED_DT);
+        this.updateHud(0.2);
+      };
       host.__scalebornQaAdvance = (frames: number): void => {
         if (!Number.isInteger(frames) || frames < 1 || frames > 180) {
           throw new Error('QA frames must be an integer between 1 and 180');
         }
+        this.consumeGameplayActions();
         const idle = { turn: 0, pitch: 0, bank: 0, boost: false, flap: false, move: 0 };
         for (let i = 0; i < frames; i++) stepFlight(this.flight, idle, FIXED_DT);
         this.accumulator = 0;
@@ -394,6 +659,21 @@ export class Game {
           if (FORM_ORDER.includes(form)) this.setForm(form);
         }
       });
+    });
+    requireElement<HTMLButtonElement>('#fire-button').addEventListener('click', () => {
+      if (!this.paused) this.fireAction();
+    });
+    requireElement<HTMLButtonElement>('#lockon-button').addEventListener('click', () => {
+      if (!this.paused) this.lockTargetAction();
+    });
+    requireElement<HTMLButtonElement>('#claw-button').addEventListener('click', () => {
+      if (!this.paused) this.clawAction();
+    });
+    requireElement<HTMLButtonElement>('#mounted-sigil-button').addEventListener('click', () => {
+      if (!this.paused) this.mountedSigilAction();
+    });
+    requireElement<HTMLButtonElement>('#bond-button').addEventListener('click', () => {
+      if (!this.paused) this.bondAction();
     });
     requireElement<HTMLButtonElement>('#land-button').addEventListener('click', () => {
       if (!this.paused) this.landAction();
@@ -452,8 +732,67 @@ export class Game {
     this.actionTimer = 3.1;
   }
 
+  /**
+   * Sole action-consumption path for RAF and bounded browser QA stepping.
+   * QA still delivers actual keyboard events to FlightInput; it does not
+   * fake hits, mount state or terrain collision. The Set takes each once.
+   */
+  private consumeGameplayActions(): void {
+    if (this.paused || this.menuOpen) return;
+    if (this.input.take('land')) this.landAction();
+    if (this.input.take('switchFocus')) this.notify(toggleRiderControl(this.flight));
+    if (this.input.take('submerge')) this.diveAction();
+    if (this.input.take('interact')) this.interactWithRune();
+    if (this.input.take('fire')) this.fireAction();
+    if (this.input.take('claw')) this.clawAction();
+    if (this.input.take('lockOn')) this.lockTargetAction();
+    if (this.input.take('mountedSigil')) this.mountedSigilAction();
+    if (this.input.take('bond')) this.bondAction();
+    for (const form of FORM_ORDER) {
+      if (this.input.take(form)) this.setForm(form);
+    }
+  }
+
   private setForm(form: DragonForm): void {
     this.notify(requestDragonForm(this.flight, form));
+  }
+
+  private finishCombatAction(result: InteractionResult): void {
+    if (!result.ok) this.notify(result);
+    // A victory can occur on the R, T or X action path, outside the fixed
+    // simulation loop. Persist it immediately and retry if storage is denied.
+    if (this.combat.gloamCleared && !this.gloamVictoryStored) {
+      this.persistProgress();
+    }
+  }
+
+  private aimTarget(): {x:number;y:number;z:number}|null {
+    const h=this.targetLock.current(this.combat,this.flight);
+    return h ? {x:h.x,y:h.y+1.2,z:h.z}:null;
+  }
+
+  private fireAction(): void {
+    const target=this.aimTarget();
+    const result = this.flight.controlTarget === 'rider'
+      ? castRiderSigil(this.combat,this.flight,false,target)
+      : castDragonFire(this.combat,this.flight,target);
+    this.finishCombatAction(result);
+  }
+
+  private lockTargetAction(): void {
+    this.notify(this.targetLock.toggle(this.combat,this.flight));
+  }
+
+  private clawAction(): void {
+    this.finishCombatAction(castDragonClaw(this.combat,this.flight,this.aimTarget()));
+  }
+
+  private mountedSigilAction(): void {
+    this.finishCombatAction(castMountedRiderSigil(this.combat,this.flight,this.aimTarget()));
+  }
+
+  private bondAction(): void {
+    this.finishCombatAction(castBondSurge(this.combat, this.flight));
   }
 
   private landAction(): void {
@@ -471,7 +810,9 @@ export class Game {
 
   private persistProgress(): void {
     this.saveAvailable = saveAzureProgress(this.progressStorage,
-      snapshotAzureProgress(this.tidegate, this.echo, this.discoveries.visitedIds()));
+      snapshotAzureProgress(this.tidegate, this.echo,
+        this.discoveries.visitedIds(), this.combat.gloamCleared));
+    if (this.saveAvailable && this.combat.gloamCleared) this.gloamVictoryStored = true;
   }
 
   private interactWithRune(): void {
@@ -530,6 +871,13 @@ export class Game {
     const rise = rider ? (submerged ? 0.45 : 2.1) : submerged ? 0.75 :
       state.form === 'small' ? 2 : state.form === 'giant' ? 13 : 4.5;
     const target = root.clone().addScaledVector(forward, rider ? 2.5 : 7);
+    // Only chase camera subtly tracks a live selected opponent. It does
+    // not rotate Onyx or alter player aim, hit tests, or other camera modes.
+    const locked = this.qaPortraitSubject ? null
+      : this.targetLock.current(this.combat,state);
+    if (locked && (cameraModes[this.cameraIndex] ?? 'CHASE') === 'CHASE') {
+      target.lerp(new THREE.Vector3(locked.x,locked.y+1.25,locked.z),.32);
+    }
     let desired: THREE.Vector3;
     if (mode === 'WIDE') desired = root.clone().addScaledVector(forward, -distance * 1.9)
       .add(new THREE.Vector3(0, rise * 1.6, 0));
@@ -554,8 +902,38 @@ export class Game {
     desired.y = Math.max(desired.y, heightAt(desired.x, desired.z) + 1.25);
     this.camera.up.set(0, 1, 0);
     this.camera.position.lerp(desired, instant ? 1 : 1 - Math.exp(-dt * 4.5));
+    if (mode !== 'DRAGON EYE') {
+      // Terrain and landmark proxies can cut through the line between
+      // player and a smoothed chase camera even when its endpoint is clear.
+      const eye=root.clone().add(new THREE.Vector3(
+        0,rider?1.45:Math.max(1.5,scale*1.25),0));
+      this.camera.position.copy(resolveCameraOcclusion(
+        eye,this.camera.position,heightAt,OBSTACLES,submerged?.85:1.15,
+      ));
+    }
     this.camera.lookAt(mode === 'DRAGON EYE'
       ? target.clone().addScaledVector(forward, 80) : target);
+    if (this.qaPortraitSubject) {
+      poseCharacterPortraitCamera(this.camera,state,this.qaPortraitSubject,heightAt);
+    }
+  }
+
+  private updateLockMarker(): void {
+    const h = this.targetLock.current(this.combat,this.flight);
+    if (!h || this.paused || this.menuOpen || this.qaPortraitSubject) {
+      this.lockMarker.hidden=true;
+      return;
+    }
+    const point=new THREE.Vector3(h.x,h.y+1.8,h.z).project(this.camera);
+    if (![point.x,point.y,point.z].every(Number.isFinite) ||
+      point.z<=-1 || point.z>=1 || Math.abs(point.x)>1 ||
+      Math.abs(point.y)>1) {
+      this.lockMarker.hidden=true;
+      return;
+    }
+    this.lockMarker.hidden=false;
+    this.lockMarker.style.left=((point.x+1)*.5*window.innerWidth)+'px';
+    this.lockMarker.style.top=((1-point.y)*.5*window.innerHeight)+'px';
   }
 
   private updateHud(dt: number): void {
@@ -573,6 +951,27 @@ export class Game {
       : swimming || (rider ? this.flight.riderMode === 'ground' : this.flight.mode === 'ground')
         ? '0' : String(Math.round(Math.max(0, current.y - Math.max(0, heightAt(current.x, current.z)))));
     this.speedText.textContent = Math.round(Math.abs(rider ? this.flight.riderSpeed : this.flight.speed)).toString();
+    const combatActive = combatNearby(this.combat, this.flight) ||
+      this.combat.hp < this.combat.maxHp || this.combat.ember < this.combat.maxEmber - 0.5 ||
+      this.combat.focus < this.combat.maxFocus - 0.5;
+    this.combatHud.hidden = !combatActive;
+    this.combatHud.dataset.actor = rider ? 'rider' : 'dragon';
+    this.combatEnergyLabel.textContent = rider ? 'RIDER FOCUS'
+      : this.flight.form === 'small' ? 'EMBER'
+        : 'EMBER · RIDER FOCUS ' + Math.round(this.combat.focus);
+    this.combatEmberBar.setAttribute('aria-label', rider ? 'Rider focus' : 'Dragon Ember');
+    const hpPercent = Math.round(100 * this.combat.hp / this.combat.maxHp);
+    const energy = rider ? this.combat.focus : this.combat.ember;
+    const energyMax = rider ? this.combat.maxFocus : this.combat.maxEmber;
+    const emberPercent = Math.round(100 * energy / energyMax);
+    this.combatHealth.style.width = hpPercent + '%';
+    this.combatEmber.style.width = emberPercent + '%';
+    this.combatHealthBar.setAttribute('aria-valuenow', String(this.combat.hp));
+    this.combatEmberBar.setAttribute('aria-valuenow', String(Math.round(energy)));
+    this.combatEmberBar.setAttribute('aria-valuemax', String(energyMax));
+    const enemiesLeft = combatRemaining(this.combat);
+    this.combatThreats.textContent = enemiesLeft === 0 ? 'GLOAM DEN CLEARED'
+      : 'GLOAM HOUNDS · ' + enemiesLeft + ' REMAIN';
     this.formName.textContent = FORMS[this.flight.form].label.toUpperCase();
     this.focusName.textContent = rider ? 'RIDER' : 'DRAGON';
     this.tidegatePanel.hidden = !tidegateNearby(this.flight);
@@ -631,6 +1030,11 @@ export class Game {
       'RIDER ' + this.flight.riderMode,
       'TIDEGATE ' + (this.tidegate.solved ? 'AWAKENED' : this.tidegate.dragonAnchored ? 'ANCHORED' : 'INACTIVE'),
       'ECHO ' + echoPhase(this.echo, this.tidegate),
+      'BOND HP ' + this.combat.hp + '/' + this.combat.maxHp,
+      'EMBER ' + Math.round(this.combat.ember),
+      'RIDER FOCUS ' + Math.round(this.combat.focus),
+      'BOND READY ' + (this.flight.time >= this.combat.bondReadyAt),
+      'HOSTILES ' + combatRemaining(this.combat),
       'TERRAIN TILES ' + this.coast.tileCount(),
       'DISCOVERED ' + this.discoveries.count() + '/' + LANDMARKS.length,
       'DRAWS ' + render.calls,
@@ -638,11 +1042,15 @@ export class Game {
       'WEBGL ' + this.renderer.capabilities.isWebGL2,
       'QUALITY ' + this.quality,
       'INTERNAL DPR ' + this.resolution.pixelRatio.toFixed(2),
-      'CURRENT GATE G3 WATER / RIDER PREVIEW',
+      'CURRENT GATE G4 COMBAT FOUNDATION (VISUAL HOLD)',
     ].join('\n');
   }
 
   private frame = (now: number): void => {
+    if (this.qaRender && this.qaFrameCaptureGate.isHeld) {
+      requestAnimationFrame(this.frame);
+      return;
+    }
     // CI uses SwiftShader (CPU WebGL). Rendering every RAF starves Playwright's
     // main-thread DOM polling on large scenes. Keep the real world/shaders and
     // deterministic QA simulation, but limit QA-only rendering to 8 FPS.
@@ -673,15 +1081,7 @@ export class Game {
     }
     if (this.input.take('menu')) this.toggleMenu();
     if (this.input.take('camera')) this.cameraIndex = (this.cameraIndex + 1) % cameraModes.length;
-    if (!this.paused && !this.menuOpen) {
-      if (this.input.take('land')) this.landAction();
-      if (this.input.take('switchFocus')) this.notify(toggleRiderControl(this.flight));
-      if (this.input.take('submerge')) this.diveAction();
-      if (this.input.take('interact')) this.interactWithRune();
-      for (const form of FORM_ORDER) {
-        if (this.input.take(form)) this.setForm(form);
-      }
-    }
+    this.consumeGameplayActions();
     this.actionTimer = Math.max(0, this.actionTimer - elapsed);
     if (this.actionTimer === 0) this.actionToast.hidden = true;
     if (!this.paused && !this.menuOpen) {
@@ -690,6 +1090,7 @@ export class Game {
       let steps = 0;
       while (this.accumulator >= FIXED_DT && steps < MAX_STEPS) {
         stepFlight(this.flight, controls, FIXED_DT);
+        stepCombat(this.combat, this.flight, FIXED_DT);
         stepTidegate(this.tidegate, this.flight);
         this.accumulator -= FIXED_DT;
         steps++;
@@ -705,13 +1106,22 @@ export class Game {
       this.revealTimer = Math.max(0, this.revealTimer - elapsed);
       this.reveal.hidden = this.revealTimer === 0;
     } else this.accumulator = 0;
+    if (this.combat.notice && this.combat.notice.sequence !== this.combatNoticeSeen) {
+      this.combatNoticeSeen = this.combat.notice.sequence;
+      this.notify({ ok: this.combat.notice.kind !== 'hurt', message: this.combat.notice.message });
+    }
     const focus = this.focusPosition();
     this.coast.setUnderwater(this.isWaterborne());
-    this.coast.animate(this.flight.time, focus.x, focus.y, focus.z, this.flight);
+    // Resolve the real chase/wide/orbit camera before choosing visible
+    // vegetation, so flight turns do not leave a whole world of leaf cards
+    // behind the player in the CPU renderer or dedicated GPU draw pass.
+    this.dragon.update(this.flight, this.combat.lastClaw);
+    this.combatVisual.update(this.combat, this.flight.time, this.paused || this.menuOpen ? 0 : elapsed);
+    this.updateCamera(elapsed);
+    this.updateLockMarker();
+    this.coast.animate(this.flight.time, focus.x, focus.y, focus.z, this.flight, this.camera);
     this.coast.updateTidegate(this.tidegate, this.flight.time, this.echo.attuned);
     this.coast.updateEcho(echoPhase(this.echo, this.tidegate), this.flight.time);
-    this.dragon.update(this.flight);
-    this.updateCamera(elapsed);
     const immersion = this.coast.updateAtmosphere(this.flight.time, this.camera.position);
     this.waterTint.hidden = immersion < .06;
     this.waterTint.style.opacity = immersion.toFixed(2);
@@ -720,6 +1130,7 @@ export class Game {
     // frame entry fails to yield when one SwiftShader frame exceeds 125 ms.
     if (this.qaRender) this.lastQaRenderTime = performance.now();
     this.updateHud(elapsed);
+    if (this.qaRender) this.qaFrameCaptureGate.didRenderFrame();
     requestAnimationFrame(this.frame);
   };
 

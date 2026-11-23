@@ -1,5 +1,6 @@
 import { minimumFlightY, SPAWN, heightAt, SEA_LEVEL } from '../../world/terrain';
 import { waterSurfaceAt } from '../../world/highlandLake';
+import { waterfallCurtainDragAt } from '../../world/waterDynamics';
 import { canExpandInAir, canStand, safeFlightY } from '../../world/collision';
 import {
   canEnterSea, dragonBottomY, dragonSurfaceY, WATER_ENTRY_HEIGHT,
@@ -185,6 +186,12 @@ export function stepFlight(state: FlightState, controls: FlightControls, dt: num
   state.x += Math.sin(state.yaw) * cos * state.speed * dt;
   state.y += Math.sin(state.pitch) * state.speed * dt;
   state.z -= Math.cos(state.yaw) * cos * state.speed * dt;
+  // A dragon that crosses the actual falling curtain feels a local,
+  // collision-safe downward/outward push; ordinary flight is unchanged.
+  const fall=waterfallCurtainDragAt(state.x,state.y,state.z,form.radius);
+  state.x+=fall.x*dt;
+  state.y+=fall.y*dt;
+  state.z+=fall.z*dt;
   const floor = Math.max(minimumFlightY(state.x, state.z), safeFlightY(state.x, state.z, state.form));
   if (state.y < floor) {
     state.y = floor;

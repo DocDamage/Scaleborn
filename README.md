@@ -1,12 +1,38 @@
 # Scaleborn
 
-**VISUAL OVERHAUL IN PROGRESS:** the large HUD and primitive tree/terrain/water rendering are being replaced by an original painterly PBR environment, Mirrorfall Lake and Cascade. See [visual acceptance gate](docs/VISUAL_QUALITY_GATE.md). Gameplay G3 continues to work but the art is not finished.
+**VISUAL QUALITY GATE STILL BLOCKING:** The real playable world has procedural painterly PBR terrain, foliage, Mirrorfall Lake, headwaters, underwater effects and the waterfall, but final character/environment art and hardware performance have not been approved. See [visual acceptance gate](docs/VISUAL_QUALITY_GATE.md).
 
 **Scaleborn** is an original painterly 3D fantasy adventure about a 13-year-old dragon-human hybrid and her bonded dragon. The project begins with a **desktop-browser Azure Coast flight prototype** and is structured for a later **Unreal Engine implementation**. Browser gameplay will not automatically transfer to Unreal.
 
-## Current state: G0–G3, expanding G3.2 multi-location Tidal Echo Trial
+## Current state: G0–G4 playable vertical slice, still early art
 
-This branch contains a playable **first-flight preview**: an original code-generated dragon and rider, deterministic seam-stitched Azure Coast terrain streamed in tiles, animated shader ocean and coastal foam, layered cloud banks, clustered trees, coastal rocks, generated harbor cottages and piers, lighthouse, ancient temple and sea arch, four discoverable landmarks, three dragon forms with distinct flight profiles, animated landing/takeoff over fixed time, a directly controlled small dragon on land, separately scaled rider, deforming three-bone wings and multiple cameras. This branch adds independent rider walking, coast-to-water movement, dragon swimming/surface/diving, water transitions and a procedural submerged shrine. This G3.2 branch adds a multi-location underwater-to-land quest and small local progress checkpoints. It does **not** yet include a general quest journal/save-slot system, rider-on-shoulder behavior, combat, audio, asset-export tooling or finished painterly textures. Dragon transformations are an early G2 implementation: small form requires landing before dismount; full free midair remounting, shoulder riding and co-op puzzles are later. These remain planned work, not hidden or simulated features.
+**The integration development branch adds a tested G4 combat foundation to
+the existing Azure Coast exploration game.** It contains three original
+Onyx dragon forms, independent hybrid rider, mounted and ground traversal,
+swimming/diving, five cameras, coast/forest/ruins discovery, the Tidegate
+two-character rune trial, the Sunken Shrine Tidal Echo quest and limited
+versioned local progress checkpoints. The seeded procedural world has an
+interactive deep Mirrorfall freshwater lake, connecting feeder river,
+waterfall, shore foam, vegetation, weathered PBR materials and underwater
+optical passes.
+
+**New G4:** Onyx has directional fire breath; the independent rider uses
+Tidal Sigil; both can coordinate a dry-ground Bond Surge. Three original
+Gloam hounds pursue and strike with attack telegraphs, damage/hit reactions,
+and forgiving recovery. One-time clearing grants +15 maximum Ember for the
+current session. Real WebGL screenshot workflows test all four encounter
+effects, plus visual and traversal routes. Open `?start=combat` to play
+the encounter. G4 does **not** mean bosses, lock-on, all elements, full
+combat animation or world-state persistence are complete.
+
+The original skinned dragon tail, articulated claws, expressive features,
+portrait-ready hybrid rider, dynamic cloak, curved painted wings, enemy
+anatomy, feathered combat effects and proportion-correct responsive grass
+are live game code. These are still first procedural art passes, not the
+final approved professional assets. No general quest journal/save slots,
+rider shoulder-perch, authored sounds, Unreal asset-export pipeline or
+coupled 3D fluid dynamics are delivered. Final shader quality requires
+real RTX 3060 gameplay inspection, not only passing software-WebGL tests.
 
 The 4 × 4 km world and all objects use meters with Y up. The packaged seed is `0x5ca1e0`. Geometry is procedurally generated and currently requires no third-party art/audio files.
 
@@ -32,7 +58,7 @@ Open the URL printed by Vite. Click **Take flight**. Press Esc to release pointe
 | F | Land / take off on land; splash down or launch from deep water |
 | 1 / 2 / 3 | Small / rideable / giant dragon; growth checks world clearance |
 | C | Dive / surface in water, for either rider or dragon |
-| G | Invoke or examine a nearby Tidegate rune stone |
+| G | Invoke or examine a nearby Tidegate rune stone |\n| R / primary mouse button | Directional dragon fire or independent rider Tidal Sigil |\n| X | Short-range Bond Surge while both companions are on dry ground |\n| M | Show/hide the contextual controls palette |
 | Q / E | Dive deeper / swim upward while underwater |
 | Tab | Switch control between the grounded small dragon and independent rider |
 | V | Cycle five cameras |
@@ -45,7 +71,7 @@ Open the URL printed by Vite. Click **Take flight**. Press Esc to release pointe
 - **G1** — painterly Azure Coast, recognizable landmarks, world-streaming quality/LOD, water, foliage and coastal architecture. **In progress:** stitched 32:8 terrain LOD edges, shader ocean, foam contours, temple/arch and discoverable landmarks; painterly art direction and benchmarks remain.
 - **G2** — polished flight dynamics, original procedural dragon/rider rigs, expressive animation and all three dragon sizes. **In progress:** 3 size modes, distinct physics profiles, conservative collision proxies, eased landing/takeoff, diagonal ground gait, controllable small dragon, independent rider scale and animated skinned wing deformation. Real skeletal rig export, transitions, complete locomotion and animation QA remain.
 - **G3** — seamless on-foot, riding, swimming and underwater traversal, co-op exploration. **In progress:** the Tidegate two-character trial now leads into the Sunken Shrine Tidal Echo recovery and rider attunement at Tidegate. Local progress checkpoints store completed flags and discovered landmarks. More complex co-op puzzles, authored animation and fluid simulation remain.
-- **G4** — fire/elemental combat, threats and rider/dragon bond interactions.
+- **G4** — first playable fire, rider magic, Gloam enemies, damage, recovery and bonded attack implemented on the integration branch. Expanded enemy types, AI, audio, lock-on and bosses remain.
 - **G5** — story opening, villages/NPCs, quests, progression and persistent saves.
 - **G6** — optimization, replacement art pipeline, accessibility, packaging and Unreal port plan.
 
@@ -135,6 +161,65 @@ The existing asset-independent design remains unchanged. All new effects use gen
 
 The game runs **high** painterly PBR shaders by default. Add `?quality=low` to reduce foliage density, internal pixel ratio and shader cost on integrated GPUs or software renderers. The lake shape, collision, traversal and quest data are identical. `?start=lake&quality=high` is the dedicated visual acceptance view. CI tests lower-resolution software WebGL; high-mode screenshots require real-GPU review.
 
+### GPU-only high-quality visual review
+
+The ordinary `npm run test:visual` screenshot workflow deliberately uses low
+settings and SwiftShader for CI. Those images prove that a WebGL scene rendered;
+they are **not** final art approval.
+
+With the development server running on a machine with a real GPU and Playwright
+Chromium installed, run:
+
+```bash
+npm run test:visual:high
+```
+
+This separate, opt-in path uses the **high** painterly shaders and explicitly
+disables the browser's software rasterizer. It captures actual in-game aerial,
+shoreline, rider-height forest, deep-water, planted lakebed, feeder-river and
+underwater waterfall-impact views under `artifacts/*-high-browser.png`.
+It rejects WebGL runtime errors and recognizable software adapter names rather
+than silently passing a SwiftShader image as a GPU review. If the browser cannot
+create a hardware WebGL2 context, the command should fail; do not lower the
+review gate to make it pass.
+
+QA mode intentionally throttles browser rendering, so these screenshots are
+**not an FPS benchmark**. Review the high-mode images in motion and measure
+frame time/draw calls separately on the intended GPU. Visual quality remains
+blocked until those checks are accepted.
+
+### Unthrottled hardware performance profile
+
+The visual screenshot harness uses development QA throttling and **cannot**
+measure real gameplay speed. For a repeatable, actual game high-quality profile,
+start `npm run dev` on the desktop GPU, then run:
+
+```bash
+npm run benchmark:gpu
+```
+
+On Windows PowerShell, a visible browser window can be requested with:
+
+```powershell
+$env:SCALEBORN_BENCH_HEADFUL = "1"
+npm run benchmark:gpu
+```
+
+The benchmark uses `start=lake&quality=high` **without** `qa=1`, disables
+software rasterization, and records a sample of ordinary running-game
+`requestAnimationFrame` intervals. It rejects identifiable SwiftShader and
+other software adapters, writing the adapter, average presentation FPS,
+median/p95/worst frame intervals, visible draws/triangles, and internal
+rendering ratio to
+`artifacts/scaleborn-high-hardware-profile.json`. It also records an actual
+browser screenshot alongside the JSON report.
+
+**Limits:** these measurements include browser/CPU presentation scheduling
+and are not hardware GPU timer-query measurements; automatic resolution
+adaptation remains enabled, so compare the recorded internal DPR. The script
+does not claim to measure VRAM, thermals, or 60 FPS success. A real in-game
+human art review and follow-up GPU profiling remain required before release.
+
 ### Waterfall flow coupling
 
 The lake waterfall now drives a shared, fixed-step local current field in `src/world/waterDynamics.ts` and an accompanying ripple/foam distortion in the lake shader. Swimming dragons and independently swimming riders are nudged away from the plunge point, with a collision-safety check. Impact current fades with distance and does not affect the ocean. This is not a fully coupled 3D fluid or water-pressure solver and will require additional work before being labeled realistic water physics.
@@ -150,3 +235,24 @@ Procedural broadleaf branches now carry leaf planes that remain visible from low
 ### Adaptive rendering for live gameplay
 
 Scaleborn now samples its actual frame rate and uses hysteresis to lower internal rendering resolution when performance remains under 28 FPS, or gradually restore it above 56 FPS. This **does not** change controls, character speed, the world heightfield, collisions, saved quest progress, or the graphics material preset. The renderer reports its current internal pixel ratio under **F3**. Automated visual QA disables adaptation for comparable screenshots; integrated-GPU and RTX 3060 results must be measured in real gameplay.
+
+
+## Integrated visual, character, and combat preview (development branch)
+
+This branch retains the current Mirrorfall waterfall, headwater, lake,
+shoreline, vegetation, and QA work while combining the original Onyx and
+rider sculpts with the first G4 combat encounter. The latest visual branch
+is the source of truth for natural world rendering; the character/combat
+branch supplies the original character identities, skinned tail/face,
+Gloam hounds, combat simulation, and contextual HUD.
+
+Run `npm run dev` and open `/?start=combat` for the encounter.
+Dragon fire uses R or pointer-locked primary click; independent rider
+Tidal Sigil uses the same action, and X triggers Bond Surge when both
+companions are nearby on dry ground. Combat smoke: `npm run test:combat-browser`.
+Mirrorfall review: `/?start=lake&quality=high`.
+
+The merged source is an integration candidate, **not visually approved art**.
+The original high-detail wing, leg, coast, and underwater tests remain in
+place. No finalized GLB models, real RTX 3060 benchmarks, complete G4,
+full save slots, or Unreal gameplay port are claimed.

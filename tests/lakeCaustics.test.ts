@@ -47,7 +47,9 @@ describe('Mirrorfall shallow-water light and breaking shoreline', () => {
       expect(shader.vertexShader).toContain('uLakeStrip > 0.5');
       expect(shader.vertexShader).toContain('plungeD');
       const p = shore.mesh.geometry.getAttribute('position');
-      expect(p.getY(0)).toBeCloseTo(GRAND_LAKE.surfaceY + .10, 5);
+      // The shore-break ribbon floats 14 cm above the mean water plane to
+      // keep its animated swash visible without z-fighting with wave crests.
+      expect(p.getY(0)).toBeCloseTo(GRAND_LAKE.surfaceY + .14, 5);
       expect(oceanFoam.uniforms.uLakeStrip?.value).toBe(0);
       shore.update(19.5);
       expect(shader.uniforms.uTime?.value).toBe(19.5);

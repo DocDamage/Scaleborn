@@ -1,0 +1,464 @@
+import { describe, expect, it } from 'vitest';
+import { assistedDirection } from '../src/combat/aimAssist';
+import { newFlightState, type FlightState } from '../src/actors/dragon/flight';
+import { FORMS } from '../src/actors/dragon/forms';
+import { heightAt } from '../src/world/terrain';
+import { steerGroundThreat } from '../src/combat/houndNavigation';
+import {
+  GLOAM_SPAWNS, castDragonFire, castRiderSigil, castMountedRiderSigil, castDragonClaw, castBondSurge, combatNearby, combatRemaining,
+  newCombatState, restoreGloamVictory, stepCombat,
+} from '../src/combat/combat';
+
+function groundDragon(x = -446, z = -52): FlightState {
+  const s = newFlightState();
+  s.x = x; s.z = z; s.y = heightAt(x, z) + FORMS.rideable.standHeight;
+  s.yaw = Math.PI / 2; s.pitch = 0; s.roll = 0;
+  s.speed = 0; s.mode = 'ground'; s.form = 'rideable';
+  return s;
+}
+function targetAhead(c: ReturnType<typeof newCombatState>, s: FlightState, meters = 14): void {
+  const target = c.hounds[0]!;
+  target.x = s.x + meters; target.z = s.z;
+  target.y = heightAt(target.x, target.z);
+  // Keep the test concerned with aim and hit registration, not hill occlusion.
+  target.y = Math.max(target.y, s.y - 0.35);
+}
+const step = (c: ReturnType<typeof newCombatState>, s: FlightState, seconds: number): void => {
+  for (let i = 0; i < Math.round(seconds * 60); i++) {
+    s.time += 1 / 60;
+    stepCombat(c, s, 1 / 60);
+  }
+};
+
+describe('G4 deterministic encounter and dragon breath', () => {
+  it('spawns the same world-aligned hounds with stable identities', () => {
+    const a = newCombatState(), b = newCombatState();
+    expect(a).toEqual(b);
+    expect(a.hounds.map((h) => h.id)).toEqual(GLOAM_SPAWNS.map((h) => h.id));
+    expect(new Set(a.hounds.map((h) => h.id)).size).toBe(a.hounds.length);
+    for (const h of a.hounds) {
+      expect(h.y).toBeCloseTo(heightAt(h.x, h.z), 5);
+      expect(h.hp).toBeGreaterThan(0);
+    }
+  });
+
+  it('deals damage through a forward fire cone, not behind or beyond range', () => {
+    const s = groundDragon(), c = newCombatState();
+    targetAhead(c, s, 13);
+    const front = c.hounds[0]!;
+    const behind = c.hounds[1]!;
+    behind.x = s.x - 12; behind.z = s.z; behind.y = s.y;
+    const far = c.hounds[2]!;
+    far.x = s.x + 91; far.z = s.z; far.y = s.y;
+    expect(castDragonFire(c, s).ok).toBe(true);
+    expect(front.hp).toBeLessThan(front.maxHp);
+    expect(behind.hp).toBe(behind.maxHp);
+    expect(far.hp).toBe(far.maxHp);
+    expect(c.lastFire?.direction.x).toBeCloseTo(1, 5);
+    expect(c.ember).toBe(78);
+  });
+
+  it('misses an enemy outside the cone instead of applying auto-target damage', () => {
+    const s = groundDragon(), c = newCombatState();
+    const victim = c.hounds[0]!;
+    victim.x = s.x + 16; victim.z = s.z + 28; victim.y = s.y;
+    const before = victim.hp;
+    castDragonFire(c, s);
+    expect(victim.hp).toBe(before);
+  });
+
+  it('only bends almost-correct locked attacks without steering backward',()=>{
+    const raw={x:1,y:0,z:0},origin={x:0,y:1,z:0};
+    const v=assistedDirection(raw,origin,{x:15,y:1,z:-1.7});
+    expect(v.z).toBeLessThan(0);
+    expect(v.z).toBeGreaterThan(-.13);
+    expect(Math.hypot(v.x,v.y,v.z)).toBeCloseTo(1,6);
+    expect(assistedDirection(raw,origin,{x:-12,y:1,z:0})).toEqual(raw);
+    expect(assistedDirection(raw,origin,{x:6,y:18,z:0})).toEqual(raw);
+    expect(assistedDirection(raw,origin,{x:NaN,y:0,z:0})).toEqual(raw);
+    expect(assistedDirection(raw,origin,null)).toEqual(raw);
+  });
+
+  it('sweeps grounded claws only forward with distinct cooldown and no Ember cost', () => {
+    const s = groundDragon(), c = newCombatState();
+    targetAhead(c, s, 3);
+    const front = c.hounds[0]!;
+    const behind = c.hounds[1]!;
+    behind.x = s.x - 3; behind.z = s.z; behind.y = s.y;
+    const far = c.hounds[2]!;
+    far.x = s.x + 30; far.z = s.z; far.y = s.y;
+    expect(castDragonClaw(c, s).ok).toBe(true);
+    expect(front.hp).toBeLessThan(front.maxHp);
+    expect(behind.hp).toBe(behind.maxHp);
+    expect(far.hp).toBe(far.maxHp);
+    expect(c.ember).toBe(100);
+    expect(c.lastClaw?.form).toBe('rideable');
+    expect(c.lastClaw?.direction.x).toBeCloseTo(1, 5);
+    expect(castDragonClaw(c, s).ok).toBe(false);
+    expect(c.clawSequence).toBe(1);
+    expect(castDragonFire(c, s).ok).toBe(true);
+    s.time = .96;
+    expect(castDragonClaw(c, s).ok).toBe(true);
+  });
+
+  it('rejects impossible claw attacks without consuming cooldowns', () => {
+    const s = groundDragon(), c = newCombatState();
+    s.controlTarget = 'rider';
+    expect(castDragonClaw(c, s).ok).toBe(false);
+    s.controlTarget = 'dragon'; s.mode = 'underwater';
+    expect(castDragonClaw(c, s).ok).toBe(false);
+    s.mode = 'air';
+    expect(castDragonClaw(c, s).ok).toBe(false);
+    s.mode = 'ground';
+    s.transition = { phase: 'landing', elapsed: 0, duration: 1.45,
+      startY: s.y, targetY: s.y, startSpeed: 0, targetSpeed: 0,
+      startPitch: 0, targetPitch: 0, startRoll: 0 };
+    expect(castDragonClaw(c, s).ok).toBe(false);
+    expect(c.clawSequence).toBe(0);
+    expect(c.clawReadyAt).toBe(0);
+  });
+
+  it('enforces cooldown, ember cost and regenerative resource', () => {
+    const s = groundDragon(), c = newCombatState();
+    expect(castDragonFire(c, s).ok).toBe(true);
+    expect(castDragonFire(c, s).ok).toBe(false);
+    expect(c.fireSequence).toBe(1);
+    s.time = 0.9;
+    expect(castDragonFire(c, s).ok).toBe(true);
+    expect(c.ember).toBe(56);
+    step(c, s, 2);
+    expect(c.ember).toBeCloseTo(86, 4);
+    expect(c.ember).toBeLessThanOrEqual(c.maxEmber);
+    c.ember = 1; s.time += 1;
+    expect(castDragonFire(c, s).ok).toBe(false);
+    expect(c.ember).toBe(1);
+  });
+
+  it('rejects rider firing, submerged firing and traversal attack exploits', () => {
+    const s = groundDragon(), c = newCombatState();
+    s.controlTarget = 'rider';
+    expect(castDragonFire(c, s).ok).toBe(false);
+    s.controlTarget = 'dragon'; s.mode = 'underwater';
+    expect(castDragonFire(c, s).ok).toBe(false);
+    s.mode = 'surface';
+    expect(castDragonFire(c, s).ok).toBe(false);
+    s.mode = 'ground';
+    s.transition = { phase: 'landing', elapsed: 0, duration: 1.45,
+      startY: s.y, targetY: s.y, startSpeed: 0, targetSpeed: 0,
+      startPitch: 0, targetPitch: 0, startRoll: 0 };
+    expect(castDragonFire(c, s).ok).toBe(false);
+    expect(c.fireSequence).toBe(0);
+    expect(c.ember).toBe(100);
+  });
+
+  it('leaves hounds inert at flight altitude and pursues a grounded nearby target', () => {
+    const s = groundDragon(), c = newCombatState();
+    const first = c.hounds[0]!;
+    s.x = first.x - 11; s.z = first.z;
+    s.mode = 'air'; s.y = first.y + 38;
+    step(c, s, 1.2);
+    expect(first.alert).toBe(false);
+    expect(first.x).toBeCloseTo(first.homeX, 5);
+    s.mode = 'ground'; s.y = heightAt(s.x, s.z) + FORMS.rideable.standHeight;
+    step(c, s, 1.2);
+    expect(first.alert).toBe(true);
+    expect(first.x).toBeLessThan(first.homeX);
+  });
+
+  it('telegraphs melee, enforces damage immunity and cannot hit underwater', () => {
+    const s = groundDragon(), c = newCombatState();
+    s.x = c.hounds[0]!.x - 1; s.z = c.hounds[0]!.z;
+    s.y = heightAt(s.x, s.z) + FORMS.rideable.standHeight;
+    const h = c.hounds[0]!;
+    h.windup = 0.64;
+    c.invulnerableUntil = 3;
+    step(c, s, 0.8);
+    expect(c.hp).toBe(100);
+    c.invulnerableUntil = 0;
+    h.attackCooldown = 0;
+    step(c, s, 1.0);
+    expect(c.hp).toBeLessThan(100);
+    const remainingHp = c.hp;
+    s.mode = 'underwater'; s.y = h.y - 12;
+    step(c, s, 3);
+    expect(c.hp).toBe(remainingHp);
+  });
+
+  it('supports lethal hits, nonpunishing respawn and persistent enemy defeats', () => {
+    const s = groundDragon(), c = newCombatState();
+    c.hounds[1]!.hp = 0;
+    c.hounds[1]!.deathAge = 1;
+    c.hp = 11;
+    const first = c.hounds[0]!;
+    s.x = first.x - 1; s.z = first.z;
+    s.y = heightAt(s.x, s.z) + FORMS.rideable.standHeight;
+    first.windup = 0.01;
+    step(c, s, 0.08);
+    expect(c.respawns).toBe(1);
+    expect(c.hp).toBe(c.maxHp);
+    expect(c.hounds[1]!.hp).toBe(0);
+    expect(s.controlTarget).toBe('dragon');
+    expect(s.y).toBeCloseTo(heightAt(-555, 100) + 18, 5);
+    expect(c.notice?.kind).toBe('respawn');
+    expect(c.invulnerableUntil).toBeGreaterThan(s.time);
+  });
+
+  it('restores cleared Gloam Den and +15 Ember only once from progress', () => {
+    const c = newCombatState(), s = groundDragon();
+    restoreGloamVictory(c, false);
+    expect(c.maxEmber).toBe(100);
+    restoreGloamVictory(c, true);
+    expect(c.gloamCleared).toBe(true);
+    expect(c.maxEmber).toBe(115);
+    expect(c.ember).toBe(115);
+    expect(c.notice).toBeNull();
+    expect(c.hounds.every((h) => h.hp === 0 && h.deathAge === 1)).toBe(true);
+    expect(combatRemaining(c)).toBe(0);
+    restoreGloamVictory(c, true);
+    expect(c.maxEmber).toBe(115);
+    s.time = 10;
+    expect(castDragonFire(c, s).ok).toBe(true);
+    expect(c.maxEmber).toBe(115);
+    expect(combatNearby(c, s)).toBe(false);
+  });
+
+  it('reports actual encounter proximity and living threats, not a permanent HUD', () => {
+    const s = groundDragon(), c = newCombatState();
+    expect(combatNearby(c, s)).toBe(true);
+    expect(combatRemaining(c)).toBe(3);
+    c.hounds.forEach((h) => { h.hp = 0; });
+    expect(combatRemaining(c)).toBe(0);
+    expect(combatNearby(c, s)).toBe(false);
+    s.x = 1550; s.z = 1440;
+    expect(combatNearby(newCombatState(), s)).toBe(false);
+  });
+
+  it('rejects invalid delta without mutating simulation state', () => {
+    const s = groundDragon(), c = newCombatState();
+    const before = structuredClone(c);
+    stepCombat(c, s, NaN);
+    stepCombat(c, s, -1);
+    stepCombat(c, s, 0.3);
+    expect(c).toEqual(before);
+  });
+  it('lets the unmounted rider cast a focused directional tidal sigil', () => {
+    const s = groundDragon(), c = newCombatState();
+    s.form = 'small';
+    s.controlTarget = 'rider';
+    s.riderX = s.x; s.riderZ = s.z;
+    s.riderY = heightAt(s.riderX, s.riderZ) + 0.05;
+    s.riderYaw = Math.PI / 2;
+    s.riderMode = 'ground';
+    targetAhead(c, s, 13);
+    const foe = c.hounds[0]!;
+    const result = castRiderSigil(c, s);
+    expect(result.ok).toBe(true);
+    expect(foe.hp).toBeLessThan(foe.maxHp);
+    expect(c.focus).toBe(77);
+    expect(c.ember).toBe(100);
+    expect(c.lastSigil?.direction.x).toBeCloseTo(1, 5);
+    expect(castRiderSigil(c, s).ok).toBe(false);
+    s.time = 0.8;
+    expect(castRiderSigil(c, s).ok).toBe(true);
+    expect(c.sigilSequence).toBe(2);
+  });
+
+  it('casts a mounted Tidal Sigil using Focus without interrupting dragon fire', () => {
+    const c = newCombatState(), s = groundDragon();
+    targetAhead(c, s, 13);
+    const foe = c.hounds[0]!;
+    expect(castMountedRiderSigil(c, s).ok).toBe(true);
+    expect(foe.hp).toBeLessThan(foe.maxHp);
+    expect(c.focus).toBe(77);
+    expect(c.ember).toBe(100);
+    expect(c.lastSigil?.groundFollowing).toBe(true);
+    expect(c.lastSigil?.range).toBe(38);
+    expect(c.lastSigil?.direction.x).toBeCloseTo(1, 5);
+    expect(castMountedRiderSigil(c, s).ok).toBe(false);
+    expect(c.sigilSequence).toBe(1);
+    expect(castDragonFire(c, s).ok).toBe(true);
+    expect(c.ember).toBe(78);
+    s.time = .8;
+    expect(castMountedRiderSigil(c, s).ok).toBe(true);
+    expect(c.sigilSequence).toBe(2);
+  });
+
+  it('rejects invalid mounted casts and does not auto-hit from high flight', () => {
+    const c = newCombatState(), s = groundDragon();
+    s.form = 'small';
+    expect(castMountedRiderSigil(c, s).ok).toBe(false);
+    s.form = 'rideable'; s.controlTarget = 'rider';
+    expect(castMountedRiderSigil(c, s).ok).toBe(false);
+    s.controlTarget = 'dragon'; s.mode = 'underwater';
+    expect(castMountedRiderSigil(c, s).ok).toBe(false);
+    s.mode = 'surface';
+    expect(castMountedRiderSigil(c, s).ok).toBe(false);
+    expect(c.focus).toBe(100);
+    s.mode = 'air'; s.y += 25;
+    targetAhead(c, s, 13);
+    const target = c.hounds[0]!;
+    // targetAhead raises test hounds for level-ground cone tests; for an
+    // aerial miss the enemy must be physically rooted on the terrain.
+    target.y = heightAt(target.x, target.z);
+    expect(castMountedRiderSigil(c, s).ok).toBe(true);
+    expect(target.hp).toBe(target.maxHp);
+    expect(c.lastSigil?.groundFollowing).toBe(false);
+    expect(c.focus).toBe(77);
+  });
+
+  it('requires a real grounded dragon/rider pairing to spend both bond resources', () => {
+    const s = groundDragon(), c = newCombatState();
+    expect(castBondSurge(c, s).ok).toBe(false); // Still mounted.
+    s.form = 'small'; s.y = heightAt(s.x, s.z) + FORMS.small.standHeight;
+    s.riderMode = 'ground'; s.riderX = s.x + 2; s.riderZ = s.z;
+    s.riderY = heightAt(s.riderX, s.riderZ) + 0.05;
+    const h = c.hounds[0]!;
+    h.x = s.x + 9; h.z = s.z; h.y = heightAt(h.x, h.z);
+    const result = castBondSurge(c, s);
+    expect(result.ok).toBe(true);
+    expect(h.hp).toBeLessThan(h.maxHp);
+    expect(c.ember).toBe(68);
+    expect(c.focus).toBe(68);
+    expect(c.lastBond?.radius).toBe(15);
+    expect(castBondSurge(c, s).ok).toBe(false);
+    s.time = 7;
+    s.riderX += 30;
+    expect(castBondSurge(c, s).ok).toBe(false);
+    s.riderX = s.x + 2;
+    c.focus = 2;
+    expect(castBondSurge(c, s).ok).toBe(false);
+    expect(c.bondSequence).toBe(1);
+  });
+
+  it('recovers independent rider focus while preserving the Ember budget', () => {
+    const c = newCombatState(), s = groundDragon();
+    c.ember = 10; c.focus = 25;
+    step(c, s, 2);
+    expect(c.ember).toBeCloseTo(40, 4);
+    expect(c.focus).toBeCloseTo(51, 4);
+    s.controlTarget = 'dragon';
+    expect(castRiderSigil(c, s).ok).toBe(false);
+    expect(c.focus).toBeCloseTo(51, 4);
+  });
+
+
+  it('detours around a blocking barrier without teleporting through it', () => {
+    const from = { x: -0.35, z: 0 };
+    const target = { x: 5, z: 0 };
+    const open = (x: number, _z: number): boolean => x <= -0.32;
+    const next = steerGroundThreat(from, target, 4.7, 0.1, open, 1);
+    expect(next.moved).toBe(true);
+    expect(next.z).not.toBeCloseTo(0);
+    expect(open(next.x, next.z)).toBe(true);
+    expect(next.x).toBeGreaterThanOrEqual(from.x - 0.0001);
+    expect(Math.hypot(next.x - from.x, next.z - from.z)).toBeLessThanOrEqual(0.471);
+  });
+
+  it('rejects impossible navigation and large deltas without motion', () => {
+    const from = { x: 0, z: 0 }, to = { x: 9, z: 4 };
+    expect(steerGroundThreat(from, to, 5, 0.05, () => false).moved).toBe(false);
+    expect(steerGroundThreat(from, to, 5, 0.5, () => true).moved).toBe(false);
+    expect(steerGroundThreat(from, to, NaN, 0.05, () => true).moved).toBe(false);
+    const direct = steerGroundThreat(from, to, 4, 0.05, () => true);
+    expect(direct.moved).toBe(true);
+    expect(direct.yaw).toBeCloseTo(Math.atan2(to.x, -to.z), 4);
+  });
+
+  it('keeps pursuing threats separated and terrain-aligned during a crowd approach', () => {
+    const s = groundDragon(-410, -38), c = newCombatState();
+    for (let i = 0; i < 180; i++) {
+      s.time += 1 / 60;
+      stepCombat(c, s, 1 / 60);
+      for (const h of c.hounds) {
+        expect(h.y).toBeCloseTo(heightAt(h.x, h.z), 3);
+      }
+      for (let j = 0; j < c.hounds.length; j++) {
+        for (let k = j + 1; k < c.hounds.length; k++) {
+          const a = c.hounds[j]!, b = c.hounds[k]!;
+          expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThanOrEqual(1.04);
+        }
+      }
+    }
+  });
+
+
+  it('grants one genuine, once-only Ember capacity increase for clearing the den', () => {
+    const s = groundDragon(-414, -56);
+    const c = newCombatState();
+    s.form = 'small';
+    s.y = heightAt(s.x, s.z) + FORMS.small.standHeight;
+    s.riderX = s.x + 1;
+    s.riderZ = s.z;
+    s.riderY = heightAt(s.riderX, s.riderZ) + 0.05;
+    s.riderMode = 'ground';
+    for (let k = 0; k < c.hounds.length; k++) {
+      const h = c.hounds[k]!;
+      h.x = s.x + 3 + 1.6 * k;
+      h.z = s.z + 0.9 * k;
+      h.y = heightAt(h.x, h.z);
+      h.hp = 1;
+    }
+    expect(castBondSurge(c, s).ok).toBe(true);
+    expect(c.hounds.every((h) => h.hp === 0)).toBe(true);
+    expect(c.gloamCleared).toBe(true);
+    expect(c.maxEmber).toBe(115);
+    expect(c.ember).toBe(115);
+    expect(c.notice?.message).toContain('15 Ember');
+    s.time = 7;
+    expect(castBondSurge(c, s).ok).toBe(true);
+    expect(c.maxEmber).toBe(115);
+  });
+
+
+  it('hits a real Gloam hound uphill with the rendered curving fire arc', () => {
+    const c = newCombatState();
+    const h = c.hounds[0]!;
+    const s = groundDragon(h.x - 13, h.z);
+    expect(h.y).toBeGreaterThan(heightAt(s.x, s.z));
+    const before = h.hp;
+    expect(castDragonFire(c, s).ok).toBe(true);
+    expect(h.hp).toBeLessThan(before);
+    expect(c.lastFire?.arcHeight).toBeCloseTo(1 + FORMS.rideable.standHeight, 4);
+  });
+
+  it('raises the rider sigil over gentle ground while retaining a forward-only hitbox', () => {
+    const c = newCombatState();
+    const h = c.hounds[0]!;
+    const s = groundDragon(h.x - 11, h.z);
+    s.form = 'small';
+    s.y = heightAt(s.x, s.z) + FORMS.small.standHeight;
+    s.controlTarget = 'rider';
+    s.riderX = s.x + 1;
+    s.riderZ = s.z;
+    s.riderY = heightAt(s.riderX, s.riderZ) + 0.05;
+    s.riderYaw = Math.PI / 2;
+    s.riderMode = 'ground';
+    expect(castRiderSigil(c, s).ok).toBe(true);
+    expect(h.hp).toBeLessThan(h.maxHp);
+    expect(c.lastSigil?.arcHeight).toBeGreaterThan(1);
+  });
+
+
+  it('aims grounded fire along the terrain elevation without auto-aiming in flight', () => {
+    const c = newCombatState();
+    const h = c.hounds[0]!;
+    h.x = -414; h.z = -54; h.y = heightAt(h.x, h.z);
+    const s = groundDragon(h.x - 13, h.z);
+    expect(h.y - heightAt(s.x, s.z)).toBeGreaterThan(3);
+    expect(castDragonFire(c, s).ok).toBe(true);
+    expect(h.hp).toBeLessThan(h.maxHp);
+    expect(c.lastFire?.groundFollowing).toBe(true);
+
+    const air = newCombatState();
+    air.hounds[0]!.x = h.x;
+    air.hounds[0]!.z = h.z;
+    air.hounds[0]!.y = h.y;
+    const f = groundDragon(h.x - 13, h.z);
+    f.mode = 'air';
+    f.y += 20;
+    expect(castDragonFire(air, f).ok).toBe(true);
+    expect(air.hounds[0]!.hp).toBe(air.hounds[0]!.maxHp);
+    expect(air.lastFire?.groundFollowing).toBe(false);
+  });
+
+});

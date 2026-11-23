@@ -1,0 +1,33 @@
+name: Scaleborn original-character visual QA
+on:
+  push:
+    branches: [feat/integrate-visual-character-combat]
+  pull_request:
+    branches: [main, feat/visual-pass6-plunge-pool-spray]
+  workflow_dispatch:
+concurrency:
+  group: original-character-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  characters:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Start development game
+        run: |
+          npm run dev -- --host 127.0.0.1 >/tmp/scaleborn-character-vite.log 2>&1 &
+      - name: Test actual game characters
+        run: npm run test:characters
+      - name: Attach real character renders
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scaleborn-characters-real-webgl
+          path: artifacts/characters-*.png
+          if-no-files-found: warn

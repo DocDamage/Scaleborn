@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { GRAND_LAKE, lakeContains } from '../src/world/highlandLake';
+import { GRAND_LAKE, MIRRORFALL, lakeContains, waterSurfaceAt,
+  headwaterProfileAt } from '../src/world/highlandLake';
 import {
   AIR_FOG_DENSITY, underwaterOpticsAt,
 } from '../src/world/underwaterOptics';
@@ -45,6 +46,16 @@ describe('camera-depth-driven underwater rendering', () => {
     expect(ocean.shaftStrength).toBe(0);
     expect(ocean.fogDensity).toBeGreaterThan(lake.fogDensity);
     expect(underwaterOpticsAt(Number.NaN, -2, 0, true).immersion).toBe(0);
+  });
+
+  it('uses freshwater optics in the shallow waterfall feeder rather than sea color',()=>{
+    const x=MIRRORFALL.x+53;
+    const p=headwaterProfileAt(x,GRAND_LAKE.z)!;
+    const waterY=waterSurfaceAt(x,p.centerZ);
+    const sample=underwaterOpticsAt(x,waterY-1.9,p.centerZ,true);
+    expect(sample.medium).toBe('lake');
+    expect(sample.immersion).toBeGreaterThan(.9);
+    expect(sample.depth).toBeCloseTo(1.9,5);
   });
 
   it('draws only depth-faded crossed shafts inside the actual freshwater boundary', () => {

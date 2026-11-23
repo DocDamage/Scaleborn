@@ -14,6 +14,8 @@ export interface AzureProgress {
   version: 1;
   worldSeed: number;
   tidegateSolved: boolean;
+  /** Additive v1 field: older saves without it remain valid. */
+  gloamCleared: boolean;
   echo: TidalEchoState;
   discovered: string[];
 }
@@ -23,6 +25,7 @@ export function freshAzureProgress(): AzureProgress {
     version: AZURE_PROGRESS_VERSION,
     worldSeed: AZURE_SEED,
     tidegateSolved: false,
+    gloamCleared: false,
     echo: newTidalEchoState(),
     discovered: [],
   };
@@ -50,7 +53,10 @@ export function parseAzureProgress(value: unknown): AzureProgress {
   const discovered = [...new Set(value.discovered.filter(
     (item): item is string => typeof item === 'string' && validLandmarks.has(item),
   ))].sort();
-  return { ...fresh, tidegateSolved, echo, discovered };
+  // Missing/invalid new field defaults to false; do not discard unrelated
+  // v1 Tidegate and Echo milestones when loading a pre-combat save.
+  const gloamCleared = value.gloamCleared === true;
+  return { ...fresh, tidegateSolved, gloamCleared, echo, discovered };
 }
 
 export function loadAzureProgress(storage: ProgressStorage | null): AzureProgress {
@@ -77,11 +83,13 @@ export function saveAzureProgress(storage: ProgressStorage | null, progress: Azu
 /** Only stable puzzle milestones persist; positioning and temporary rune anchors do not. */
 export function snapshotAzureProgress(
   gate: TidegateState, echo: TidalEchoState, discoveredIds: readonly string[],
+  gloamCleared = false,
 ): AzureProgress {
   return parseAzureProgress({
     version: AZURE_PROGRESS_VERSION,
     worldSeed: AZURE_SEED,
     tidegateSolved: gate.solved,
+    gloamCleared,
     echo,
     discovered: [...discoveredIds],
   });

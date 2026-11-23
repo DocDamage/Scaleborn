@@ -19,12 +19,57 @@ export const GRAND_LAKE = Object.freeze({
 export const MIRRORFALL = Object.freeze({
   id: 'azure.mirrorfall',
   name: 'Mirrorfall Cascade',
-  x: GRAND_LAKE.x + GRAND_LAKE.radiusX * 1.08,
+  // Align the water lip with the actual eastern escarpment's 170–180m
+  // summit rather than spawning a curtain in open air above lakebank terrain.
+  x: GRAND_LAKE.x + GRAND_LAKE.radiusX * 1.17,
   z: GRAND_LAKE.z,
-  topY: 192,
+  topY: 176,
   bottomY: GRAND_LAKE.surfaceY,
   width: 78,
 });
+
+export interface HeadwaterProfile {
+  along: number; centerZ: number; halfWidth: number;
+  relativeWidth: number; surfaceY: number; bedY: number; influence: number;
+}
+
+/** The same curved, narrow headwater profile drives the terrain, shallow
+ * water volume, and rendering. Nothing is imported from the renderer. */
+export function headwaterProfileAt(x: number, z: number): HeadwaterProfile | null {
+  if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
+  const along=(x-(MIRRORFALL.x-1))/132;
+  if(along<-.14 || along>1.13) return null;
+  const t=Math.max(0,Math.min(1,along));
+  const centerZ=GRAND_LAKE.z+7*Math.sin(t*Math.PI);
+  const halfWidth=37-21*t;
+  const relativeWidth=(z-centerZ)/halfWidth;
+  const edge=Math.abs(relativeWidth);
+  if(edge>1.90)return null;
+  const longitudinal=smoothstep(-.14,0,along)
+    *(1-smoothstep(.92,1.13,along));
+  const influence=longitudinal*(1-smoothstep(1.10,1.90,edge));
+  const surfaceY=MIRRORFALL.topY+1.75*t;
+  const channel=1-smoothstep(.16,.89,edge);
+  const raisedBank=smoothstep(.81,1.25,edge);
+  const bedY=surfaceY-2.25*channel+1.60*raisedBank;
+  return {along,centerZ,halfWidth,relativeWidth,
+    surfaceY,bedY,influence};
+}
+
+export function headwaterContains(x:number,z:number):boolean {
+  const p=headwaterProfileAt(x,z);
+  // The GPU stream mesh uses float32 world coordinates. Tolerate its
+  // sub-millimetre roundoff at the exact upstream endpoint.
+  return p!==null && p.along>=-.00001 && p.along<=1.00001
+    && Math.abs(p.relativeWidth)<.86;
+}
+
+/** Small surface ripples on shallow headwaters; no ocean-sized surf here. */
+export function headwaterWaveAt(x:number,z:number,time:number):number {
+  if(!Number.isFinite(time) || !headwaterContains(x,z)) return 0;
+  return .065*Math.sin(x*.32+z*.11+time*2.35)
+    +.035*Math.sin(x*.57-z*.28+time*3.4);
+}
 
 const smoothstep = (a: number, b: number, x: number): number => {
   const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
@@ -51,12 +96,28 @@ export function lakeContains(x: number, z: number): boolean {
 }
 
 export function waterSurfaceAt(x: number, z: number): number {
-  return lakeContains(x, z) ? GRAND_LAKE.surfaceY : 0;
+  if(lakeContains(x,z))return GRAND_LAKE.surfaceY;
+  const headwater=headwaterProfileAt(x,z);
+  return headwater && headwaterContains(x,z)
+    ? headwater.surfaceY : 0;
 }
 
 /** SDF-like return value: negative inside the freshwater ellipse, positive outside. */
 export function lakeShoreDistance(x: number, z: number): number {
   return (lakeRadius(x, z) - 0.982) * Math.min(GRAND_LAKE.radiusX, GRAND_LAKE.radiusZ);
+}
+
+/**
+ * Smoothly wandering central cliff width replaces the old rectangular
+ * fourth-power superellipse. The midpoint remains at the same waterfall lip,
+ * and both terrain collision and rendering still sample this heightfield.
+ */
+export function mirrorfallEscarpmentCoreAt(x:number,z:number):number {
+  if(![x,z].every(Number.isFinite))return 0;
+  const drift=14*Math.sin(z*.035+x*.019)
+    +7*Math.sin(z*.071-x*.014+1.1);
+  const width=Math.max(58,92+drift);
+  return Math.exp(-Math.pow(Math.abs((z-GRAND_LAKE.z)/width),2.6));
 }
 
 /**
@@ -91,18 +152,25 @@ export function sculptMirrorfallTerrain(
   // The previous 20 m cliff step produced a single giant vertical polygon
   // wall in actual browser screenshots. Preserve the waterfall's steep core
   // while spreading the side banks into layered, eroded rock slopes.
-  const core = Math.exp(-Math.pow((z - GRAND_LAKE.z) / 92, 4));
+  const core = mirrorfallEscarpmentCoreAt(x,z);
   const cliffStep = smoothstep(1.006, 1.177 - core * 0.099, r);
   const erosion = fbm(x * 0.031, z * 0.037, seed + 2401, 4);
   const rockFolds = Math.sin((z - GRAND_LAKE.z) * .069
     + r * 21.0 + erosion * 3.3) * 4.8;
-  const gullyRelief = (erosion * 8.8 + rockFolds)
+  const shoulderFissures=(1-core)*Math.sin(x*.054+z*.031+
+    erosion*.7)*5.6;
+  const gullyRelief = (erosion * 8.8 + rockFolds + shoulderFissures)
     * Math.sin(Math.PI * cliffStep) * easternFace * canyonBand;
   const escarpment = GRAND_LAKE.surfaceY
     + (111 + lap * 14) * cliffStep * easternFace * canyonBand
     + gullyRelief;
   const highBank = Math.max(shore + crest, escarpment);
-  if (r < 1.43) return highBank;
   const transition = smoothstep(1.43, 1.72, r);
-  return highBank * (1 - transition) + originalHeight * transition;
+  const bankHeight=r<1.43?highBank
+    :highBank*(1-transition)+originalHeight*transition;
+  const stream=headwaterProfileAt(x,z);
+  // The river is an actual shallow carved bed with small raised banks.
+  // The same deterministic heightfield is used for rendering and collision.
+  return stream ? bankHeight*(1-stream.influence)
+    +stream.bedY*stream.influence : bankHeight;
 }

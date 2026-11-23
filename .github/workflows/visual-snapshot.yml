@@ -1,7 +1,7 @@
 name: Mirrorfall visual snapshot
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/visual-pass6-plunge-pool-spray]
   workflow_dispatch:
 jobs:
   mirrorfall:

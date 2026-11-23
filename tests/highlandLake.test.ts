@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GRAND_LAKE, MIRRORFALL, lakeContains, lakeRadius, lakeShoreDistance, waterSurfaceAt } from '../src/world/highlandLake';
+import { GRAND_LAKE, MIRRORFALL, lakeContains, lakeRadius, lakeShoreDistance, waterSurfaceAt, mirrorfallEscarpmentCoreAt } from '../src/world/highlandLake';
 import { heightAt } from '../src/world/terrain';
 
 describe('Mirrorfall Lake common geometry contract', () => {
@@ -17,6 +17,30 @@ describe('Mirrorfall Lake common geometry contract', () => {
     expect(MIRRORFALL.topY - GRAND_LAKE.surfaceY).toBeGreaterThan(95);
     expect(heightAt(-555, 100)).toBeGreaterThan(50);
   });
+  it('anchors the waterfall crest to the actual summit, with impact inside lake',()=>{
+    const lip=heightAt(MIRRORFALL.x-1,MIRRORFALL.z);
+    expect(Math.abs(lip-MIRRORFALL.topY)).toBeLessThan(9);
+    expect(MIRRORFALL.topY-lip).toBeGreaterThan(0);
+    const plungeX=MIRRORFALL.x-82;
+    expect(lakeContains(plungeX,MIRRORFALL.z)).toBe(true);
+    expect(GRAND_LAKE.surfaceY-heightAt(plungeX,MIRRORFALL.z))
+      .toBeGreaterThan(10);
+    expect(MIRRORFALL.topY-GRAND_LAKE.surfaceY).toBeGreaterThan(100);
+  });
+  it('breaks symmetric rectangular cliff shoulders without shifting the waterfall midpoint',()=>{
+    const x=MIRRORFALL.x-82,z=GRAND_LAKE.z;
+    expect(mirrorfallEscarpmentCoreAt(x,z)).toBe(1);
+    const left=mirrorfallEscarpmentCoreAt(x,z-60);
+    const right=mirrorfallEscarpmentCoreAt(x,z+60);
+    expect(left).toBeGreaterThan(0);
+    expect(right).toBeGreaterThan(0);
+    expect(Math.abs(left-right)).toBeGreaterThan(.08);
+    expect(mirrorfallEscarpmentCoreAt(x,z+400)).toBeLessThan(.001);
+    expect(mirrorfallEscarpmentCoreAt(NaN,z)).toBe(0);
+    expect(mirrorfallEscarpmentCoreAt(x,Infinity)).toBe(0);
+    expect(heightAt(x,z)).toBe(heightAt(x,z));
+  });
+
   it('does not introduce seam discontinuities at the sculpt radius boundary', () => {
     const z = GRAND_LAKE.z;
     const a = heightAt(GRAND_LAKE.x + GRAND_LAKE.radiusX * 1.715, z);

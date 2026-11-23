@@ -4,18 +4,28 @@ import { makeTerrainTile, disposeTerrainTile } from './terrainTile';
 import { addCoastalDressing } from './dressing';
 import { PainterlyWaterSurface, LakeShoreFoam, makeFoamShader } from './waterSurface';
 import { MirrorfallCascade } from './mirrorfallCascade';
+import { MirrorfallHeadwaters } from './mirrorfallHeadwaters';
+import { HeadwaterBanks } from './headwaterBanks';
 import { LakeCaustics } from './lakeCaustics';
+import { LakebedHabitat } from './lakebedHabitat';
 import { UnderwaterLightShafts } from './underwaterLightShafts';
+import { UnderwaterParticulates } from './underwaterParticulates';
+import { PlungePoolBubbles } from './plungePoolBubbles';
 import { underwaterOpticsAt } from './underwaterOptics';
 import { PainterlyNature } from './painterlyNature';
 import { LocalGroundcover } from './localGroundcover';
+import { ShorelineReeds } from './shorelineReeds';
 import { PainterlyClouds } from './painterlyClouds';
 import { MirrorfallCliffs } from './mirrorfallCliffs';
+import { CliffOutcrops } from './cliffOutcrops';
+import { ShorelineSediment } from './shorelineSediment';
 import { SurfaceWake } from './surfaceWake';
+import { CreatureSplash } from './creatureSplash';
 import type { FlightState } from '../actors/dragon/flight';
 import { makeTerrainMaterial } from './materials';
+import { updateTerrainPigmentTime } from './terrainPigment';
 import { PainterlySky } from './sky';
-import { addMarineDressing } from './marineDressing';
+import { addMarineDressing, type MarineDressing } from './marineDressing';
 import { TidegateVisual } from './tidegateVisual';
 import { TidalEchoVisual } from './tidalEchoVisual';
 import type { EchoPhase } from './tidalEcho';
@@ -30,17 +40,27 @@ export class AzureCoast {
   private lastTileZ = Number.NaN;
   private readonly terrainMaterial: THREE.MeshStandardMaterial;
   private readonly foamMaterial = makeFoamShader();
-  private readonly water = new PainterlyWaterSurface('ocean');
-  private readonly lake = new PainterlyWaterSurface('lake');
+  private readonly water: PainterlyWaterSurface;
+  private readonly lake: PainterlyWaterSurface;
   private readonly lakeFoam = new LakeShoreFoam();
   private readonly caustics: LakeCaustics;
+  private readonly lakebed: LakebedHabitat;
+  private readonly marine: MarineDressing;
   private readonly shafts: UnderwaterLightShafts;
-  private readonly waterfall = new MirrorfallCascade();
+  private readonly particulates: UnderwaterParticulates;
+  private readonly bubbles: PlungePoolBubbles;
+  private readonly waterfall: MirrorfallCascade;
+  private readonly headwaters: MirrorfallHeadwaters;
+  private readonly headwaterBanks: HeadwaterBanks;
   private readonly nature: PainterlyNature;
   private readonly nearGrass: LocalGroundcover;
+  private readonly reeds: ShorelineReeds;
   private readonly clouds: PainterlyClouds;
   private readonly cliffs: MirrorfallCliffs;
+  private readonly outcrops: CliffOutcrops;
+  private readonly sediment: ShorelineSediment;
   private readonly wake: SurfaceWake;
+  private readonly splash: CreatureSplash;
   private readonly sky = new PainterlySky();
   private readonly sun = new THREE.DirectionalLight(0xffd3a5, 2.1);
   private readonly hemisphere: THREE.HemisphereLight;
@@ -58,6 +78,8 @@ export class AzureCoast {
 
   constructor(scene: THREE.Scene, quality: 'high' | 'low' = 'high') {
     this.quality = quality;
+    this.water = new PainterlyWaterSurface('ocean',quality);
+    this.lake = new PainterlyWaterSurface('lake',quality);
     this.terrainMaterial = makeTerrainMaterial(quality);
     this.scene = scene;
     scene.background = this.airBackground;
@@ -83,17 +105,29 @@ export class AzureCoast {
     scene.add(this.sun,this.sunTarget);
     this.ocean = this.water.mesh;
     this.caustics = new LakeCaustics(quality);
+    this.lakebed = new LakebedHabitat(scene,quality);
     this.shafts = new UnderwaterLightShafts(quality);
+    this.particulates = new UnderwaterParticulates(scene, quality);
+    this.bubbles = new PlungePoolBubbles(scene, quality);
+    this.waterfall = new MirrorfallCascade(quality);
+    this.headwaters = new MirrorfallHeadwaters(quality);
+    this.headwaterBanks = new HeadwaterBanks(scene,quality);
     scene.add(this.sky.mesh, this.ocean, this.caustics.mesh, this.shafts.mesh,
-      this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group);
+      this.lake.mesh, this.lakeFoam.mesh, this.waterfall.group, this.headwaters.mesh);
+    if (this.water.midMesh) scene.add(this.water.midMesh);
+    if (this.water.nearMesh) scene.add(this.water.nearMesh);
     this.nature = new PainterlyNature(scene, quality);
     this.nearGrass = new LocalGroundcover(scene, quality);
+    this.reeds = new ShorelineReeds(scene, quality);
     this.clouds = new PainterlyClouds(scene, quality);
     this.cliffs = new MirrorfallCliffs(quality);
+    this.outcrops = new CliffOutcrops(scene,quality);
+    this.sediment = new ShorelineSediment(scene,quality);
     this.wake = new SurfaceWake(scene,quality);
+    this.splash = new CreatureSplash(scene,quality);
     scene.add(this.cliffs.group);
     addCoastalDressing(scene, false);
-    addMarineDressing(scene);
+    this.marine = addMarineDressing(scene, quality);
     scene.add(this.tidegate.root, this.echoVisual.root);
   }
 
@@ -148,6 +182,8 @@ export class AzureCoast {
       camera.x, camera.y, camera.z, this.underwater,
     );
     this.shafts.update(time, optics.shaftStrength);
+    this.particulates.update(time, camera, optics);
+    this.bubbles.update(time, camera, optics);
     if (optics.immersion > 0) {
       this.seaFog.density = optics.fogDensity;
       this.seaFog.color.copy(this.airFog.color).lerp(optics.tint, optics.immersion);
@@ -165,15 +201,30 @@ export class AzureCoast {
     return optics.immersion;
   }
 
-  animate(time: number, x: number, y: number, z: number, state?: FlightState): void {
+  animate(time: number, x: number, y: number, z: number, state?: FlightState, camera?: THREE.Camera): void {
+    // Animate terrain contact wetness with the very same absolute clock as
+    // wave vertices, swimmer heights and waterfall-impact surface foam.
+    updateTerrainPigmentTime(this.terrainMaterial,time);
+    this.water.follow(x,z);
     this.water.update(time);
     this.lake.update(time);
     this.lakeFoam.update(time);
     this.caustics.update(time);
-    this.waterfall.update(time);
-    if(state)this.wake.update(state,time);
-    this.nature.update(time,x,z);
+    this.lakebed.update(time,x,z,camera);
+    this.marine.update(time,x,z,camera);
+    this.waterfall.update(time,camera);
+    this.headwaters.update(time);
+    this.headwaterBanks.update(x,z);
+    this.cliffs.update(time);
+    this.outcrops.update(x,z);
+    this.sediment.update(x,z);
+    if(state){
+      this.wake.update(state,time);
+      this.splash.update(state,time);
+    }
+    this.nature.update(time,x,z,camera);
     this.nearGrass.update(x,z,time);
+    this.reeds.update(x,z,time);
     this.clouds.update(time);
     this.foamMaterial.uniforms.uTime!.value=time;
     this.sky.update(time);
@@ -204,13 +255,23 @@ export class AzureCoast {
     this.lake.dispose();
     this.lakeFoam.dispose();
     this.caustics.dispose();
+    this.lakebed.dispose();
+    this.marine.dispose();
     this.shafts.dispose();
+    this.particulates.dispose();
+    this.bubbles.dispose();
     this.waterfall.dispose();
+    this.headwaters.dispose();
+    this.headwaterBanks.dispose();
     this.nature.dispose();
     this.nearGrass.dispose();
+    this.reeds.dispose();
     this.clouds.dispose();
     this.cliffs.dispose();
+    this.outcrops.dispose();
+    this.sediment.dispose();
     this.wake.dispose();
+    this.splash.dispose();
     this.sky.dispose();
     this.echoVisual.dispose();
     this.hemisphere.removeFromParent();

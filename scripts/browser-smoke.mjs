@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { captureQaScreenshot } from './qa-screenshot.mjs';
 
 async function main() {
   const browser = await chromium.launch({
@@ -31,10 +32,12 @@ async function main() {
     const url = process.env.SCALEBORN_URL ?? 'http://127.0.0.1:5173';
     // SwiftShader CPU rendering must not be mistaken for a dedicated GPU.
     const lowUrl = url + '?start=lake&quality=low&qa=1';
+    // Vite's persistent HMR requests and expensive SwiftShader frames need not
+    // make the page network-idle. Wait for the actual app controls below.
     let connected = false;
     for (let attempt = 0; attempt < 12; attempt++) {
       try {
-        const response = await page.goto(lowUrl, { waitUntil: 'networkidle', timeout: 10000 });
+        const response = await page.goto(lowUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
         assert.equal(response?.status(), 200);
         connected = true;
         break;
@@ -54,7 +57,7 @@ async function main() {
       null, { timeout: 30000 });
     await page.waitForTimeout(800);
     await mkdir('artifacts', { recursive: true });
-    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-chase.png' });
+    await captureQaScreenshot(page, { timeout: 120000, path: 'artifacts/azure-coast-chase.png' });
     const formName = page.locator('#form-name');
     await formName.waitFor({ state: 'attached' });
     assert.match(await formName.textContent() ?? '', /RIDEABLE/);
@@ -65,7 +68,7 @@ async function main() {
       const notice = document.querySelector('#action-toast')?.textContent;
       return text?.includes('GIANT') || notice?.includes('Climb higher');
     }, null, { timeout: 20000 });
-    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-giant.png' });
+    await captureQaScreenshot(page, { timeout: 120000, path: 'artifacts/azure-coast-giant.png' });
     await page.keyboard.press('2');
     await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'RIDEABLE', null, { timeout: 20000 });
     await page.keyboard.press('1');
@@ -84,11 +87,11 @@ async function main() {
       Boolean(canvas.getContext('webgl2')),
     );
     assert.ok(hasWebGL, 'No WebGL2 context on game canvas');
-    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-smoke.png' });
+    await captureQaScreenshot(page, { timeout: 120000, path: 'artifacts/azure-coast-smoke.png' });
     // Extended QA uses real player keyboard controls (1/2/Tab/G), not hidden menu buttons. SwiftShader sometimes
     // stalls RAF, so dev-only bounded simulation steps refresh HUD deterministically.
     // Exercise a complete animated landing/size change/takeoff in a deterministic meadow.
-    const meadowResponse = await page.goto(url + '?start=meadow&qa=1&quality=low', { waitUntil: 'networkidle' });
+    const meadowResponse = await page.goto(url + '?start=meadow&qa=1&quality=low', { waitUntil: 'domcontentloaded' });
     assert.equal(meadowResponse?.status(), 200);
     await page.locator('#start').click();
     await page.evaluate(() => {
@@ -105,6 +108,7 @@ async function main() {
     await page.evaluate(() => window.__scalebornQaAdvance(1));
     await page.waitForFunction(() => document.querySelector('#form-name')?.textContent === 'SMALL COMPANION', null, { timeout: 12000 });
     await page.keyboard.press('g');
+    await page.evaluate(() => window.__scalebornQaAdvance(1));
     await page.waitForFunction(() => document.querySelector('#tidegate-status')?.textContent === '1 / 2 RUNES', null, { timeout: 12000 });
     await page.keyboard.press('Tab');
     await page.evaluate(() => window.__scalebornQaAdvance(1));
@@ -114,8 +118,9 @@ async function main() {
       window.__scalebornQaStageRiderRune();
     });
     await page.keyboard.press('g');
+    await page.evaluate(() => window.__scalebornQaAdvance(1));
     await page.waitForFunction(() => document.querySelector('#tidegate-status')?.textContent === 'TIDEBOUND SIGIL AWAKENED', null, { timeout: 12000 });
-    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-small-meadow.png' });
+    await captureQaScreenshot(page, { timeout: 120000, path: 'artifacts/azure-coast-small-meadow.png' });
     await page.keyboard.press('Tab');
     await page.evaluate(() => window.__scalebornQaAdvance(1));
     await page.waitForFunction(() => document.querySelector('#focus-name')?.textContent === 'DRAGON', null, { timeout: 12000 });
@@ -159,10 +164,10 @@ async function main() {
       window.__scalebornQaStageShrine();
     });
     await page.waitForFunction(() => document.querySelector('#mode-name')?.textContent === 'DIVING', null, { timeout: 12000 });
-    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-tidal-echo-before.png' });
+    await captureQaScreenshot(page, { timeout: 120000, path: 'artifacts/azure-coast-tidal-echo-before.png' });
     await page.keyboard.press('g');
     await page.waitForFunction(() => document.querySelector('#echo-stage')?.textContent === 'ECHO COLLECTED', null, { timeout: 12000 });
-    await page.screenshot({ timeout: 120000, path: 'artifacts/azure-coast-tidal-echo.png' });
+    await captureQaScreenshot(page, { timeout: 120000, path: 'artifacts/azure-coast-tidal-echo.png' });
     await page.evaluate(() => {
       if (typeof window.__scalebornQaStageEchoReturn !== 'function') throw new Error('Echo return QA hook missing');
       window.__scalebornQaStageEchoReturn();
@@ -182,7 +187,7 @@ async function main() {
       window.__scalebornQaLake();
     });
     await page.waitForTimeout(850);
-    await page.screenshot({ path: 'artifacts/mirrorfall-lake-visual.png', timeout: 120000 });
+    await captureQaScreenshot(page, { path: 'artifacts/mirrorfall-lake-visual.png', timeout: 120000 });
     assert.deepEqual(errors, [], 'Browser reported runtime or shader errors');
     console.log('PASS: WebGL2, dragon/rider controls, ocean diving, quest progress and Mirrorfall Lake visual screenshot.');
   } finally {

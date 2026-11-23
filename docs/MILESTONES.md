@@ -27,3 +27,7 @@ These gates describe **completion criteria**, not completed claims. Deliver one 
 - Procedural generation is a source implementation, not a colored-debug-object excuse.
 - When introducing extra dependencies, record license, performance cost, use and export implications in the architecture decision record.
 - Never mark a gate complete without executable acceptance evidence and reproducible run instructions.
+
+## G4 combat foundation (initial implementation, not gate complete)
+
+The first Gloam Den encounter adds directional dragon fire, Ember regeneration/cooldown, deterministic three-hound AI, hit/stagger/death feedback, bond HP, melee windups and nonpunishing checkpoint recovery. It is reachable in-world and via `?start=combat`. Tests cover core math and generated visuals. Rider Tidal Sigil and an actual proximity/cost-gated two-character Bond Surge are also implemented. Bounded enemy sidestepping, contextual world-space HP bars and a dedicated browser combat screenshot workflow are added. More threats, actual GPU acceptance and final authored art are still open; the existing visual hold remains in force. See `docs/COMBAT_G4.md`.

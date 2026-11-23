@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { createTreePrototype, makeLeafAtlas, type TreeSpecies } from './treeCanopy';
+import { installTreeWind } from './treeWind';
 import { makeFernTuft } from './fernUnderstory';
 import { InstanceVisibility } from './instanceVisibility';
 import { rng, fbm } from '../core/random';
 import { AZURE_SEED, heightAt, LANDMARKS } from './terrain';
 import { GRAND_LAKE, MIRRORFALL, waterSurfaceAt, lakeShoreDistance } from './highlandLake';
 import { makeBarkMaterial, makeRockMaterial } from './materials';
+import { createStratifiedRockGeometry } from './stratifiedRock';
 
 interface PlantSite { x: number; y: number; z: number; scale: number; hue: number }
 const dummy = new THREE.Object3D();
@@ -14,15 +16,15 @@ function grassTuft(): THREE.BufferGeometry {
   const positions: number[] = [];
   for(let i=0;i<7;i++){
     const angle = i * Math.PI*2/7;
-    const base = new THREE.Vector3(Math.cos(angle)*0.14,0,Math.sin(angle)*0.14);
-    const middle = new THREE.Vector3(Math.cos(angle)*0.28,0.50,Math.sin(angle)*0.28);
-    const tip = new THREE.Vector3(Math.cos(angle)*0.44,1.10+(i%3)*0.12,Math.sin(angle)*0.44);
+    const base = new THREE.Vector3(Math.cos(angle)*0.09,0,Math.sin(angle)*0.09);
+    const middle = new THREE.Vector3(Math.cos(angle)*0.16,0.26,Math.sin(angle)*0.16);
+    const tip = new THREE.Vector3(Math.cos(angle)*0.27,0.52+(i%3)*0.07,Math.sin(angle)*0.27);
     const s=new THREE.Vector3(-Math.sin(angle),0,Math.cos(angle));
     const verts=[
-      base.clone().addScaledVector(s,-0.095),
-      base.clone().addScaledVector(s,0.095),
-      middle.clone().addScaledVector(s,-0.057),
-      middle.clone().addScaledVector(s,0.057),
+      base.clone().addScaledVector(s,-0.064),
+      base.clone().addScaledVector(s,0.064),
+      middle.clone().addScaledVector(s,-0.037),
+      middle.clone().addScaledVector(s,0.037),
     ];
     for(const p of [verts[0],verts[1],verts[2],verts[1],verts[3],verts[2],
       verts[2],verts[3],tip]){
@@ -36,18 +38,6 @@ function grassTuft(): THREE.BufferGeometry {
   return geo;
 }
 
-function irregularRock(): THREE.BufferGeometry {
-  const g = new THREE.IcosahedronGeometry(1,2);
-  const p=g.getAttribute('position');
-  for(let i=0;i<p.count;i++){
-    const x=p.getX(i), y=p.getY(i), z=p.getZ(i);
-    const perturb=1+0.09*Math.sin(x*12.9+y*17.3+z*7.2)+0.07*Math.sin(z*23.1-x*11.4);
-    p.setXYZ(i,x*perturb,y*perturb,z*perturb);
-  }
-  g.computeVertexNormals();
-  return g;
-}
-
 export class PainterlyNature {
   private readonly root = new THREE.Group();
   private readonly materials: THREE.Material[] = [];
@@ -56,6 +46,7 @@ export class PainterlyNature {
   private readonly visibility = new InstanceVisibility();
   private grassWind: { value: number } | null = null;
   private leafWind: { value: number } | null = null;
+  private readonly actorGrassPosition={value:new THREE.Vector2()};
   constructor(scene: THREE.Scene, quality: 'high' | 'low' = 'high') {
     this.root.name='vegetation.azure.painterly-nature';
     scene.add(this.root);
@@ -167,40 +158,37 @@ export class PainterlyNature {
       color:0xffffff,map:leafTex,roughness:.88,metalness:0,
       side:THREE.DoubleSide,alphaTest:0.28,depthWrite:true,
     });
-    // Gentle leaf motion follows the rooted tree, not a rotating billboard.
-    // The tips sway more than the branch attachment, with a world-seeded
-    // gust phase so distant tree crowns do not oscillate in lockstep.
+    // Drive the tree's trunk, limbs and leaf cards from one gust field.
+    // Identical vertex offsets in the color and shadow passes keep foliage
+    // attached to bending boughs and prevent stationary shadow silhouettes.
     const leafWind={value:0};
     this.leafWind=leafWind;
-    leafMat.onBeforeCompile=(shader)=>{
-      shader.uniforms.uScLeafTime=leafWind;
-      shader.vertexShader=shader.vertexShader.replace('#include <common>',
-        '#include <common>\nuniform float uScLeafTime;');
-      shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',
-        `#include <begin_vertex>
-          #ifdef USE_INSTANCING
-            float gustPhase=instanceMatrix[3].x*.015+
-              instanceMatrix[3].z*.017;
-          #else
-            float gustPhase=0.0;
-          #endif
-          float canopyWeight=smoothstep(1.0,7.5,position.y);
-          transformed.x+=sin(uScLeafTime*.74+gustPhase+
-            position.z*.33)*canopyWeight*.12;
-          transformed.z+=cos(uScLeafTime*.63+gustPhase+
-            position.x*.22)*canopyWeight*.10;
-        `);
-    };
-    leafMat.customProgramCacheKey=()=> 'scaleborn-foliage-motion-v1';
+    installTreeWind(woodMat,leafWind,'wood');
+    installTreeWind(leafMat,leafWind,'foliage');
+    // Depth-pass vertex offsets and alpha-tested leaf cutouts match the
+    // visible foliage. These depth materials are shared by all archetypes.
+    const woodDepth=quality==='high'
+      ? new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}) : null;
+    const leafDepth=quality==='high'
+      ? new THREE.MeshDepthMaterial({
+        depthPacking:THREE.RGBADepthPacking,map:leafTex,
+        alphaTest:.28,side:THREE.DoubleSide,
+      }) : null;
+    if(woodDepth && leafDepth) {
+      installTreeWind(woodDepth,leafWind,'wood');
+      installTreeWind(leafDepth,leafWind,'foliage');
+      this.materials.push(woodDepth,leafDepth);
+    }
     const grassMat=new THREE.MeshStandardMaterial({
       color:0xb8c99c,roughness:.94,metalness:0,side:THREE.DoubleSide
     });
     grassMat.onBeforeCompile=(shader)=>{
       const time={value:0};
       shader.uniforms.uScWindTime=time;
+      shader.uniforms.uScGrassActor=this.actorGrassPosition;
       this.grassWind=time;
       shader.vertexShader=shader.vertexShader.replace('#include <common>',
-        '#include <common>\nuniform float uScWindTime;');
+        '#include <common>\nuniform float uScWindTime;\nuniform vec2 uScGrassActor;');
       shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',
         `#include <begin_vertex>
           #ifdef USE_INSTANCING
@@ -210,9 +198,15 @@ export class PainterlyNature {
           #endif
           transformed.x += sin(uScWindTime*1.26+phase+position.y*1.2)
             * position.y*position.y*0.085;
+          #ifdef USE_INSTANCING
+            // A close dragon or rider brushes grass aside. Roots stay put.
+            float scActorDistance=length(instanceMatrix[3].xz-uScGrassActor);
+            float scFlatten=1.0-smoothstep(.65,3.1,scActorDistance);
+            transformed.y*=1.0-.74*scFlatten;
+          #endif
         `);
     };
-    grassMat.customProgramCacheKey=()=> 'scaleborn-grass-wind-v1';
+    grassMat.customProgramCacheKey=()=> 'scaleborn-grass-wind-v1-actor-response';
     this.materials.push(woodMat,rockMat,leafMat,grassMat);
     this.textures.push(leafTex);
 
@@ -238,6 +232,10 @@ export class PainterlyNature {
       crown.name='vegetation.azure.pbr-tree-leaves.'+species;
       wood.castShadow = quality === 'high';
       crown.castShadow = quality === 'high';
+      if(woodDepth && leafDepth) {
+        wood.customDepthMaterial=woodDepth;
+        crown.customDepthMaterial=leafDepth;
+      }
       wood.receiveShadow = quality === 'high';
       this.root.add(wood,crown);
       this.meshes.push(wood,crown);
@@ -273,14 +271,32 @@ export class PainterlyNature {
     this.root.add(fern);this.meshes.push(fern);
     this.visibility.register(fern,ferns,quality==='high'?350:235);
 
-    const rock=new THREE.InstancedMesh(irregularRock(),rockMat,rocks.length);
+    // Layered, eroded talus replaces identically shaped icosahedral stones.
+    // Reuse one indexed geometry and one PBR material across all instances.
+    rockMat.vertexColors=true;
+    const rock=new THREE.InstancedMesh(
+      createStratifiedRockGeometry(quality),rockMat,rocks.length);
+    const groundNormal=new THREE.Vector3(), up=new THREE.Vector3(0,1,0);
+    const sampleStep=2.5;
     rocks.forEach((p,i)=>{
-      dummy.position.set(p.x,p.y-p.scale*.11,p.z);
-      dummy.rotation.set(rand()*2,rand()*6.28,rand()*.8);
-      dummy.scale.set(p.scale,p.scale*(.27+rand()*.28),p.scale*(.55+rand()*.35));
+      // The base follows the collision heightfield instead of randomly
+      // tipping stones through rock faces or leaving them above steep soil.
+      const dx=(heightAt(p.x+sampleStep,p.z)-
+        heightAt(p.x-sampleStep,p.z))/(2*sampleStep);
+      const dz=(heightAt(p.x,p.z+sampleStep)-
+        heightAt(p.x,p.z-sampleStep))/(2*sampleStep);
+      groundNormal.set(-dx,1,-dz).normalize();
+      const heightScale=p.scale*(.30+rand()*.25);
+      dummy.position.set(p.x,p.y-heightScale*.34,p.z);
+      dummy.quaternion.setFromUnitVectors(up,groundNormal);
+      dummy.rotateY(rand()*Math.PI*2);
+      // Thin bedding tilt avoids a perfectly aligned row of stone slabs.
+      dummy.rotateX((rand()-.5)*.14);
+      dummy.rotateZ((rand()-.5)*.12);
+      dummy.scale.set(p.scale,heightScale,p.scale*(.68+rand()*.23));
       dummy.updateMatrix();rock.setMatrixAt(i,dummy.matrix);
       rock.setColorAt(i,new THREE.Color().setHSL(
-        .12+p.hue*.09,.09+p.hue*.14,.62+p.hue*.17));
+        .12+p.hue*.09,.09+p.hue*.14,.69+p.hue*.13));
     });
     rock.name='terrain.azure.rounded-pbr-boulders';
     rock.castShadow=quality==='high';
@@ -288,10 +304,12 @@ export class PainterlyNature {
     this.root.add(rock);this.meshes.push(rock);
     this.visibility.register(rock,rocks,quality==='high'?780:520);
   }
-  update(time:number,x?:number,z?:number):void{
+  update(time:number,x?:number,z?:number,camera?:THREE.Camera):void{
     if(this.grassWind)this.grassWind.value=time;
     if(this.leafWind)this.leafWind.value=time;
-    if(x!==undefined&&z!==undefined)this.visibility.update(x,z);
+    if(typeof x==='number'&&typeof z==='number'&&Number.isFinite(x)&&Number.isFinite(z))
+      this.actorGrassPosition.value.set(x,z);
+    if(x!==undefined&&z!==undefined)this.visibility.update(x,z,camera);
   }
   dispose():void{
     this.meshes.forEach(mesh=>mesh.geometry.dispose());

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { GRAND_LAKE } from './highlandLake';
 import { makePaintedSurfaceTextures, type SurfaceKind } from './surfaceTextures';
+import { installTerrainTriplanar } from './terrainTriplanar';
+import { installTerrainPigment } from './terrainPigment';
 
 function attachPaintedMaps(
   material: THREE.MeshStandardMaterial, kind: SurfaceKind,
@@ -27,14 +29,31 @@ function attachPaintedMaps(
  */
 function installSurfaceDetail(material: THREE.MeshStandardMaterial, kind: 'land' | 'rock' | 'bark'): void {
   const lake = GRAND_LAKE;
-  material.customProgramCacheKey = () => 'scaleborn-pbr-' + kind + '-v2';
+  material.customProgramCacheKey = () => 'scaleborn-pbr-' + kind + '-v3';
   material.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>
       varying vec3 vScPosition;
       varying vec3 vScNormal;`);
     shader.vertexShader = shader.vertexShader.replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
-      vScPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
-      vScNormal = normalize(mat3(modelMatrix) * normal);`);
+      // The terrain is an ordinary mesh, but rocks and bark are instanced.
+      // Without instanceMatrix, every tree and boulder samples the same
+      // origin-relative mineral grain, wetness and cliff/moss masks.
+      vec4 scInstancePosition = vec4(transformed, 1.0);
+      vec3 scInstanceNormal = normal;
+      #ifdef USE_INSTANCING
+        scInstancePosition = instanceMatrix * scInstancePosition;
+        // Undo nonuniform instance scale before rotating the normal. This
+        // follows Three's instance normal transform without a GLSL inverse().
+        mat3 scInstanceMat = mat3(instanceMatrix);
+        vec3 scScaleSq = vec3(
+          dot(scInstanceMat[0], scInstanceMat[0]),
+          dot(scInstanceMat[1], scInstanceMat[1]),
+          dot(scInstanceMat[2], scInstanceMat[2]));
+        scInstanceNormal /= max(scScaleSq, vec3(0.00001));
+        scInstanceNormal = scInstanceMat * scInstanceNormal;
+      #endif
+      vScPosition = (modelMatrix * scInstancePosition).xyz;
+      vScNormal = normalize(mat3(modelMatrix) * scInstanceNormal);`);
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>
       varying vec3 vScPosition;
       varying vec3 vScNormal;
@@ -90,7 +109,20 @@ export function makeTerrainMaterial(quality: 'high' | 'low' = 'high'): THREE.Mes
     side: THREE.DoubleSide,
   });
   attachPaintedMaps(mat,'soil',quality);
+  // Terrain's steep faces need their own mineral albedo, normal and
+  // roughness response: using the soil texture everywhere left cliff walls
+  // resembling smooth painted dirt despite stone vertex colors.
+  const rockMaps = makePaintedSurfaceTextures('rock', quality === 'high' ? 256 : 128);
+  mat.addEventListener('dispose', () => {
+    rockMaps.color.dispose();
+    rockMaps.normal.dispose();
+    rockMaps.roughness.dispose();
+  });
   if (quality === 'high') installSurfaceDetail(mat, 'land');
+  // Use the same world-space projections for BOTH texture families, on
+  // every preset. Continuous slope weights eliminate material seams.
+  installTerrainTriplanar(mat, 13, rockMaps);
+  installTerrainPigment(mat);
   return mat;
 }
 export function makeRockMaterial(quality: 'high' | 'low' = 'high'): THREE.MeshStandardMaterial {

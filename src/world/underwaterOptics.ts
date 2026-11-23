@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { lakeContains, waterSurfaceAt } from './highlandLake';
+import { headwaterContains, lakeContains, waterSurfaceAt } from './highlandLake';
 
 export type WaterMedium = 'air' | 'lake' | 'ocean';
 
@@ -43,7 +43,8 @@ export function underwaterOpticsAt(
     };
   }
 
-  const lake = lakeContains(x, z);
+  // The shallow mountain creek is freshwater, not an ocean volume.
+  const lake = lakeContains(x, z) || headwaterContains(x, z);
   const depth = Math.max(0, waterSurfaceAt(x, z) - y);
   // Smoothly cross the lens through the waterline; the player animation's
   // swim mode alone does not guarantee the *camera* is submerged.
