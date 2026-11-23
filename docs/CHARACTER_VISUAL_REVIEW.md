@@ -208,3 +208,30 @@ cylinder. Narrow original collar-to-chest cloth lapels lie on its existing
 surface, retaining clothing palette, three form sockets and hero identity.
 It remains first-pass code-authored fabric, not a skinned production garment;
 actual WebGL side and mounted captures must determine visual acceptance.
+### Sculpted Onyx cartilage, reptilian eyes, and articulated heroine tail (2026-11-22)
+
+- `a4e8868` + `c5b432c`: Existing three-bone Onyx wing fingers now use
+  curved flattened cartilage cross-sections with natural taper rather than
+  cylinder-like round shafts. The original grounded fold, morph positions,
+  material, bone/socket names and flight simulation are unchanged. Both left
+  and right cartilage lofts are geometry-tested for normals, UVs and slender
+  tip profiles. Compare real giant and rideable side/flight screenshots:
+  **shape is implemented, appearance is not approved**.
+- `243ef06` + `a4e8ef6` + `c9aeb68`: Original Onyx iris surfaces now have
+  shallow, pointed reptilian eye lenses rather than full protruding globes.
+  Named pupil, glint, lids, face expression and blink sockets remain active,
+  with mirrored winding and finite normal tests. Verify readability in
+  unaltered gameplay daylight/underwater screenshots; no art signoff yet.
+- `756bdc4` through `286686b`: The bonded heroine's original narrow
+  draconic tail is one continuously skinned three-bone surface with
+  deterministic independent mid/tip flex while walking, swimming and riding.
+  The existing fin follows the tip using its inverse rest transform, with
+  original child height, root socket, character ID, costume and gameplay
+  unaffected. Added skin-weight, tip/fin rest-position and mounted/swim
+  animation tests. This is **not** a substitute for a production authored
+  humanoid skeleton or final face/cloth animation.
+
+**Acceptance remains BLOCKING.** Standard npm lint/test/build results,
+real WebGL character captures of this precise branch head, transition
+motion review and RTX 3060 performance are not yet verified by these source
+edits. PR #15 must remain in DRAFT and unmerged.
