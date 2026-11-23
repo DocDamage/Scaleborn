@@ -95,37 +95,40 @@ function woven(color:number, roughness=.93):THREE.MeshStandardMaterial {
 }
 
 function smallEye(parent:THREE.Group,side:number,
-  skin:THREE.Material,eye:THREE.Material,iris:THREE.Material):void {
+  skin:THREE.Material,eye:THREE.Material,iris:THREE.Material,
+  browPigment:THREE.Material):void {
   // Small almond-shaped eyes sit against the facial surface rather than
   // floating as round green toy-like globes in real close-up screenshots.
   const white = new THREE.Mesh(new THREE.SphereGeometry(1,18,14),eye);
   white.name=side<0?'rider.eye.left':'rider.eye.right';
-  white.position.set(side*.086,1.295,-.148);
-  white.scale.set(.038,.018,.006);
+  // The previous large white capsules read as separate doll eyes in real
+  // WebGL portraits. A narrower, flush almond follows the cheek curvature.
+  white.position.set(side*.084,1.296,-.145);
+  white.scale.set(.031,.013,.0035);
   parent.add(white);
   const jewel=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),iris);
   jewel.name=side<0?'rider.iris.left':'rider.iris.right';
-  jewel.position.set(side*.086,1.295,-.155);
-  jewel.scale.set(.012,.014,.0045);
+  jewel.position.set(side*.084,1.296,-.150);
+  jewel.scale.set(.009,.010,.0028);
   parent.add(jewel);
   // Curved upper and lower eyelids partially enclose the thin almond eye.
   // They hide the exposed sphere edges that appeared googly in real WebGL QA.
   const upperLid = new THREE.Mesh(taperedSpine([
-    [side*.047,1.309,-.142],[side*.085,1.320,-.158],
-    [side*.122,1.306,-.145],
-  ],.011,10,20),skin);
+    [side*.054,1.306,-.139],[side*.084,1.312,-.151],
+    [side*.115,1.305,-.140],
+  ],.007,10,20),skin);
   upperLid.name=side<0?'rider.eyelid.upper.left':'rider.eyelid.upper.right';
   parent.add(upperLid);
   const lowerLid = new THREE.Mesh(taperedSpine([
-    [side*.047,1.280,-.143],[side*.086,1.277,-.156],
-    [side*.122,1.285,-.146],
-  ],.008,10,20),skin);
+    [side*.055,1.287,-.139],[side*.084,1.283,-.150],
+    [side*.114,1.289,-.141],
+  ],.005,10,20),skin);
   lowerLid.name=side<0?'rider.eyelid.lower.left':'rider.eyelid.lower.right';
   parent.add(lowerLid);
   const brow=new THREE.Mesh(taperedSpine([
-    [side*.040,1.346,-.143],[side*.086,1.358,-.157],
-    [side*.133,1.345,-.133],
-  ],.018,8),skin);
+    [side*.044,1.343,-.137],[side*.083,1.353,-.148],
+    [side*.125,1.344,-.128],
+  ],.010,10,22),browPigment);
   brow.name=side<0?'rider.brow.left':'rider.brow.right';
   parent.add(brow);
 }
@@ -246,8 +249,10 @@ export function makeScalebornRider():THREE.Group {
   const trim=new THREE.MeshStandardMaterial({
     color:0xb4a585,roughness:.76,metalness:.08,
   });
-  const eyes=material(0xadb7af,.68);
-  const irises=material(0x4d9a83,.57);
+  // Muted green-gray sclera and deeper sea-glass irises preserve the
+  // original hybrid palette without glowing coin-like eyes.
+  const eyes=material(0x9ca9a1,.77);
+  const irises=material(0x326e61,.65);
   const hair=material(0x252937,.93);
   const scale=new THREE.MeshStandardMaterial({
     color:0x354d67,metalness:.19,roughness:.52,
@@ -292,7 +297,10 @@ export function makeScalebornRider():THREE.Group {
   ],warmSkin,'rider.neck',12));
 
   const face=shapedTorso([
-    [1.20,.097,.095,-.005],[1.24,.136,.124,-.018],
+    // The neck overlaps the jaw's inward taper, hiding the lower open ring
+    // that read as a bright grin beneath the original child-scale face.
+    [1.164,.058,.070,-.009],[1.20,.097,.095,-.005],
+    [1.24,.136,.124,-.018],
     [1.30,.173,.151,-.011],[1.352,.169,.156,.003],
     [1.414,.149,.142,.019],[1.458,.116,.115,.035],
     [1.48,.074,.082,.038],
@@ -306,14 +314,14 @@ export function makeScalebornRider():THREE.Group {
     [1.50,.126,.123,.052],[1.525,.036,.059,.051],
   ],hair,'rider.crown',18));
   for(const side of [-1,1] as const){
-    smallEye(rest,side,shadowSkin,eyes,irises);
+    smallEye(rest,side,shadowSkin,eyes,irises,hair);
     // Four thin layered strands replace the old single rigid hair tube.
     rest.add(makeRiderHairLock(side,hair));
     // Dragon ancestry is subtle: swept short horns, not adult antlers.
     const horn=new THREE.Mesh(taperedSpine([
       [side*.108,1.471,.071],[side*.137,1.516,.135],
       [side*.185,1.517,.210],[side*.212,1.487,.274],
-    ],.039,14),scale);
+    ],.029,14),scale);
     horn.name=side<0?'rider.horn.left':'rider.horn.right';
     rest.add(horn);
     // The previous side tusks looked like stray ears in real screenshots.
@@ -330,18 +338,18 @@ export function makeScalebornRider():THREE.Group {
 
   // Subtle dragon-hybrid nose bridge keeps the painted face dimensional.
   const nose=new THREE.Mesh(taperedSpine([
-    [0,1.302,-.146],[0,1.281,-.156],
-    [0,1.268,-.166],[0,1.256,-.171],
-  ],.015,12,24),warmSkin);
+    [0,1.305,-.143],[0,1.288,-.150],
+    [0,1.275,-.157],[0,1.269,-.160],
+  ],.012,12,24),warmSkin);
   nose.name='rider.nose';
   rest.add(nose);
 
   // Subtle expression line follows the child heroine's lower facial contour.
   // The lip is embedded in the sculpt, not a black floating cartoon mouth.
   const mouth=new THREE.Mesh(taperedSpine([
-    [-.062,1.222,-.109],[-.036,1.218,-.126],
-    [0,1.216,-.136],[.036,1.218,-.126],[.062,1.222,-.109],
-  ],.0055,10,28),shadowSkin);
+    [-.050,1.231,-.117],[-.028,1.226,-.130],
+    [0,1.226,-.136],[.028,1.226,-.130],[.050,1.231,-.117],
+  ],.0045,10,28),shadowSkin);
   mouth.name='rider.mouth';
   rest.add(mouth);
 
