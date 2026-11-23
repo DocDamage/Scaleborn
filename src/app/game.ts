@@ -194,6 +194,9 @@ export class Game {
         __scalebornQaResumeFrames?: () => void;
         __scalebornQaCharacterPortrait?: (pose: PortraitPose) => void;
         __scalebornQaCharacterGameplay?: (pose: DragonForm | 'rider') => void;
+        __scalebornQaCharacterMotion?: () => {
+          form:DragonForm;mode:string;speed:number;roll:number;
+        };
         __scalebornQaLand?: () => void;
         __scalebornQaLaunch?: () => void;
         __scalebornQaWater?: () => void;
@@ -222,6 +225,12 @@ export class Game {
       };
       // Screenshot tests capture one fresh scene frame, then stop the CPU
       // renderer while Chromium copies its completed compositor surface.
+      // Read-only DEV telemetry lets real screenshot tests reject a static
+      // pose accidentally captured after the simulation's velocity decays.
+      host.__scalebornQaCharacterMotion = () => ({
+        form:this.flight.form,mode:this.flight.mode,
+        speed:this.flight.speed,roll:this.flight.roll,
+      });
       host.__scalebornQaHoldNextFrame = () => this.qaFrameCaptureGate.holdAfterNextFrame();
       host.__scalebornQaResumeFrames = () => this.qaFrameCaptureGate.resume();
       host.__scalebornQaCharacterPortrait = (pose: PortraitPose): void => {
