@@ -41,9 +41,9 @@ describe('organic Onyx hock and foreleg muscle compression',()=>{
         // the body or the paw as its hock muscle compresses.
         for(const index of [p.count-2,p.count-1]){
           for(const target of targets){
-            for(const axis of ['X','Y','Z'] as const){
-              expect(target!['get'+axis](index)).toBeCloseTo(p['get'+axis](index),5);
-            }
+            expect(target!.getX(index)).toBeCloseTo(p.getX(index),5);
+            expect(target!.getY(index)).toBeCloseTo(p.getY(index),5);
+            expect(target!.getZ(index)).toBeCloseTo(p.getZ(index),5);
           }
         }
       }
