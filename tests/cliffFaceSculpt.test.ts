@@ -85,10 +85,10 @@ describe('sculpted Mirrorfall waterfall cliff wings', () => {
     });
   }
 
-  it('is deterministic and reuses the original shared wet-rock geometry', () => {
-    const a = createMirrorfallCliffGeometry('low');
-    const b = createMirrorfallCliffGeometry('low');
-    const cliffs = new MirrorfallCliffs('low');
+  it.each(['low', 'high'] as const)('reuses deterministic wet-rock geometry and the %s shader', quality => {
+    const a = createMirrorfallCliffGeometry(quality);
+    const b = createMirrorfallCliffGeometry(quality);
+    const cliffs = new MirrorfallCliffs(quality);
     try {
       expect(a.getAttribute('position').array)
         .toEqual(b.getAttribute('position').array);
@@ -116,7 +116,7 @@ describe('sculpted Mirrorfall waterfall cliff wings', () => {
       expect(shader.fragmentShader).toContain('scTriSample(map)');
       expect(shader.fragmentShader).toContain('scTriSample(roughnessMap)');
       expect(shader.fragmentShader).toContain('scWorldNormal');
-      expect(shader.fragmentShader).toContain('scFbm');
+      expect(shader.fragmentShader.includes('scFbm(vScPosition')).toBe(quality === 'high');
       cliffs.update(4.5);
       expect(((film as THREE.Mesh).material as THREE.ShaderMaterial)
         .uniforms.uTime!.value).toBe(4.5);

@@ -92,8 +92,9 @@ describe('braided Mirrorfall cascade geometry', () => {
       expect(curtains).toHaveLength(3);
       expect(curtains[0]!.geometry.userData.channelCount).toBe(6);
       expect(curtains.every(c => c.material === curtains[0]!.material)).toBe(true);
-      const ropes = fall.group.getObjectByName('water.azure.mirrorfall-filament-ropes')
-        as THREE.Mesh;
+      const ropes = fall.group.getObjectByName(
+        'water.azure.mirrorfall-filament-ropes',
+      ) as THREE.Mesh;
       expect(ropes.material).toBe(curtains[0]!.material);
       const shader = curtains[0]!.material as THREE.ShaderMaterial;
       expect(shader.uniforms.fogDensity?.value).toBeDefined();
