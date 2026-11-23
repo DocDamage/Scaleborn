@@ -105,12 +105,12 @@ describe('sculpted Mirrorfall waterfall cliff wings', () => {
         .toContain('terrain-triplanar-v2-0.133333333');
       const shader = {
         uniforms: {},
-        vertexShader: '#include <common>\\n#include <worldpos_vertex>',
+        vertexShader: '#include <common>\n#include <worldpos_vertex>',
         fragmentShader: [
           '#include <common>', '#include <map_fragment>',
           '#include <color_fragment>', '#include <roughnessmap_fragment>',
           '#include <normal_fragment_maps>',
-        ].join('\\n'),
+        ].join('\n'),
       } as Parameters<THREE.MeshStandardMaterial['onBeforeCompile']>[0];
       wallMaterial.onBeforeCompile(shader, {} as THREE.WebGLRenderer);
       expect(shader.fragmentShader).toContain('scTriSample(map)');
