@@ -15,6 +15,7 @@ import { makeScalebornRider } from '../rider/heroSculpt';
 import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
 import { dragonExpression } from './dragonExpression';
 import { createDragonLegSculpt } from './limbSculpt';
+import { makeOnyxEyeLens } from './eyeLens';
 import { RiderCloakMotion } from '../rider/cloakMotion';
 import { mountedRiderSeat } from '../rider/mountSeat';
 
@@ -49,45 +50,6 @@ const glimmer = new THREE.MeshStandardMaterial({
 function ellipsoid(parent: THREE.Group, material: THREE.Material,
   pos: [number, number, number], scale: [number, number, number], detail = 14): THREE.Mesh {
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, Math.max(26,detail), Math.max(18,Math.round(detail*.7))), material);
-  mesh.position.set(...pos);
-  mesh.scale.set(...scale);
-  parent.add(mesh);
-  return mesh;
-}
-
-/**
- * A shallow, tapered eye surface that follows the skull's side, rather than a
- * protruding ball. The medial height tapers to narrow reptilian corners and
- * the very shallow corneal bulge catches light without cartoon globe volume.
- * Scale remains driven by the existing expression/blink channels.
- */
-function dragonEyeLens(parent: THREE.Group, side: -1 | 1,
-  material: THREE.Material, pos:[number,number,number],
-  scale:[number,number,number]): THREE.Mesh {
-  const longitudinal=32,vertical=12;
-  const points:number[]=[],uvs:number[]=[],indices:number[]=[];
-  for(let i=0;i<=longitudinal;i++){
-    const z=2*i/longitudinal-1;
-    const corner=Math.max(0,1-z*z);
-    const aperture=.013+.72*Math.pow(corner,.72);
-    for(let j=0;j<=vertical;j++){
-      const v=2*j/vertical-1;
-      const bulge=.035+.26*corner*(1-v*v);
-      points.push(side*bulge,v*aperture,z);
-      uvs.push(i/longitudinal,j/vertical);
-      if(i<longitudinal&&j<vertical){
-        const k=i*(vertical+1)+j,n=k+vertical+1;
-        if(side<0) indices.push(k,n,k+1,k+1,n,n+1);
-        else indices.push(k,k+1,n,k+1,n+1,n);
-      }
-    }
-  }
-  const geometry=new THREE.BufferGeometry();
-  geometry.setAttribute('position',new THREE.Float32BufferAttribute(points,3));
-  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
-  geometry.setIndex(indices);
-  geometry.computeVertexNormals();
-  const mesh=new THREE.Mesh(geometry,material);
   mesh.position.set(...pos);
   mesh.scale.set(...scale);
   parent.add(mesh);
@@ -200,7 +162,7 @@ export class DragonVisual {
     this.jawPivot.add(lowerJaw);
     this.head.add(this.jawPivot);
     for (const side of [-1, 1]) {
-      const irisMesh=dragonEyeLens(this.head,side as -1|1,iris,
+      const irisMesh=makeOnyxEyeLens(this.head,side as -1|1,iris,
         [side*.59,.20,-.35],[.110,.158,.16]);
       irisMesh.name='creature.dragon.eye.iris.'+(side<0?'left':'right');
       // The vertical slit remains a separately animated named part.
