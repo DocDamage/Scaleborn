@@ -5,6 +5,7 @@ import { makeRiderSkinMaterial } from './riderSkinSurface';
 import { createRiderTailRig } from './riderTailRig';
 import { installSleeveCreaseMorph } from './riderSleeveCloth';
 import { installRiderUpperBody } from './riderUpperBodyRig';
+import { installRiderFaceMorphs } from './riderFaceMorph';
 
 /**
  * Original adolescent dragon-human heroine. Her slender coastal-traveller
@@ -283,12 +284,14 @@ export function makeScalebornRider():THREE.Group {
     [1.225,.075,.08,-.02],
   ],warmSkin,'rider.neck',12));
 
-  rest.add(shapedTorso([
+  const face=shapedTorso([
     [1.20,.097,.095,-.005],[1.24,.136,.124,-.018],
     [1.30,.173,.151,-.011],[1.352,.169,.156,.003],
     [1.414,.149,.142,.019],[1.458,.116,.115,.035],
     [1.48,.074,.082,.038],
-  ],warmSkin,'rider.face',48,30,'face'));
+  ],warmSkin,'rider.face',48,30,'face');
+  installRiderFaceMorphs(face);
+  rest.add(face);
 
   // Hood-like angular hairline, parting in the middle to reveal the brows.
   rest.add(shapedTorso([
