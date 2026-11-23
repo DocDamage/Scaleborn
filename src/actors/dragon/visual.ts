@@ -15,6 +15,7 @@ import { makeScalebornRider } from '../rider/heroSculpt';
 import { poseRiderTail } from '../rider/riderTailRig';
 import { poseSleeveCrease } from '../rider/riderSleeveCloth';
 import { riderUpperBodyPose } from '../rider/riderUpperBodyRig';
+import { poseRiderFaceMorphs } from '../rider/riderFaceMorph';
 import { createDragonTailRig, poseDragonTail } from './dragonTailRig';
 import { dragonExpression } from './dragonExpression';
 import { createDragonLegSculpt } from './limbSculpt';
@@ -104,6 +105,7 @@ export class DragonVisual {
   };
   private readonly riderMouth = this.rider.getObjectByName('rider.mouth') as THREE.Mesh;
   private readonly riderHead = this.rider.getObjectByName('rider.head') as THREE.Group;
+  private readonly riderFaceSurface = this.rider.getObjectByName('rider.face') as THREE.Mesh;
   private readonly riderSpine = this.rider.getObjectByName('rider.spine') as THREE.Group;
   private readonly riderEyes = ([-1,1] as const).map(side => {
     const suffix=side<0?'left':'right';
@@ -407,6 +409,8 @@ export class DragonVisual {
     this.riderSpine.rotation.set(
       upperPose.spinePitch,upperPose.spineYaw,upperPose.spineBank);
     const riderFace = riderFacialPose(state,riderMotion);
+    poseRiderFaceMorphs(this.riderFaceSurface,
+      riderFace.cheekLift,riderFace.faceFocus);
     for(const feature of this.riderEyes){
       feature.white.scale.y=.018*riderFace.eyeOpen;
       feature.iris.scale.y=.014*riderFace.eyeOpen;
@@ -414,6 +418,7 @@ export class DragonVisual {
       feature.brow.position.y=riderFace.browLift;
     }
     this.riderMouth.position.y=riderFace.mouthShift;
+    this.riderMouth.scale.x=1+riderFace.cheekLift*.08;
     this.riderHead.rotation.set(
       riderFace.headPitch,riderFace.headYaw,riderFace.headBank);
     this.cloakMotion.update(state.time,
