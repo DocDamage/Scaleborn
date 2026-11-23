@@ -227,7 +227,8 @@ export class Game {
       host.__scalebornQaCharacterPortrait = (pose: PortraitPose): void => {
         if (!['small','rideable','giant','rider','rider-side','rider-face',
           'rider-tail','flight-rideable','mounted-rideable','mounted-giant',
-          'mounted-rideable-side','mounted-giant-side'].includes(pose)) {
+          'mounted-rideable-side','mounted-giant-side','walk-rideable',
+          'bank-rideable'].includes(pose)) {
           throw new Error('Invalid character review pose');
         }
         this.qaPortraitSubject = stageCharacterPortrait(this.flight, pose, heightAt);
