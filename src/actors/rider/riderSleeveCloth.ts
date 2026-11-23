@@ -35,6 +35,16 @@ export function installSleeveCreaseMorph(mesh:THREE.Mesh):void {
   geometry.morphAttributes.position=[
     new THREE.Float32BufferAttribute(values,3),
   ];
+  // Supply correct shaded normals at full elbow bend, instead of keeping
+  // the undeformed sleeve's normal field over the woven PBR maps.
+  const foldGeometry=new THREE.BufferGeometry();
+  foldGeometry.setAttribute('position',new THREE.Float32BufferAttribute(values,3));
+  if(geometry.index)foldGeometry.setIndex(geometry.index.clone());
+  foldGeometry.computeVertexNormals();
+  geometry.morphAttributes.normal=[
+    foldGeometry.getAttribute('normal').clone(),
+  ];
+  foldGeometry.dispose();
   geometry.morphTargetsRelative=false;
   mesh.updateMorphTargets();
   // The morph stays within original upper-arm limits; a conservative local
