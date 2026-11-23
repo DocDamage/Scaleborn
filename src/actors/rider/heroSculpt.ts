@@ -4,6 +4,7 @@ import { makeRiderFabricTextures } from './riderFabric';
 import { makeRiderSkinMaterial } from './riderSkinSurface';
 import { createRiderTailRig } from './riderTailRig';
 import { installSleeveCreaseMorph } from './riderSleeveCloth';
+import { installRiderUpperBody } from './riderUpperBodyRig';
 
 /**
  * Original adolescent dragon-human heroine. Her slender coastal-traveller
@@ -392,5 +393,9 @@ export function makeScalebornRider():THREE.Group {
   // The original draconic tail is now one skinned surface with a moving
   // mid-joint, tip and inherited fin, retaining its old root coordinates.
   group.add(createRiderTailRig(scale,cloakMat).root);
+  // This is the complete existing original upper body, not a second mesh.
+  // It gains a chest/spine hinge while the tail and lower limbs stay at the
+  // original child-scale pelvis and saddle coordinates.
+  installRiderUpperBody(group);
   return group;
 }
