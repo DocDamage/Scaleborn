@@ -8,6 +8,7 @@ import { PlungePoolFoam } from './plungePoolFoam';
 import { makeSprayStreakGeometry, makeSprayStreakTexture } from './sprayStreak';
 import { createCascadeFilaments } from './waterfallFilaments';
 import { WaterfallMist } from './waterfallMist';
+import { WaterfallFallSpray } from './waterfallFallSpray';
 import { waterfallCenterXAt } from './waterfallTrajectory';
 
 const plungeX=MIRRORFALL_IMPACT.x;
@@ -170,6 +171,7 @@ export class MirrorfallCascade {
   private readonly velocity=new THREE.Vector3();
   private readonly up=new THREE.Vector3(0,1,0);
   private readonly mist:WaterfallMist;
+  private readonly falling:WaterfallFallSpray;
   private previousTime=0;
   constructor(quality:'high'|'low'='high'){
     this.group.name='water.azure.mirrorfall-cascade';
@@ -211,6 +213,10 @@ export class MirrorfallCascade {
       this.reset(drop, true);this.droplets.push(drop);
     }
     this.group.add(this.spray);
+    // Real descending breakup threads share the existing streak atlas and
+    // impact-spray material, costing one bounded instanced draw.
+    this.falling=new WaterfallFallSpray(material,quality);
+    this.group.add(this.falling.mesh);
 
     // Irregular, lake-clipped foam surface replaces artificial torus circles.
     this.group.add(this.foam.mesh);
@@ -260,12 +266,14 @@ export class MirrorfallCascade {
       this.spray.setMatrixAt(i,this.dummy.matrix);
     });
     this.spray.instanceMatrix.needsUpdate=true;
+    this.falling.update(time);
     this.foam.update(time);
     this.mist.update(time,camera);
   }
   dispose():void{
     this.foam.dispose();
     this.mist.dispose();
+    this.falling.dispose();
     const geometries=new Set<THREE.BufferGeometry>();
     const materials=new Set<THREE.Material>();
     this.group.traverse(obj=>{

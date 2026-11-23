@@ -1116,3 +1116,26 @@ stylized wave-break approximation; compare actual rider-height lakebank
 WebGL captures for bright aliasing, water/terrain edge intersection and
 moving crest timing before treating the art gate as passed. No full browser
 or target RTX 3060 GPU result is claimed from this source edit.
+
+### Gravity-timed waterfall curtain breakup (follow-up batch)
+
+The previous waterfall's 420/720 ballistic impact droplets all spawned
+**at lake level**, leaving no independent descending spray between the
+crown and pool. `waterfallFallSpray.ts` now adds one bounded instanced draw
+of 240 Low / 540 High detached, irregular streaks, reusing the existing
+painted-alpha spray material/texture. Droplets advance along the same
+`waterfallCenterXAt` path as the main mesh, with fall distance proportional
+to elapsed time squared under 9.81 m/s² gravity. Seeded offsets, lengths,
+taper, subtle pigment differences and desynchronized respawn cycles avoid
+identical vertical bands. The threads descend and retire above the moving
+freshwater wave surface; those entering the lake rim are clipped. All
+per-instance transforms are rebuilt from an absolute, deterministic clock,
+without spawning scene objects or buffers during gameplay. The separate
+upward impact-spray pool remains intact.
+
+This adds **one** actual GPU draw (not hundreds), and is a physically
+inspired particle approximation, **not** fluid-volume continuity,
+pressure-driven droplet fragmentation or a ray-traced waterfall. Compare
+actual high/low Chromium waterfall side views for oversaturation, opaque
+stripes, lake-crest intersection and sprite overdraw; target RTX 3060
+profiling and complete test execution remain blocking.
