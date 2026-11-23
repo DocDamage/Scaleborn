@@ -6,6 +6,7 @@ import { createRiderTailRig } from './riderTailRig';
 import { installSleeveCreaseMorph } from './riderSleeveCloth';
 import { installRiderUpperBody } from './riderUpperBodyRig';
 import { installRiderFaceMorphs } from './riderFaceMorph';
+import { makeRiderHairLock } from './riderHairSculpt';
 
 /**
  * Original adolescent dragon-human heroine. Her slender coastal-traveller
@@ -300,10 +301,8 @@ export function makeScalebornRider():THREE.Group {
   ],hair,'rider.crown',18));
   for(const side of [-1,1] as const){
     smallEye(rest,side,shadowSkin,eyes,irises);
-    rest.add(new THREE.Mesh(taperedSpine([
-      [side*.112,1.462,.032],[side*.151,1.39,.053],
-      [side*.158,1.298,.069],
-    ],.055),hair));
+    // Four thin layered strands replace the old single rigid hair tube.
+    rest.add(makeRiderHairLock(side,hair));
     // Dragon ancestry is subtle: swept short horns, not adult antlers.
     const horn=new THREE.Mesh(taperedSpine([
       [side*.108,1.471,.071],[side*.137,1.516,.135],
